@@ -24456,6 +24456,264 @@ $('pfNick').addEventListener('click', () => { audioInit(); sfx('click'); accOpen
 try { if (WEB && navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 /* ================================================================ /version 106 */
 
+/* version 107 (11/11): « Prochainement » for Gem TD and Fusion TD (Line Towers alone for now), the VIP code, the profile kept on the
+   server, « Lier un appareil ». Patrick, 16 h 04: « je voulais d'abord mettre "prochainement" pour le mode fusion td et gem TD afin de
+   communiquer que sur line towers… est-ce possible d'avoir des places VIP pour moi et des potes » ; 16 h 11: « code a taper » ; les invités
+   d'un VIP jouent à tout chez lui : « oui » ; « Le profil sur le serveur et « Lier un appareil » : code le tout suite ». */
+const SOON = true;                                                      // Gem TD and Fusion TD: « Prochainement » (the site)
+const VIP = { on: false, admin: false };
+try { VIP.on = localStorage.getItem('ddl-vip') === '1'; } catch (e) {}
+const srvOK = () => typeof rkOnline === 'function' && rkOnline();
+function srvPost(path, body, keep) {
+  const ac = typeof AbortController === 'function' ? new AbortController() : null, to = setTimeout(() => { try { if (ac) ac.abort(); } catch (e) {} }, 10000);
+  return fetch(RK_SRV + path, { method: 'POST', mode: 'cors', credentials: 'omit', keepalive: !!keep, headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(body), signal: ac ? ac.signal : undefined })
+    .then(r => r.json().catch(() => ({})).then(d => Object.assign({ status: r.status }, d))).finally(() => clearTimeout(to));
+}
+// a mode one may open (alone, or as the host of a table): Line Towers always; the others for a VIP; on claude.ai everything
+const modeOk = m => m === 'lt' || !WEB || !SOON || VIP.on;
+function soonMarks() {
+  document.querySelectorAll('#modes [data-mode]').forEach(b => {
+    const m = b.dataset.mode; if (m === 'lt') return;
+    const off = !modeOk(m), tag = b.querySelector('.mb-tag');
+    b.classList.toggle('soon', off);
+    if (tag) tag.textContent = off ? 'Prochainement' : (WEB && SOON && VIP.on ? 'VIP' : 'Nouveau');
+    b.setAttribute('aria-label', MODE_NAME[m] + (off ? ', prochainement' : ''));
+  });
+}
+function vipSet(on, admin) {
+  VIP.on = !!on; if (admin != null) VIP.admin = !!admin;
+  try { localStorage.setItem('ddl-vip', VIP.on ? '1' : '0'); } catch (e) {}
+  soonMarks();
+}
+// the sheet « Gem TD arrive bientôt »
+function soonOpen(m) {
+  const v = accEl(); v.hidden = false; ACC.view = 'soon';
+  const pic = document.querySelector(`#modes [data-mode="${m}"] .mb-pic`), bg = pic ? pic.style.backgroundImage.replace(/"/g, "'") : '';
+  v.innerHTML = `<div class="ami-sh soon-sh" role="dialog" aria-label="${MODE_NAME[m]} arrive bientôt"><div class="ami-h"><h2>Bientôt</h2><button type="button" class="ami-x" data-acc="close" aria-label="Fermer">✕</button></div>` +
+    `<div class="pic" style="background-image:${bg}"></div>` +
+    `<p><b>${MODE_NAME[m]} arrive bientôt.</b> Pour l’instant, on joue à <b>Line Towers</b>.</p>` +
+    `<p>${MODE_NAME[m]} est déjà ouvert aux joueurs VIP, et à leur table pour les amis qu’ils invitent.</p>` +
+    `<button type="button" class="ami-b wide gold" data-acc="lt">Jouer à Line Towers</button>` +
+    `<button type="button" class="ami-b wide" data-acc="vipgo">J’ai un code VIP</button></div>`;
+}
+// the modes screen: a mode not open shows the sheet instead of its table
+$('modes').addEventListener('click', e => {
+  const b = e.target.closest('[data-mode]'); if (!b) return;
+  const m = b.dataset.mode; if (modeOk(m)) return;
+  e.stopPropagation(); audioInit(); sfx('click'); soonOpen(m);
+}, true);
+// the sheet of the modes, from a table's title: not open, « Prochainement »
+{ const base = modeSheetOpen; modeSheetOpen = function () {
+    const r = base.apply(this, arguments);
+    document.querySelectorAll('#msRows [data-pm]').forEach(b => {
+      const m = b.dataset.pm; if (modeOk(m)) return;
+      b.disabled = true; const sp = b.querySelector('.tx span'); if (sp) sp.textContent = 'Prochainement · ouvert aux VIP';
+    });
+    return r;
+}; }
+{ const base = gemGuided; gemGuided = function () { if (!modeOk('gem')) { soonOpen('gem'); return; } return base.apply(this, arguments); }; }
+// the défi du jour: Line Towers from 12/11 while the two modes wait (the same for everyone, the VIPs too: one board a day)
+{ const base = dfModeOf; dfModeOf = function (day, i) { return SOON && day >= '2026-11-12' ? 'lt' : base.apply(this, arguments); };
+  DF_SEQ.i = -1; DF_SEQ.last = { lt: null, gem: null, farm: null }; DF_SEQ.memo.clear(); }
+
+/* ---------------------------------------------------------------- the profile, kept on the server */
+const PS_KEEP = /^(ddl-[a-z0-9-]{1,40}|jt-maison|farmtd-[a-z0-9-]{1,40}|gemtd-[a-z0-9-]{1,40}|gemmes-v1-[a-z0-9-]{1,40})$/;
+// what stays on each device: the key and its numbers, the visits, the flags of the moves, the cache of the VIP, the sounds
+const PS_SKIP = /^(ddl-rkey|ddl-rkey-prev|ddl-rpid|ddl-pid|ddl-visits|ddl-migrated|ddl-moved|ddl-a2hs|ddl-prof-[a-z]+|ddl-vip|ddl-sound|ddl-sound-tw|ddl-music|ddl-vib)$|-test$/;
+const PS = { busy: false, sent: '', iv: 0 };
+function psSnap() {
+  const ks = [], d = {}; let size = 0;
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (PS_KEEP.test(k) && !PS_SKIP.test(k)) ks.push(k); } } catch (e) { return d; }
+  ks.sort();
+  for (const k of ks) { let v = null; try { v = localStorage.getItem(k); } catch (e) {} if (typeof v !== 'string' || size + k.length + v.length > 190000) continue; d[k] = v; size += k.length + v.length; }
+  return d;
+}
+function psHash(d) { const t = JSON.stringify(d); let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '.' + t.length; }
+const psGames = d => { try { const m = JSON.parse(d['ddl-meta'] || '{}'); return (m && m.games) | 0; } catch (e) { return 0; } };
+function psGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function psPut(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, String(v)); } catch (e) {} }
+function psPush(force, keep) {
+  if (!WEB || !srvOK() || PS.busy) return Promise.resolve(false);
+  const d = psSnap(), h = psHash(d);
+  if (!force && h === psGet('ddl-prof-h')) return Promise.resolve(true);
+  PS.busy = true;
+  const body = { key: RKX.key, t: Date.now(), data: d };
+  return srvPost('/profil/save', body, keep && JSON.stringify(body).length < 60000).then(r => {
+    PS.busy = false;
+    if (r && r.ok && !r.stale) { psPut('ddl-prof-t', r.t); psPut('ddl-prof-h', h); return true; }
+    return false;
+  }).catch(() => { PS.busy = false; return false; });
+}
+// a device that opens the game: the server's profile if it is newer and this one has not changed since (or if it is more advanced,
+// or right after « Lier un appareil »); else this one is sent
+function psStart() {
+  if (!WEB || !srvOK()) return;
+  srvPost('/profil', { key: RKX.key }).then(d => {
+    if (!d || !d.ok) return;
+    vipSet(d.vip, d.admin); if (ACC.view === 'acc') accDraw();
+    const take = psGet('ddl-prof-take') === '1', local = psSnap(), lh = psHash(local), lastT = +psGet('ddl-prof-t') || 0, lastH = psGet('ddl-prof-h');
+    psPut('ddl-prof-take', null);
+    const srv = d.data && typeof d.data === 'object' ? d.data : null;
+    if (srv && psHash(srv) !== lh && (take || (d.t > lastT && (lh === lastH || psGames(srv) >= psGames(local))))) {
+      let once = ''; try { once = sessionStorage.getItem('ddl-prof-rl') || ''; } catch (e) {}
+      if (once === String(d.t)) return;                                // never twice in a row for the same profile
+      try { sessionStorage.setItem('ddl-prof-rl', String(d.t)); } catch (e) {}
+      for (const k of Object.keys(local)) if (!(k in srv)) psPut(k, null);
+      for (const k of Object.keys(srv)) if (PS_KEEP.test(k) && !PS_SKIP.test(k)) psPut(k, srv[k]);
+      psPut('ddl-prof-t', d.t); psPut('ddl-prof-h', psHash(psSnap()));
+      location.reload();
+      return;
+    }
+    if (srv && psHash(srv) === lh) { psPut('ddl-prof-t', d.t); psPut('ddl-prof-h', lh); return; }
+    psPush(true);
+  }).catch(() => {});
+}
+function psLoop() {
+  if (PS.iv) return;
+  PS.iv = setInterval(() => { if (!document.hidden) psPush(false); }, 30000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) psPush(false, true); });
+  window.addEventListener('pagehide', () => psPush(false, true));
+}
+
+/* ---------------------------------------------------------------- « Mon compte »: the name, « Lier un appareil », the VIP code, the key */
+const ACC_OK = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 10l5 5 9-10" stroke="currentColor" stroke-width="3" stroke-linecap="square"/></svg>';
+Object.assign(ACC, { view: '', link: null, lmsg: '', vmsg: '', vgood: false, amsg: '', more: false, tk: null });
+accOpen = function (focus) {
+  ACC.ask = ''; ACC.msg = ''; ACC.link = null; ACC.lmsg = ''; ACC.vmsg = ''; ACC.amsg = ''; ACC.tk = null; ACC.view = 'acc';
+  const v = accEl(); v.hidden = false; accDraw();
+  if (focus === 'vip') setTimeout(() => { const i = $('accVp'); if (i) { try { i.focus({ preventScroll: false }); i.scrollIntoView({ block: 'center' }); } catch (e) {} } }, 60);
+};
+accClose = function () {
+  ACC.view = ''; if (ACC.tm) { clearInterval(ACC.tm); ACC.tm = 0; }
+  const v = $('accOv'); if (v) { v.hidden = true; v.innerHTML = ''; }
+  try { profRender(); } catch (e) {}
+  try { if (typeof amiPoll === 'function') amiPoll(); } catch (e) {}
+  psPush(false);
+};
+function accLinkHTML() {
+  const L = ACC.link, on = WEB && srvOK();
+  if (!on) return '<p class="ami-note">Lier un appareil se fait sur lesjoutes.fr et dans l’appli.</p>';
+  if (ACC.tk) return `<p class="acc-q">Remplacer ce profil par celui de ton autre appareil ? Sa progression, ses tenues, ses amis et son nom arrivent ici.</p><div class="acc-row"><button type="button" class="ami-b" data-acc="tkno">Annuler</button><button type="button" class="ami-b gold" data-acc="tkyes">Remplacer</button></div>`;
+  if (L && L.code) {
+    const left = Math.max(0, Math.ceil((L.exp - Date.now()) / 60000));
+    return `<div class="acc-lk"><b>${L.code.slice(0, 3)} ${L.code.slice(3)}</b><span>Sur ton autre appareil : Mon compte › Lier un appareil › J’ai un code. Valable ${left} min.</span></div>`;
+  }
+  if (L === 'enter') return `<input class="acc-in code" id="accLk" maxlength="7" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="· · · · · ·" aria-label="Le code de ton autre appareil, six signes"><div class="acc-row"><button type="button" class="ami-b" data-acc="lkno">Annuler</button><button type="button" class="ami-b gold" data-acc="lkgo">Lier</button></div>` + (ACC.lmsg ? `<p class="acc-msg">${esc(ACC.lmsg)}</p>` : '');
+  return `<div class="acc-row"><button type="button" class="ami-b" data-acc="lkshow">Afficher un code</button><button type="button" class="ami-b" data-acc="lkenter">J’ai un code</button></div>` + (ACC.lmsg ? `<p class="acc-msg">${esc(ACC.lmsg)}</p>` : '');
+}
+function accVipHTML() {
+  let h = '';
+  if (VIP.on) h += `<div class="acc-ok">${ACC_OK}<span>Tu es VIP : Gem TD et Fusion TD sont ouverts, pour toi et les amis que tu invites.</span></div>`;
+  else h += `<input class="acc-in code" id="accVp" maxlength="16" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Code VIP" aria-label="Code VIP">` +
+    `<button type="button" class="ami-b wide gold" data-acc="vipok">Valider le code</button>` + (ACC.vmsg ? `<p class="acc-msg${ACC.vgood ? ' good' : ''}">${esc(ACC.vmsg)}</p>` : '');
+  if (VIP.admin) h += `<p class="ami-note">Toi seul : le code VIP à donner à tes amis (4 à 16 lettres ou chiffres). Le changer ferme l’accès à ceux qui avaient l’ancien.</p>` +
+    `<div class="acc-row"><input class="acc-in code" id="accVa" maxlength="16" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Nouveau code" aria-label="Nouveau code VIP" style="flex:2"><button type="button" class="ami-b gold" data-acc="vipset">Changer</button></div>` +
+    (ACC.amsg ? `<p class="acc-msg good">${esc(ACC.amsg)}</p>` : '');
+  return h;
+}
+accDraw = function () {
+  const v = $('accOv'); if (!v || v.hidden || ACC.view !== 'acc') return;
+  const keepNm = document.activeElement && document.activeElement.id === 'accNm', ask = ACC.ask, sc = v.firstChild ? v.firstChild.scrollTop : 0;
+  const lkv = ($('accLk') || {}).value || '', vpv = ($('accVp') || {}).value || '', vav = ($('accVa') || {}).value || '', inv = ($('accIn') || {}).value || '';
+  v.innerHTML = `<div class="ami-sh" role="dialog" aria-label="Mon compte"><div class="ami-h"><h2>Mon compte</h2><button type="button" class="ami-x" data-acc="close" aria-label="Fermer">✕</button></div>` +
+    `<label class="acc-f"><span>Ton nom</span><input id="accNm" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(nick || 'Joueur')}"></label>` +
+    `<div class="ami-sec"><span>Lier un appareil</span></div><p class="ami-note">Retrouve ce profil sur ton téléphone, ton ordinateur ou l’appli : ta progression, tes tenues, tes amis.</p>` + accLinkHTML() +
+    (WEB ? `<div class="ami-sec"><span>Accès VIP</span></div>` + accVipHTML() : '') +
+    `<button type="button" class="acc-more" data-acc="more" aria-expanded="${ACC.more}"><span>Clé de secours</span><span>${ACC.more ? '–' : '+'}</span></button>` +
+    (ACC.more ? `<div class="ami-code"><span class="lb"><span>Ta clé de récupération</span><b class="acc-k">${esc(accKeyFmt(RKX.key))}</b></span></div>` +
+      `<div class="acc-row"><button type="button" class="ami-b" data-acc="copy">Copier la clé</button><button type="button" class="ami-b" data-acc="share">Envoyer</button></div>` +
+      `<p class="ami-note">Colle ici la clé d’un autre appareil pour reprendre son profil.</p>` +
+      `<input class="acc-in" id="accIn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Clé de récupération" aria-label="Clé de récupération">` +
+      (ask ? `<p class="acc-q">Remplacer ce profil (code ami ${esc(amiFmt(AMI.code) || '·')}) par celui de la clé ?</p><div class="acc-row"><button type="button" class="ami-b" data-acc="no">Annuler</button><button type="button" class="ami-b gold" data-acc="yes">Remplacer</button></div>`
+             : `<button type="button" class="ami-b wide" id="accGo" data-acc="go" disabled>Reprendre ce profil</button>`) +
+      `<p class="acc-msg" id="accMsg"${ACC.msg ? '' : ' hidden'}>${esc(ACC.msg)}</p>` : '') + `</div>`;
+  if ($('accLk')) $('accLk').value = lkv; if ($('accVp')) $('accVp').value = vpv; if ($('accVa')) $('accVa').value = vav;
+  if ($('accIn')) { $('accIn').value = ask || inv; const g = $('accGo'); if (g) g.disabled = !accValid($('accIn').value); }
+  if (v.firstChild) v.firstChild.scrollTop = sc;
+  if (keepNm) { const i = $('accNm'); try { i.focus({ preventScroll: true }); i.setSelectionRange(i.value.length, i.value.length); } catch (e) {} }
+};
+// take another device's key: this device becomes that profile (its old key kept aside), and takes the server's profile at once
+function accTake(k) {
+  try { localStorage.setItem('ddl-rkey-prev', RKX.key); localStorage.setItem('ddl-rkey', k); localStorage.removeItem('ddl-rpid'); localStorage.removeItem('ddl-prof-t'); localStorage.removeItem('ddl-prof-h'); localStorage.setItem('ddl-prof-take', '1'); sessionStorage.removeItem('ddl-prof-rl'); }
+  catch (er) { ACC.msg = 'Ce navigateur refuse d’écrire. Réessaie hors navigation privée.'; ACC.lmsg = ACC.msg; ACC.ask = ''; ACC.tk = null; accDraw(); return; }
+  location.reload();
+}
+{ const base = accClick; accClick = function (e) {
+    const b = e.target.closest && e.target.closest('[data-acc]'); if (!b) return;
+    const a = b.dataset.acc;
+    if (a === 'lt') { sfx('click'); accClose(); PLAYMODE = 'lt'; modeEnter('lt'); return; }
+    if (a === 'vipgo') { sfx('click'); accOpen('vip'); return; }
+    if (a === 'more') { sfx('click'); ACC.more = !ACC.more; accDraw(); return; }
+    if (a === 'yes') { const k = ACC.ask; if (!accValid(k)) return; sfx('click'); accTake(k); return; }
+    if (a === 'lkshow') {
+      sfx('click'); ACC.lmsg = '…'; accDraw();
+      psPush(true).then(() => srvPost('/lier/code', { key: RKX.key })).then(d => {
+        if (!d || !d.ok) { ACC.lmsg = 'Le serveur ne répond pas. Réessaie.'; accDraw(); return; }
+        ACC.link = { code: d.code, exp: d.exp }; ACC.lmsg = ''; accDraw();
+        if (ACC.tm) clearInterval(ACC.tm);
+        ACC.tm = setInterval(() => { if (!ACC.link || !ACC.link.code || ACC.view !== 'acc') { clearInterval(ACC.tm); ACC.tm = 0; return; } if (Date.now() > ACC.link.exp) { ACC.link = null; ACC.lmsg = 'Le code a expiré.'; } accDraw(); }, 20000);
+      }).catch(() => { ACC.lmsg = 'Le serveur ne répond pas. Réessaie.'; accDraw(); });
+      return;
+    }
+    if (a === 'lkenter') { sfx('click'); ACC.link = 'enter'; ACC.lmsg = ''; accDraw(); setTimeout(() => { const i = $('accLk'); if (i) try { i.focus(); } catch (er) {} }, 40); return; }
+    if (a === 'lkno') { sfx('back'); ACC.link = null; ACC.lmsg = ''; accDraw(); return; }
+    if (a === 'lkgo') {
+      const c = (($('accLk') || {}).value || '').toUpperCase().replace(/[\s-]/g, ''); sfx('click');
+      if (!/^[A-HJ-NP-Z2-9]{6}$/.test(c)) { ACC.lmsg = 'Le code a six signes (lettres et chiffres).'; accDraw(); return; }
+      srvPost('/lier/prendre', { code: c }).then(d => {
+        if (d && d.ok && /^[A-Za-z0-9]{32}$/.test(d.key || '')) {
+          if (d.key === RKX.key) { ACC.lmsg = 'C’est déjà ce profil.'; accDraw(); return; }
+          ACC.tk = d.key; accDraw(); return;
+        }
+        ACC.lmsg = d && d.why === 'inconnu' ? 'Ce code n’existe pas ou a expiré. Affiche-en un nouveau sur l’autre appareil.' : 'Le serveur ne répond pas. Réessaie.'; accDraw();
+      }).catch(() => { ACC.lmsg = 'Le serveur ne répond pas. Réessaie.'; accDraw(); });
+      return;
+    }
+    if (a === 'tkno') { sfx('back'); ACC.tk = null; ACC.link = null; accDraw(); return; }
+    if (a === 'tkyes') { const k = ACC.tk; if (!/^[A-Za-z0-9]{32}$/.test(k || '')) return; sfx('click'); accTake(k); return; }
+    if (a === 'vipok') {
+      const c = (($('accVp') || {}).value || '').toUpperCase().replace(/[\s-]/g, ''); sfx('click');
+      if (!/^[A-Z0-9]{4,16}$/.test(c)) { ACC.vmsg = 'Ce code n’est pas le bon.'; ACC.vgood = false; accDraw(); return; }
+      if (!srvOK()) { ACC.vmsg = 'Il faut être en ligne.'; ACC.vgood = false; accDraw(); return; }
+      srvPost('/vip', { key: RKX.key, code: c }).then(d => {
+        if (d && d.ok && d.vip) { vipSet(true); ACC.vmsg = ''; accDraw(); toast('Accès VIP : Gem TD et Fusion TD sont ouverts', 'gold'); return; }
+        ACC.vgood = false; ACC.vmsg = d && (d.why === 'faux' || d.why === 'ferme') ? 'Ce code n’est pas le bon.' : 'Le serveur ne répond pas. Réessaie.'; accDraw();
+      }).catch(() => { ACC.vmsg = 'Le serveur ne répond pas. Réessaie.'; ACC.vgood = false; accDraw(); });
+      return;
+    }
+    if (a === 'vipset') {
+      const c = (($('accVa') || {}).value || '').toUpperCase().replace(/[\s-]/g, ''); sfx('click');
+      if (!/^[A-Z0-9]{4,16}$/.test(c)) { ACC.amsg = ''; ACC.vmsg = ''; toast('Le code : 4 à 16 lettres ou chiffres'); return; }
+      srvPost('/vip/regler', { key: RKX.key, code: c }).then(d => {
+        if (d && d.ok) { ACC.amsg = `Le code VIP est ${c}. Les anciens codes ne marchent plus.`; const i = $('accVa'); if (i) i.value = ''; accDraw(); return; }
+        toast('Le serveur ne répond pas. Réessaie.');
+      }).catch(() => toast('Le serveur ne répond pas. Réessaie.'));
+      return;
+    }
+    return base.call(this, e);
+}; }
+// a key typed in « Clé de secours » now takes the server's profile too (« yes » above); the sheet « Bientôt » closes like the other
+{ const v = accEl(); v.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'accLk') { const g = v.querySelector('[data-acc="lkgo"]'); if (g) g.click(); } if (e.key === 'Enter' && e.target && e.target.id === 'accVp') { const g = v.querySelector('[data-acc="vipok"]'); if (g) g.click(); } }); }
+(function () { const st = document.createElement('style'); st.textContent = `
+.acc-row{display:flex;gap:8px}.acc-row .ami-b{flex:1}
+.acc-lk{display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:#16232a;box-shadow:inset 0 0 0 2px rgba(213,191,123,.5)}
+.acc-lk b{font:400 46px/.9 var(--fb);letter-spacing:.08em;color:#d5bf7b;white-space:nowrap}
+.acc-lk span{font:600 13px/1.35 var(--f);color:#8ea2a7}
+.acc-ok{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#1f3328;box-shadow:inset 0 0 0 1px #8fb08a;font:600 14px/1.35 var(--f);color:#cfe3cb}
+.acc-ok svg{flex:none;color:#8fb08a}
+.acc-more{display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 2px;border:0;background:none;color:#8ea2a7;font:700 12px/1 var(--f);letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.acc-in.code{font:400 30px/1 var(--fb);letter-spacing:.2em;text-transform:uppercase;text-align:center}
+.acc-msg.good{color:#9fd18a}
+.acc-q{margin:0;font:600 14px/1.35 var(--f);color:#e0e5e6}
+#accVa{font-size:20px;letter-spacing:.1em}
+.soon-sh p{margin:0;font:500 15px/1.4 var(--f);color:#a9b8bc}
+.soon-sh p b{color:#e0e5e6}
+.soon-sh .pic{height:120px;background:#0b1317 50% 30%/cover no-repeat;image-rendering:pixelated;box-shadow:inset 0 0 0 1px #33474f;filter:saturate(.6) brightness(.75)}
+`; document.head.appendChild(st); })();
+soonMarks();
+setTimeout(() => { psStart(); psLoop(); }, 1500);
+/* ================================================================ /version 107 */
+
 useTerrain(TERKEY);
 demo();
 layout(); Object.assign(cam, allCam());
