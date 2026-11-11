@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Les Joutes, le passage de l'ancienne adresse (patrickmorvan21.github.io/Pat/domus-td/) à lesjoutes.fr (version 102, 11/11/2026).
+     Le navigateur range les données d'un jeu par adresse : son profil, ses records, sa clé et ses amis (le serveur le reconnaît à sa clé)
+     resteraient à l'ancienne adresse. La page de l'ancienne adresse les envoie ici, dans le # de l'adresse (le # n'est jamais envoyé à un serveur),
+     et cette page les range, puis ouvre le jeu.
+     - elle ne range que ce qui vient de l'ancienne adresse (le referrer), que les clés du jeu, que celles qui manquent encore ici, une seule fois ;
+     - le jeu garde ce qu'il a déjà ici : rien n'est écrasé. -->
+<title>Les Joutes</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1b2b34">
+<style>html,body{margin:0;height:100%;background:#1b2b34;color:#e0e5e6;font:16px/1.4 system-ui,sans-serif}body{display:flex;align-items:center;justify-content:center}</style>
+</head>
+<body>
+<p id="m">Les Joutes…</p>
+<script>
+(function () {
+  var OLD = 'https://patrickmorvan21.github.io';                  // l'ancienne adresse (son origine)
+  var KEEP = /^(ddl-|jt-maison$|farmtd-|gemtd-|gemmes-v1-)/, SKIP = /-test$/, FLAG = 'ddl-migrated';
+  var q = '', h = '';
+  function go() { try { location.replace('./' + q + h); } catch (e) { location.href = './'; } }
+  try {
+    var raw = location.hash.replace(/^#/, '');
+    if (!raw) return go();
+    var from = '';
+    try { from = new URL(document.referrer).origin; } catch (e) {}
+    var json = decodeURIComponent(escape(atob(raw.replace(/-/g, '+').replace(/_/g, '/'))));
+    var d = JSON.parse(json);
+    q = typeof d.q === 'string' && /^\?[\w%=&.,~:;+!*'()@$-]*$/.test(d.q) && d.q.length < 400 ? d.q : '';
+    h = typeof d.h === 'string' && /^#[\w%=&.,~:;+!*'()@$\/?-]*$/.test(d.h) && d.h.length < 400 ? d.h : '';
+    var ok = from === OLD && d && d.v === 1 && d.ls && typeof d.ls === 'object';
+    var wrote = 0;
+    if (ok && !localStorage.getItem(FLAG)) {
+      for (var k in d.ls) {
+        if (!Object.prototype.hasOwnProperty.call(d.ls, k) || !KEEP.test(k) || SKIP.test(k)) continue;
+        var v = d.ls[k];
+        if (typeof v !== 'string' || v.length > 200000) continue;
+        if (localStorage.getItem(k) === null) { localStorage.setItem(k, v); wrote++; }
+      }
+      localStorage.setItem(FLAG, String(wrote));
+    }
+  } catch (e) {}
+  go();
+})();
+</script>
+<noscript><p><a href="./">Les Joutes</a></p></noscript>
+</body>
+</html>
