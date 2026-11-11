@@ -2139,6 +2139,7 @@ body:has(#startOv:not([hidden]):not([data-view=home])[data-view=ftable]){backgro
     <div class="pf-tabs" id="pfTabs" role="tablist"><button type="button" role="tab" data-tab="tenue" aria-selected="true">Tenue</button><button type="button" role="tab" data-tab="motif" aria-selected="false">Bannière</button><button type="button" role="tab" data-tab="titre" aria-selected="false">Titre</button></div>
     <div class="pf-list" id="pfList"></div>
     <div class="pf-rec" id="pfRec"></div>
+    <button class="ami-b wide pf-acc" id="pfAcc" type="button">Mon compte · nom et clé de récupération</button>
   </div></div>
 
   <!-- 1 · the four doors: the House, its general, its colour -->
@@ -24373,8 +24374,87 @@ setTimeout(amiRender, 0);
 /* ================================================================ /version 102 */
 /* version 103 (11/11): the home screen's level number is smaller, the daily challenge's arrow is a centred square; nothing else here */
 /* ================================================================ /version 103 */
-/* version 104 (11/11): « Fusion TD » is called « Fusion TD » (the shown name only; the keys farmtd-… and the page's id stay) */
+/* version 104 (11/11): « Farm TD » is called « Fusion TD » (the shown name only; the keys farmtd-… and the page's id stay) */
 /* ================================================================ /version 104 */
+
+/* version 106 (11/11): « Mon compte » — the name, the recovery key, a key pasted to get a profile back; the browser is asked to keep the data */
+const ACC = { ask: '', msg: '' };
+const accClean = v => String(v || '').replace(/[\s​-‏]/g, '');
+const accValid = v => /^[A-Za-z0-9]{32}$/.test(accClean(v));
+const accKeyFmt = k => (k || '').replace(/(.{4})(?=.)/g, '$1 ');
+(function () { const st = document.createElement('style'); st.textContent = `
+.pf-acc{margin:12px 16px calc(24px + env(safe-area-inset-bottom,0px));width:calc(100% - 32px)}
+#pfNick{cursor:pointer}
+#pfNick::after{content:" ✏";font-size:.7em;opacity:.55}
+.acc-f{display:flex;flex-direction:column;gap:8px}
+.acc-f>span{font:700 11px/1 var(--f);letter-spacing:.16em;text-transform:uppercase;color:#8ea2a7}
+.acc-f input,.acc-in{box-sizing:border-box;width:100%;height:48px;padding:0 14px;border:0;border-radius:0;background:#16232a;box-shadow:inset 0 0 0 2px #33474f;color:#e0e5e6;font:700 18px/1 var(--f);outline:0}
+.acc-f input:focus,.acc-in:focus{box-shadow:inset 0 0 0 2px #d5bf7b}
+.acc-in{font-size:16px;letter-spacing:.04em}
+.ami-code .lb b.acc-k{display:block;font:700 19px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;color:#d5bf7b;white-space:normal;word-break:normal;user-select:all;-webkit-user-select:all}
+.acc-msg{margin:0;font:600 14px/1.35 var(--f);color:#e3a197}
+.acc-row{display:flex;gap:8px}.acc-row .ami-b{flex:1}
+`; document.head.appendChild(st); })();
+function accEl() {
+  let v = $('accOv'); if (v) return v;
+  v = document.createElement('div'); v.className = 'ami-veil'; v.id = 'accOv'; v.hidden = true; document.body.appendChild(v);
+  v.addEventListener('click', e => { if (e.target === v) { try { sfx('back'); } catch (er) {} accClose(); return; } accClick(e); });
+  v.addEventListener('input', e => {
+    const t = e.target; if (!t) return;
+    if (t.id === 'accNm') { setNick(t.value); const p = $('pfNick'); if (p) p.textContent = nick || 'Joueur'; try { profHomeSync(); } catch (er) {} }
+    else if (t.id === 'accIn') { ACC.msg = ''; ACC.ask = ''; const b = $('accGo'); if (b) { b.disabled = !accValid(t.value); b.textContent = 'Récupérer mon profil'; } const m = $('accMsg'); if (m) m.hidden = true; }
+  });
+  return v;
+}
+function accOpen() { ACC.ask = ''; ACC.msg = ''; const v = accEl(); v.hidden = false; accDraw(); }
+function accClose() {
+  const v = $('accOv'); if (v) { v.hidden = true; v.innerHTML = ''; }
+  try { profRender(); } catch (e) {}
+  try { if (typeof amiPoll === 'function') amiPoll(); } catch (e) {}
+}
+function accDraw() {
+  const v = $('accOv'); if (!v || v.hidden) return;
+  const ask = ACC.ask;
+  v.innerHTML = `<div class="ami-sh" role="dialog" aria-label="Mon compte"><div class="ami-h"><h2>Mon compte</h2><button type="button" class="ami-x" data-acc="close" aria-label="Fermer">✕</button></div>` +
+    `<label class="acc-f"><span>Ton nom</span><input id="accNm" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(nick || 'Joueur')}"></label>` +
+    `<div class="ami-code"><span class="lb"><span>Ta clé de récupération</span><b class="acc-k">${esc(accKeyFmt(RKX.key))}</b></span></div>` +
+    `<div class="acc-row"><button type="button" class="ami-b" data-acc="copy">Copier la clé</button><button type="button" class="ami-b" data-acc="share">Envoyer</button></div>` +
+    `<p class="ami-note">Garde-la dans tes notes ou envoie-la-toi. Avec elle, tu retrouves tes amis et tes records en ligne sur n’importe quel appareil, même si le jeu a été effacé.</p>` +
+    `<div class="ami-sec"><span>J’ai déjà un profil</span></div>` +
+    `<p class="ami-note">Colle la clé de ton autre appareil. Ce profil-ci sera remplacé par celui-là : tes amis et tes records en ligne reviennent. Ton nom et ton niveau restent ceux de cet appareil.</p>` +
+    `<input class="acc-in" id="accIn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Clé de récupération" aria-label="Clé de récupération">` +
+    (ask ? `<p class="acc-msg">Remplacer ce profil (code ami ${esc(amiFmt(AMI.code) || '·')}) par celui de la clé ?</p><div class="acc-row"><button type="button" class="ami-b" data-acc="no">Annuler</button><button type="button" class="ami-b gold" data-acc="yes">Remplacer</button></div>`
+           : `<button type="button" class="ami-b wide gold" id="accGo" data-acc="go" disabled>Récupérer mon profil</button>`) +
+    `<p class="acc-msg" id="accMsg"${ACC.msg ? '' : ' hidden'}>${esc(ACC.msg)}</p></div>`;
+  if (ask) { const i = $('accIn'); if (i) i.value = ask; }
+}
+function accCopy() {
+  const k = RKX.key, ok = () => toast('Clé copiée', 'gold');
+  try { navigator.clipboard.writeText(k).then(ok, () => toast(accKeyFmt(k))); } catch (e) { toast(accKeyFmt(k)); }
+}
+function accClick(e) {
+  const b = e.target.closest && e.target.closest('[data-acc]'); if (!b) return;
+  const a = b.dataset.acc;
+  if (a === 'close') { sfx('back'); accClose(); return; }
+  if (a === 'copy') { sfx('click'); accCopy(); return; }
+  if (a === 'share') { sfx('click'); if (navigator.share) navigator.share({ title: 'Les Joutes', text: 'Ma clé de récupération des Joutes : ' + RKX.key }).catch(() => {}); else accCopy(); return; }
+  if (a === 'go') {
+    const k = accClean(($('accIn') || {}).value); sfx('click');
+    if (!accValid(k)) { ACC.msg = 'Cette clé n’a pas le bon format (32 lettres et chiffres).'; accDraw(); return; }
+    if (k === RKX.key) { ACC.msg = 'C’est déjà la clé de ce profil.'; accDraw(); return; }
+    ACC.ask = k; ACC.msg = ''; accDraw(); return;
+  }
+  if (a === 'no') { sfx('back'); ACC.ask = ''; accDraw(); return; }
+  if (a === 'yes') {
+    const k = ACC.ask; if (!accValid(k)) return; sfx('click');
+    try { localStorage.setItem('ddl-rkey-prev', RKX.key); localStorage.setItem('ddl-rkey', k); localStorage.removeItem('ddl-rpid'); } catch (er) { ACC.msg = 'Ce navigateur refuse d’écrire. Réessaie hors navigation privée.'; ACC.ask = ''; accDraw(); return; }
+    location.reload();
+  }
+}
+$('pfAcc').addEventListener('click', () => { audioInit(); sfx('click'); accOpen(); });
+$('pfNick').addEventListener('click', () => { audioInit(); sfx('click'); accOpen(); });
+try { if (WEB && navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+/* ================================================================ /version 106 */
 
 useTerrain(TERKEY);
 demo();
