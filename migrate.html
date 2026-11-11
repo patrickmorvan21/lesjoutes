@@ -8,7 +8,8 @@
      resteraient à l'ancienne adresse. La page de l'ancienne adresse les envoie ici, dans le # de l'adresse (le # n'est jamais envoyé à un serveur),
      et cette page les range, puis ouvre le jeu.
      - elle ne range que ce qui vient de l'ancienne adresse (le referrer), que les clés du jeu, que celles qui manquent encore ici, une seule fois ;
-     - le jeu garde ce qu'il a déjà ici : rien n'est écrasé. -->
+     - le jeu garde ce qu'il a déjà ici : rien n'est écrasé, SAUF quand ce qu'il a ici est un profil neuf (aucun nom, aucune partie, aucun record : le jeu
+       en crée un tout seul à la première visite) ou quand on le demande (l'ancienne adresse avec « ?restaurer ») : alors le profil de l'ancienne adresse reprend sa place. -->
 <title>Les Joutes</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#1b2b34">
@@ -33,12 +34,20 @@
     h = typeof d.h === 'string' && /^#[\w%=&.,~:;+!*'()@$\/?-]*$/.test(d.h) && d.h.length < 400 ? d.h : '';
     var ok = from === OLD && d && d.v === 1 && d.ls && typeof d.ls === 'object';
     var wrote = 0;
-    if (ok && !localStorage.getItem(FLAG)) {
+    // a profile that is new here: the game made it by itself (no name, no game played, no record, no friend's table)
+    function fresh() {
+      if (localStorage.getItem('ddl-nick')) return false;
+      try { var me = JSON.parse(localStorage.getItem('ddl-meta') || '{}'); if (me && me.games > 0) return false; } catch (e) {}
+      for (var i = 0; i < localStorage.length; i++) { var n = localStorage.key(i); if (/^(ddl-best|ddl-rec-meta|jt-maison$|farmtd-|gemtd-|gemmes-v1-)/.test(n) && !SKIP.test(n)) return false; }
+      return true;
+    }
+    var over = ok && (d.f === 1 || fresh());                        // asked for, or nothing to lose here
+    if (ok && (over || !localStorage.getItem(FLAG))) {
       for (var k in d.ls) {
-        if (!Object.prototype.hasOwnProperty.call(d.ls, k) || !KEEP.test(k) || SKIP.test(k)) continue;
+        if (!Object.prototype.hasOwnProperty.call(d.ls, k) || !KEEP.test(k) || SKIP.test(k) || k === FLAG) continue;
         var v = d.ls[k];
         if (typeof v !== 'string' || v.length > 200000) continue;
-        if (localStorage.getItem(k) === null) { localStorage.setItem(k, v); wrote++; }
+        if (over || localStorage.getItem(k) === null) { localStorage.setItem(k, v); wrote++; }
       }
       localStorage.setItem(FLAG, String(wrote));
     }
