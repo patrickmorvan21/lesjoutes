@@ -24733,6 +24733,16 @@ function lierFirst(n) {
 }
 setTimeout(() => lierFirst(0), 2600);
 /* ================================================================ /version 108 */
+/* version 109 (11/11): a white pixel pencil beside the name, « Mon compte » as a gold button */
+
+function nk109() { const el = $('pfNick'); if (!el || el.querySelector('.nm109')) return; const t = el.querySelector('.tt100'); const nm = (t ? [...el.childNodes].filter(n => n !== t).map(n => n.textContent).join('') : el.textContent); el.classList.add('nk100'); el.innerHTML = '<span class="nm109">' + esc(nm) + '</span>' + (t ? t.outerHTML : ''); }
+try { const el = $('pfNick'); nk109(); new MutationObserver(nk109).observe(el, { childList: true }); } catch (e) {}
+(function () { const st = document.createElement('style'); st.textContent = `#pfNick::after{content:none!important}
+#pfNick .nm109::after{content:"";display:inline-block;width:18px;height:18px;margin-left:7px;vertical-align:-2px;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2012%2012%22%20shape-rendering%3D%22crispEdges%22%20fill%3D%22%23fff%22%3E%3Crect%20x%3D%221%22%20y%3D%229%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%221%22%20y%3D%2210%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%222%22%20y%3D%229%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%222%22%20y%3D%2210%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%229%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%229%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%228%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%226%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%226%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%226%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%227%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%227%22%20y%3D%226%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%225%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%229%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3Crect%20x%3D%2210%22%20y%3D%223%22%20width%3D%221%22%20height%3D%221%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat;image-rendering:pixelated}
+#pfAcc{flex:none;height:48px;width:auto;align-self:stretch;background:#d5bf7b;color:#1b2b34;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22);font-size:15px}
+#pfAcc::after{content:"›";margin-left:2px;font-size:20px;line-height:1}
+`; document.head.appendChild(st); })();
+/* ================================================================ /version 109 */
 
 useTerrain(TERKEY);
 demo();
