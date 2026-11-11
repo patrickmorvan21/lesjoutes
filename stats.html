@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b1317">
+<title>Les Joutes · Stats</title>
+<style>
+:root{--bg:#0b1317;--panel:#13202a;--line:#26363e;--ink:#e0e5e6;--mut:#8ea2a7;--gold:#d5bf7b;--teal:#5fb7a6;--violet:#9b7fd1;--orange:#e0913a;--red:#c46d5c;--f:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:500 15px/1.4 var(--f)}
+body{padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px));max-width:760px;margin:0 auto}
+h1{margin:6px 0 2px;font:800 24px/1.1 var(--f);letter-spacing:-.01em}
+.sub{margin:0 0 14px;color:var(--mut);font-size:13px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+.seg{display:flex;background:var(--panel);box-shadow:inset 0 0 0 2px var(--line)}
+.seg button{border:0;background:none;color:var(--mut);font:700 13px/1 var(--f);padding:11px 14px;cursor:pointer}
+.seg button.on{background:var(--gold);color:#1b2b34}
+.btn{border:0;background:var(--panel);box-shadow:inset 0 0 0 2px var(--line);color:var(--ink);font:700 13px/1 var(--f);padding:11px 14px;cursor:pointer}
+.btn.on{box-shadow:inset 0 0 0 2px var(--gold);color:var(--gold)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.k{background:var(--panel);box-shadow:inset 0 0 0 2px var(--line);padding:12px 12px 10px}
+.k b{display:block;font:800 28px/1 var(--f);letter-spacing:-.02em}.k.hot b{color:var(--gold)}
+.k span{display:block;margin-top:6px;color:var(--mut);font-size:12px}
+.card{background:var(--panel);box-shadow:inset 0 0 0 2px var(--line);padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 2px;font:800 15px/1.2 var(--f)}.card p.d{margin:0 0 12px;color:var(--mut);font-size:12.5px}
+.big{margin:0 0 12px;padding:14px;background:#1b2b34;box-shadow:inset 0 0 0 2px var(--gold);font:700 16px/1.35 var(--f)}
+.big em{font-style:normal;color:var(--gold)}
+svg{display:block;width:100%;height:auto;overflow:visible}svg text{font:600 10px var(--f);fill:var(--mut)}
+.row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}.row .n{flex:none;width:96px;color:var(--ink)}.row .t{flex:1;height:14px;background:#0b1317}.row .t i{display:block;height:100%}.row .v{flex:none;width:64px;text-align:right;font-weight:700}
+.leg{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--mut)}.leg i{display:inline-block;width:10px;height:10px;margin-right:6px}
+.fun{display:flex;flex-direction:column;gap:6px}.fun div{position:relative;height:38px;background:#0b1317;display:flex;align-items:center;padding:0 10px;font-size:13px;font-weight:700}.fun div i{position:absolute;left:0;top:0;bottom:0;background:var(--teal);opacity:.35}.fun div span{position:relative;flex:1}.fun div b{position:relative}
+.msg{padding:18px;background:var(--panel);box-shadow:inset 0 0 0 2px var(--line);margin:20px 0;color:var(--mut)}
+input.key{width:100%;height:48px;border:0;background:#0b1317;box-shadow:inset 0 0 0 2px var(--line);color:var(--ink);font:600 16px var(--f);padding:0 12px;margin:10px 0}
+.foot{margin-top:18px;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<h1>Les Joutes · Stats</h1>
+<p class="sub" id="sub">Chargement…</p>
+<div id="app"></div>
+<script>
+(function(){
+'use strict';
+var SRV = /^(127\.0\.0\.1|localhost)$/.test(location.hostname) ? 'http://127.0.0.1:8787' : 'https://lesjoutes.patrick-morvan21.workers.dev';
+var $ = function (id) { return document.getElementById(id); };
+var days = 14, last = null;
+function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} return null; }
+function post(path, body) { return fetch(SRV + path, { method: 'POST', mode: 'cors', credentials: 'omit', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(body) }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { d.status = r.status; return d; }); }); }
+var N = function (x) { return (x || 0).toLocaleString('fr-FR'); };
+function dur(s) { s = Math.round(s || 0); if (s < 60) return s + ' s'; var m = Math.floor(s / 60); if (m < 60) return m + ' min' + (s % 60 >= 30 && m < 10 ? ' 30' : ''); return Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; }
+var pct = function (a, b) { return b ? Math.round(100 * a / b) : 0; };
+function bars(list, color) { var mx = Math.max.apply(null, list.map(function (r) { return r.v; }).concat([1])); return list.map(function (r) { return '<div class="row"><span class="n">' + r.n + '</span><span class="t"><i style="width:' + Math.max(r.v ? 3 : 0, 100 * r.v / mx) + '%;background:' + (r.c || color || 'var(--gold)') + '"></i></span><span class="v">' + (r.t || N(r.v)) + '</span></div>'; }).join(''); }
+function chart(rows) {
+  var W = 700, H = 190, L = 30, B = 24, T = 10, n = rows.length, mx = Math.max.apply(null, rows.map(function (r) { return r.sessions; }).concat([1])), mm = Math.max.apply(null, rows.map(function (r) { return r.secs / 60; }).concat([1]));
+  var bw = (W - L) / n, s = '';
+  for (var g = 0; g <= 2; g++) { var y = T + (H - B - T) * (1 - g / 2); s += '<line x1="' + L + '" x2="' + W + '" y1="' + y + '" y2="' + y + '" stroke="#26363e"/><text x="0" y="' + (y + 3) + '">' + Math.round(mx * g / 2) + '</text>'; }
+  var pts = [];
+  rows.forEach(function (r, i) { var h = (H - B - T) * r.sessions / mx, x = L + i * bw; s += '<rect x="' + (x + bw * .18) + '" y="' + (H - B - h) + '" width="' + (bw * .64) + '" height="' + Math.max(h, r.sessions ? 2 : 0) + '" fill="#d5bf7b"/>'; pts.push((x + bw / 2) + ',' + (T + (H - B - T) * (1 - (r.secs / 60) / mm))); if (n <= 16 || i % 2 === 0) s += '<text x="' + (x + bw / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + r.d.slice(8) + '/' + r.d.slice(5, 7) + '</text>'; });
+  s += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#5fb7a6" stroke-width="2.5"/>';
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Sessions et minutes jouées par jour">' + s + '</svg><div class="leg"><span><i style="background:#d5bf7b"></i>Joueurs ce jour-là (ouvertures du jeu)</span><span><i style="background:#5fb7a6"></i>Minutes jouées (max ' + Math.round(mm) + ')</span></div>';
+}
+function hoursChart(h) { var W = 700, H = 110, mx = Math.max.apply(null, h.concat([1])), bw = W / 24, s = ''; h.forEach(function (v, i) { var hh = (H - 22) * v / mx; s += '<rect x="' + (i * bw + 2) + '" y="' + (H - 18 - hh) + '" width="' + (bw - 4) + '" height="' + Math.max(hh, v ? 2 : 0) + '" fill="#9b7fd1"/>'; if (i % 3 === 0) s += '<text x="' + (i * bw + bw / 2) + '" y="' + (H - 4) + '" text-anchor="middle">' + i + ' h</text>'; }); return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Heures de jeu">' + s + '</svg>'; }
+function render(d) {
+  last = d; var t = d.total, pr = d.players || {}, ks = {}; d.byKind.forEach(function (r) { ks[r.w] = r; });
+  var solo = (ks.solo || {}).n || 0, tab = (ks.table || {}).n || 0, starts = solo + tab, ends = {}; d.ends.forEach(function (r) { ends[r.w] = r; });
+  var fin = ((ends.win || {}).n || 0) + ((ends.lose || {}).n || 0), quit = (ends.quit || {}).n || 0, endsAll = fin + quit;
+  var avgSess = t.sessions ? t.secs / t.sessions : 0, joined = {}; d.joins.forEach(function (r) { joined[r.w] = r.n; });
+  var tablesMade = d.perDay.reduce(function (a, r) { return a + (r.tables || 0); }, 0), joinsAll = d.perDay.reduce(function (a, r) { return a + (r.joins || 0); }, 0);
+  var h = '';
+  h += '<div class="bar"><div class="seg" id="per">' + [7, 14, 30, 90].map(function (x) { return '<button data-d="' + x + '"' + (x === days ? ' class="on"' : '') + '>' + x + ' j</button>'; }).join('') + '</div><button class="btn" id="rf">Actualiser</button><button class="btn' + (ls('ddl-stat-me') === '1' ? ' on' : '') + '" id="me">' + (ls('ddl-stat-me') === '1' ? 'Mes parties comptées' : 'Mes parties ignorées') + '</button></div>';
+  var real = d.tableSizes.reduce(function (a, r) { return a + (r.a >= 2 ? r.n : 0); }, 0);
+  if (starts) h += '<p class="big">Sur <em>' + N(starts) + '</em> parties lancées, <em>' + pct(solo, starts) + ' %</em> sont en solo contre des bots et <em>' + pct(tab, starts) + ' %</em> à une table, dont <em>' + N(real) + '</em> avec au moins 2 vrais joueurs.</p>';
+  else h += '<p class="big">Pas encore de partie sur cette période. Les chiffres arrivent dès que quelqu’un joue.</p>';
+  h += '<div class="grid">' +
+    '<div class="k hot"><b>' + N((d.now || {}).online) + '</b><span>en jeu maintenant (5 min)</span></div>' +
+    '<div class="k hot"><b>' + N(pr.h24) + '</b><span>joueurs connectés sur 24 h</span></div>' +
+    '<div class="k"><b>' + N(t.sessions) + '</b><span>ouvertures du jeu (' + days + ' j)</span></div>' +
+    '<div class="k"><b>' + dur(avgSess) + '</b><span>temps moyen par ouverture</span></div>' +
+    '<div class="k"><b>' + N(starts) + '</b><span>parties lancées</span></div>' +
+    '<div class="k"><b>' + pct(fin, endsAll) + ' %</b><span>parties jouées jusqu’au bout</span></div>' +
+    '<div class="k"><b>' + N(pr.d7) + '</b><span>joueurs connectés sur 7 j</span></div>' +
+    '<div class="k"><b>' + N(pr.joueurs) + '</b><span>profils créés en tout</span></div></div>';
+  h += '<div class="card"><h2>Fréquentation par jour</h2><p class="d">Combien d’ouvertures du jeu, et combien de minutes jouées.</p>' + (d.perDay.length ? chart(d.perDay) : '<p class="d">Rien à montrer pour l’instant.</p>') + '</div>';
+  h += '<div class="card"><h2>Du clic à la table entre amis</h2><p class="d">Sur les ouvertures du jeu : combien lancent une partie, jouent à une table, ou invitent / rejoignent.</p><div class="fun">' +
+    [['Ont ouvert le jeu', t.sessions], ['Ont lancé une partie', t.played], ['Ont joué à une table', t.withTable], ['Ont créé ou rejoint une table', t.social]].map(function (r) { return '<div><i style="width:' + pct(r[1], t.sessions) + '%"></i><span>' + r[0] + '</span><b>' + N(r[1]) + ' · ' + pct(r[1], t.sessions) + ' %</b></div>'; }).join('') + '</div></div>';
+  h += '<div class="card"><h2>Seul ou à plusieurs ?</h2><p class="d">Parties lancées en solo contre des bots, ou à une table.</p>' + bars([{ n: 'Solo, bots', v: solo, c: 'var(--orange)' }, { n: 'À une table', v: tab, c: 'var(--teal)' }]) +
+    '<p class="d" style="margin-top:12px">Taille des tables (joueurs réels) :</p>' + (d.tableSizes.length ? bars(d.tableSizes.map(function (r) { return { n: r.a + ' joueur' + (r.a > 1 ? 's' : ''), v: r.n, c: 'var(--teal)' }; })) : '<p class="d">Aucune table lancée encore.</p>') +
+    '<p class="d" style="margin-top:10px">Tables créées : <b style="color:var(--ink)">' + N(tablesMade) + '</b> · rejointes : <b style="color:var(--ink)">' + N(joinsAll) + '</b> (code ' + N(joined.code) + ', lien ' + N(joined.lien) + ', ami ' + N(joined.ami) + ')</p></div>';
+  var lab = { lt: 'Line Towers', gem: 'Gem TD', farm: 'Fusion TD' }, col = { lt: 'var(--gold)', gem: 'var(--violet)', farm: 'var(--orange)' };
+  h += '<div class="card"><h2>Modes joués</h2><p class="d">Parties lancées par mode (Gem TD et Fusion TD : VIP seulement pour l’instant).</p>' + bars(['lt', 'gem', 'farm'].map(function (m) { var r = d.byMode.filter(function (x) { return x.m === m; })[0]; return { n: lab[m], v: r ? r.n : 0, c: col[m] }; })) + '</div>';
+  h += '<div class="card"><h2>Parties finies, perdues, abandonnées</h2><p class="d">Line Towers uniquement (les deux autres modes ne signalent pas encore leur fin).</p>' + bars([{ n: 'Gagnées', v: (ends.win || {}).n || 0, c: 'var(--teal)' }, { n: 'Perdues', v: (ends.lose || {}).n || 0, c: 'var(--red)' }, { n: 'Quittées', v: quit, c: 'var(--mut)' }]) +
+    (endsAll ? '<p class="d" style="margin-top:10px">Durée moyenne d’une partie finie : <b style="color:var(--ink)">' + dur((((ends.win || {}).secs || 0) * ((ends.win || {}).n || 0) + ((ends.lose || {}).secs || 0) * ((ends.lose || {}).n || 0)) / Math.max(1, fin)) + '</b></p>' : '') + '</div>';
+  h += '<div class="card"><h2>Combien de temps on reste</h2><p class="d">Durée de chaque ouverture du jeu.</p>' + bars(['Moins d’1 min', '1 à 5 min', '5 à 15 min', '15 à 30 min', 'Plus de 30 min'].map(function (n, i) { return { n: n, v: d.buckets[i], c: i < 2 ? 'var(--red)' : i < 3 ? 'var(--gold)' : 'var(--teal)' }; })) + '</div>';
+  h += '<div class="card"><h2>À quelle heure on joue</h2><p class="d">Heure de Paris, ouvertures du jeu sur la période.</p>' + hoursChart(d.hours) + '</div>';
+  h += '<div class="card"><h2>Où on joue</h2><p class="d">Ouvertures par support.</p>' + bars([['web', 'Site (Safari…)'], ['icone', 'Icône d’accueil'], ['appli', 'App']].map(function (x) { var r = d.plat.filter(function (p) { return p.p === x[0]; })[0]; return { n: x[1], v: r ? r.n : 0 }; })) + '</div>';
+  h += '<p class="foot">Données anonymes : un identifiant tiré au hasard à chaque ouverture, jamais lié à un profil, à un nom ou à une adresse. Mis à jour le ' + new Date().toLocaleString('fr-FR') + '. Tes propres parties ne sont pas comptées, sauf si tu actives « Mes parties comptées ».</p>';
+  $('app').innerHTML = h; $('sub').textContent = 'Du ' + d.from.split('-').reverse().join('/') + ' au ' + d.today.split('-').reverse().join('/');
+  $('per').onclick = function (e) { var b = e.target.closest('button'); if (b) { days = +b.dataset.d; load(); } };
+  $('rf').onclick = function () { load(); };
+  $('me').onclick = function () { ls('ddl-stat-me', ls('ddl-stat-me') === '1' ? '0' : '1'); render(last); };
+}
+function ask(msg) {
+  $('sub').textContent = '';
+  $('app').innerHTML = '<div class="msg">' + msg + '<input class="key" id="k" placeholder="Ta clé de récupération" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn on" id="ok">Voir les stats</button></div>';
+  $('ok').onclick = function () { var v = $('k').value.trim(); if (/^[A-Za-z0-9]{32}$/.test(v)) { ls('ddl-stats-key', v); load(); } else $('k').style.boxShadow = 'inset 0 0 0 2px #c46d5c'; };
+}
+function load() {
+  var key = ls('ddl-rkey'); if (!/^[A-Za-z0-9]{32}$/.test(key || '')) key = ls('ddl-stats-key');
+  if (!/^[A-Za-z0-9]{32}$/.test(key || '')) { ask('Ouvre cette page depuis le jeu (Mon compte › Statistiques), ou colle ici ta clé de récupération.'); return; }
+  $('sub').textContent = 'Chargement…';
+  post('/stats/resume', { key: key, days: days }).then(function (d) {
+    if (d.status === 403) { ls('ddl-stats-key', null); ask('Cette clé n’ouvre pas les statistiques. Utilise la clé du profil de Patrick (Mon compte › Clé de récupération).'); return; }
+    if (!d.ok) { $('sub').textContent = 'Le serveur ne répond pas pour l’instant. Réessaie dans un instant.'; return; }
+    render(d);
+  }, function () { $('sub').textContent = 'Pas de connexion au serveur.'; });
+}
+load();
+})();
+</script>
+</body>
+</html>

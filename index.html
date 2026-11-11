@@ -24809,6 +24809,56 @@ body.v96 #multiBtn.join96{display:none}
 })();
 /* ================================================================ /version 110 */
 
+/* version 111 (11/11): anonymous statistics — a random id at each opening (never the profile's), time spent, games, tables */
+(function v111() {
+  const ST = { sid: '', q: [], cur: null, t0: Date.now(), last: Date.now(), src: '', inNet: false, mute: false };
+  const rnd = () => { let s = ''; const A = 'abcdefghijklmnopqrstuvwxyz0123456789'; for (let i = 0; i < 12; i++) s += A[(Math.random() * 36) | 0]; return s; };
+  ST.sid = rnd();
+  const plat = () => (window.Capacitor ? 'appli' : DEV.standalone ? 'icone' : 'web');
+  // not counted: the page on claude.ai, a test copy, the games of Patrick's own devices (unless he asks for them, from the page of statistics)
+  const on = () => { try { if (!WEB || !srvOK()) return false; if (localStorage.getItem('ddl-stat-test') === '1') return true; if (localStorage.getItem('ddl-rk-test') === '1') return false; if (VIP.admin && localStorage.getItem('ddl-stat-me') !== '1') return false; return true; } catch (e) { return false; } };
+  const push = e => { if (ST.q.length < 40) ST.q.push(e); };
+  function flush(keep) {
+    if (!ST.q.length || !on()) { ST.q = []; return; }
+    const ev = ST.q.splice(0, 20);
+    srvPost('/stat', { sid: ST.sid, p: plat(), ev }, keep).catch(() => {});
+  }
+  function tick(force) {
+    const now = Date.now(), dt = Math.round((now - ST.last) / 1000); ST.last = now;
+    if (!document.hidden || force) { if (dt > 0) push({ k: 'ping', n: Math.min(dt, 120) }); }
+  }
+  push({ k: 'open' });
+  setInterval(() => { if (!document.hidden) { tick(); flush(false); } else ST.last = Date.now(); }, 30000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { tick(true); closeGame('quit'); flush(true); } else ST.last = Date.now(); });
+  window.addEventListener('pagehide', () => { tick(true); closeGame('quit'); flush(true); });
+  setTimeout(() => flush(false), 6000);
+
+  function openGame(m, a, b, w) { closeGame('quit'); ST.cur = { m, a, w, t: Date.now() }; push({ k: 'start', m, a, b, w }); }
+  function closeGame(res) { const c = ST.cur; if (!c) return; ST.cur = null; push({ k: 'end', m: c.m, a: c.a, w: res, n: Math.round((Date.now() - c.t) / 1000) }); }
+
+  // Line Towers: alone against bots, or the host of a table (the guests' phones do not count the game again)
+  { const base = newGame; newGame = function (seats, me, diff, opts) {
+      const r = base.apply(this, arguments);
+      try { if (!(opts && (opts.guide || opts.spec)) && NET.mode !== 'client') { const h = seats.filter(x => !x.bot).length; openGame('lt', Math.max(1, h), seats.length - h, NET.mode === 'solo' ? 'solo' : 'table'); } } catch (e) {}
+      return r; }; }
+  { const base = finish; finish = function (winner) { const was = G && G.ended; const r = base.apply(this, arguments); try { if (!was && ST.cur && ST.cur.m === 'lt') closeGame(winner === G.me && !G.spec ? 'win' : 'lose'); } catch (e) {} return r; }; }
+  // Gem TD and Fusion TD: their pages run apart; the start is counted (the time comes from the pings)
+  { const base = openGem; openGem = function () { const was = GEMX.open; const r = base.apply(this, arguments); try { if (!was && !ST.inNet) openGame('gem', 1, 0, 'solo'); } catch (e) {} return r; }; }
+  { const base = openFarm; openFarm = function () { const was = FARMX.open; const r = base.apply(this, arguments); try { if (!was && !ST.inNet) openGame('farm', 1, 0, 'solo'); } catch (e) {} return r; }; }
+  { const base = gemOpenNet; gemOpenNet = function (gc) { ST.inNet = true; try { return base.apply(this, arguments); } finally { ST.inNet = false; try { if (NET.mode === 'host' && gc && gc.seats) { const h = gc.seats.filter(y => !y[1]).length; openGame('gem', h, gc.seats.length - h, 'table'); } } catch (e) {} } }; }
+  { const base = farmOpenNet; farmOpenNet = function (fc) { ST.inNet = true; try { return base.apply(this, arguments); } finally { ST.inNet = false; try { if (NET.mode === 'host' && fc && fc.seats) { const h = fc.seats.filter(y => !y[1]).length; openGame('farm', h, fc.seats.length - h, 'table'); } } catch (e) {} } }; }
+  // tables created, tables joined (by a typed code, a friend's link, or the friend who waits)
+  { const base = hostCreate; hostCreate = function () { try { push({ k: 'table', m: PLAYMODE === 'gem' || PLAYMODE === 'farm' ? PLAYMODE : 'lt' }); } catch (e) {} return base.apply(this, arguments); }; }
+  ['jn110Go', 'jbGo'].forEach(id => { const el = $(id); if (el) el.addEventListener('click', () => { ST.src = 'code'; }, true); });
+  { const el = $('waitPlate'); if (el) el.addEventListener('click', () => { ST.src = 'ami'; }, true); }
+  { const base = clientJoin; clientJoin = function () { try { push({ k: 'join', w: ST.src || (NET.inviteCode ? 'lien' : 'code') }); ST.src = ''; } catch (e) {} return base.apply(this, arguments); }; }
+
+  // Mon compte, for Patrick only: the page of statistics
+  { const base = accVipHTML; accVipHTML = function () { let h = base.apply(this, arguments); if (VIP.admin) h += `<a class="ami-b wide gold" href="/stats.html" style="text-decoration:none;margin-top:10px">Voir les statistiques du jeu</a>`; return h; }; }
+  window.__ST = ST;
+})();
+/* ================================================================ /version 111 */
+
 useTerrain(TERKEY);
 demo();
 layout(); Object.assign(cam, allCam());
@@ -24818,7 +24868,5 @@ requestAnimationFrame(frame);
 </script>
 
 
-<!-- Cloudflare Web Analytics (sans cookie, sans suivi individuel) : seulement sur lesjoutes.fr -->
-<script>if(location.hostname==='lesjoutes.fr'){var cf=document.createElement('script');cf.type='module';cf.defer=true;cf.src='https://static.cloudflareinsights.com/beacon.min.js';cf.setAttribute('data-cf-beacon','{"token": "698a980e834e480ba71d8e981bb4d38e"}');document.body.appendChild(cf);}</script>
 </body>
 </html>
