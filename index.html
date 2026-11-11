@@ -24714,6 +24714,26 @@ soonMarks();
 setTimeout(() => { psStart(); psLoop(); }, 1500);
 /* ================================================================ /version 107 */
 
+/* version 108 (11/11): a new home-screen icon starts empty: « Tu jouais déjà ailleurs ? », the link code at its first opening */
+{ const base = accLinkHTML; accLinkHTML = function () {
+    let h = base.apply(this, arguments);
+    if (!ACC.lead || ACC.link !== 'enter') return h;
+    h = h.replace('data-acc="lkno">Annuler<', 'data-acc="lkno">Non, je commence<');
+    return `<p class="acc-q">Cette icône démarre avec un profil vide. Tu jouais déjà dans Safari ou sur un autre appareil ? Là-bas : <b>Mon compte › Lier un appareil › Afficher un code</b>, puis tape le code ici.</p>` + h;
+}; }
+{ const base = accClick; accClick = function (e) { const b = e.target.closest && e.target.closest('[data-acc="lkno"]'); if (b && ACC.lead) { sfx('back'); accClose(); return; } return base.call(this, e); }; }
+{ const base = accClose; accClose = function () { ACC.lead = false; return base.apply(this, arguments); }; }
+function lierFirst(n) {
+  if (!WEB || !DEV.standalone || !srvOK()) return;
+  if (psGet('ddl-lier-vu') === '1' || psGet('ddl-prof-take') === '1' || psGames(psSnap()) > 0 || psGet('ddl-best')) return;
+  const ov = $('startOv'), acc = $('accOv');
+  if (!ov || ov.hidden || (ov.dataset.view || 'home') !== 'home' || (acc && !acc.hidden) || (typeof G !== 'undefined' && G && G.running && !G.quiet)) { if (n < 40) setTimeout(() => lierFirst(n + 1), 2000); return; }
+  psPut('ddl-lier-vu', '1');
+  accOpen(); ACC.link = 'enter'; ACC.lead = true; accDraw();
+}
+setTimeout(() => lierFirst(0), 2600);
+/* ================================================================ /version 108 */
+
 useTerrain(TERKEY);
 demo();
 layout(); Object.assign(cam, allCam());
