@@ -25323,7 +25323,7 @@ body.jn112 #jn110 .jn-go{height:54px;font-size:15px}
     cerf(C, k, A) {
       const ANT = [0, 0, 52, 19], STAFF = [38, 6, 53, 92];
       const lh = { givre: [198, .7, 1.2], cendre: [22, 1, 1], sable: [46, 1, 1], ebene: [276, .9, 1], rose: [335, .9, 1.05] }[k];
-      C.hue(cyan, ALL, lh[0], lh[1], lh[2]);
+      C.hue(cyan, [44, 8, 61, 45], lh[0], lh[1], lh[2]);   // version 117: the lantern only (her eyes are cyan too: they stay)
       const top = (x, y) => !C.is(x, y - 1, cream), bot = (x, y) => !C.is(x, y + 1, cream);
       const a = C.at(cream, ANT); if (!a) return;
       C.each(cream, ANT, (x, y) => {
@@ -25334,7 +25334,6 @@ body.jn112 #jn110 .jn-go{height:54px;font-size:15px}
         if (k === 'ebene' && top(x, y) && rx % 7 === 3) { C.set(x, y - 2, hex('#f1eaff'), true); if (rx % 14 === 3) { C.set(x - 1, y - 2, hex('#9b6ae0'), true); C.set(x + 1, y - 2, hex('#9b6ae0'), true); C.set(x, y - 3, hex('#9b6ae0'), true); C.set(x, y - 1, hex('#9b6ae0'), true); } }
       });
       if (k === 'rose') C.each(cream, ANT, (x, y) => { const rx = x - a[0]; if (top(x, y) && rx % 6 === 2) C.stamp(['.p.', 'pYp', '.p.'], { p: '#ff8fb0', Y: '#fff0b4' }, x - 1, y - 2, 1); });
-      const sa = C.at(brown, STAFF); if (sa && k !== 'cendre') C.each(brown, STAFF, (x, y) => { const ry = y - sa[1]; if (ry > 26 && ry % 7 < 2) C.set(x, y, hex(A.m)); });
     },
     // ------------------------------------------------------------ the Ours: the stone of his hammer, his fur, marks on his skull
     ours(C, k, A) {
