@@ -25707,6 +25707,24 @@ body.jn112 #jn110 .jn-go{height:54px;font-size:15px}
   let n = 0; const tm = setInterval(() => { try { if (sync() && !$('profil').hidden) profRender(); } catch (e) {} if (++n > 20) clearInterval(tm); }, 1500);
 })();
 
+/* version 120 (13/11): the outfit chosen is kept from one visit to the next. The legendaries added after the profile is read (the Renard
+   and Corbeau ones, the Ours ones, Chloue's) were not yet known when it was cleaned, so the profile dropped them and put « bois » back.
+   Now, once all are known, the saved choice is put back; a second copy of the choice is kept in 'ddl-eqkeep'. */
+(function keep120() {
+  const KEEP = 'ddl-eqkeep';
+  const rd = k => { try { return JSON.parse(localStorage.getItem(k) || 'null') || {}; } catch (e) { return {}; } };
+  const own = (t, m) => { try { return !!t && !!legOf(t, m) && !!legHas(t, m); } catch (e) { return false; } };
+  const put = () => { try { const o = {}; for (const m of MAISONS) o[m] = PMETA.eq[m].tenue; localStorage.setItem(KEEP, JSON.stringify(o)); } catch (e) {} };
+  { const base = profSave; profSave = function () { base.apply(this, arguments); put(); }; }
+  const raw = rd(PROF_KEY).eq || {}, keep = rd(KEEP); let changed = false;
+  for (const m of MAISONS) {
+    const r = raw[m] && raw[m].tenue;
+    const t = TENUE_KEYS.includes(r) || own(r, m) ? r : (own(keep[m], m) ? keep[m] : null);
+    if (t && PMETA.eq[m] && PMETA.eq[m].tenue !== t) { PMETA.eq[m].tenue = t; changed = true; }
+  }
+  if (changed) profSave(); else put();
+})();
+
 
 
 
