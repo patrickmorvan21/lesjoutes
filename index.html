@@ -8816,7 +8816,7 @@ function podHeadApply(b, hv) {
 const POD_BGS = ['nuit', 'lac', 'aube', 'cimes'];
 function podBgOpen() {
   let l = []; try { l = JSON.parse(localStorage.getItem('ddl-fin-bgs') || '[]'); } catch (e) {}
-  return POD_BGS.filter(k => k === 'nuit' || (Array.isArray(l) && l.includes(k)));
+  return POD_BGS.slice();   // version 113
 }
 function podBgKey() { let k = ''; try { k = localStorage.getItem('ddl-fin-bg') || ''; } catch (e) {} return podBgOpen().includes(k) ? k : 'nuit'; }
 function podRng(seed) { let a = seed >>> 0; const f = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -9068,12 +9068,12 @@ function podDraw() {
   x.fillStyle = '#1c2a33'; x.fillRect(0, D(g.plateTop), cw, ch - D(g.plateTop));
   x.fillStyle = 'rgba(255,255,255,.07)'; x.fillRect(0, D(g.plateTop), cw, Math.max(1, D(3)));
   // the podium: 2-1-3 (or 1-2), the winner's step in the middle of the screen
-  const rows = R.rows, n = Math.min(3, rows.length), colW = Math.min(W, 440), cx = W / 2, gap = 6;
-  const sw = Math.floor(Math.min(n === 3 ? 118 : 124, (colW - 20 - (n - 1) * gap) / n));
+  const rows = R.rows, n = 1, colW = Math.min(W, 440), cx = W / 2, gap = 6;   // version 113: the winner alone
+  const sw = Math.floor(Math.min(n === 3 ? 118 : n === 1 ? 168 : 124, (colW - 20 - (n - 1) * gap) / n));
   const h1 = Math.max(34, Math.min(70, avail * 0.18)), hs = { 1: h1, 2: Math.max(28, h1 * (n === 3 ? 0.69 : 0.63)), 3: Math.max(24, h1 * 0.46) };
   const xs = n === 3 ? { 2: cx - sw * 1.5 - gap, 1: cx - sw / 2, 3: cx + sw / 2 + gap } : { 1: cx - sw / 2, 2: cx - sw / 2 - gap - sw * 0.9 };
   const wOf = r => (n === 2 && r === 2 ? sw * 0.9 : sw);
-  const kk = Math.max(0.22, Math.min(0.8, avail * 0.46 / 267));
+  const kk = Math.max(0.22, Math.min(1.1, avail * 0.6 / 267));
   // the banner first (behind the winner), hung from under the title
   const win = rows[0], bc = podBanner(win.b), bf = podSnap(Math.max(1.5, avail * 0.0122));
   x.drawImage(bc, D(xs[1] + sw / 2 - bc.width * bf / 2), D(top), D(bc.width * bf), D(bc.height * bf));
@@ -9107,8 +9107,7 @@ function podDraw() {
     x.fillRect(X, Y, s, s); if (sh === 1) x.fillRect(X + s, Y, s, s); else if (sh === 2) x.fillRect(X, Y + s, s, s); else if (sh === 3) x.fillRect(X + s, Y + s, s, s);
   }
   // the place numbers on the faces of the steps
-  $('finRanks').innerHTML = Object.keys(geo).map(r => { const q = geo[r], fs = Math.max(16, Math.round({ 1: 44, 2: 34, 3: 27 }[r] * Math.min(1, q.h / ({ 1: 70, 2: 48, 3: 32 }[r]) * 1.1)));
-    return `<span class="fin-rk${+r === 1 ? ' gold' : ''}" style="left:${q.cx.toFixed(1)}px;top:${(q.y + 10 + (q.h - 10) / 2 - fs * 0.52).toFixed(1)}px;font-size:${fs}px">${r}</span>`; }).join('');
+  { const q = geo[1]; $('finRanks').innerHTML = q ? `<span class="fin-rk gold nm113" style="left:${q.cx.toFixed(1)}px;top:${(q.y + 10 + (q.h - 10) / 2 - 11).toFixed(1)}px">${esc(rows[0].name)}</span>` : ''; }   // version 113: the winner's name on his step
   if (!ready && PODX.redraw++ < 40) setTimeout(() => { if (PODX.res) podDraw(); }, 120);
   else PODX.redraw = 0;
 }
@@ -24903,6 +24902,227 @@ body.jn112 #jn110 .jn-go{height:54px;font-size:15px}
   { const base = soonMarks; soonMarks = function () { const r = base.apply(this, arguments); try { document.body.classList.toggle('vip112', !!(WEB && SOON && VIP.on)); } catch (e) {} return r; }; }
   try { soonMarks(); } catch (e) {}
 })();
+
+/* version 113 (13/11, Patrick 9 h 23, on the board « Propositions du 12/11 »):
+   3C · the défi du jour as a thin band (a finer crown, a small chevron);
+   4A · the end of Line Towers: the winner alone on the scene (the same backgrounds, now chosen in the profile: « Décor »), his name on the
+        step, the scores, the three distinctions, the level's gauge that fills (and passes the level), « Retour à la table »;
+   5A · the profile speaks of the general only; « Mon compte » is in the settings. */
+(function v113() {
+  const st = document.createElement('style');
+  // ---------------------------------------------------------------- the crown (22 × 14 art pixels)
+  const CROWN = ['..........hh..........', '.........hGGh.........', '.h.......gGGg.......h.', 'hGh......gGGg......hGh', '.G......gGhGGg......G.', '.gG.....gGhGGg.....Gg.', '.gGG...gGGhGGGg...GGg.', '.gGGG.gGGGhGGGGg.GGGg.', '.gGGGGGGGGhGGGGGGGGGg.', '.gGhGGGGGGGGGGGGGGGGg.', '.dddddddddddddddddddd.', '.gGhGbBGGGrRrGGGbBGGg.', '.gGGGbbGGGrrrGGGbbGGg.', '.dddddddddddddddddddd.'];
+  let crown = '';
+  try {
+    const pal = { G: '#e2c467', h: '#fbefc0', g: '#c9a550', d: '#8a6a2c', r: '#a8382f', R: '#e3766a', b: '#3f6ea3', B: '#8fbbe6' }, k = 4, c = document.createElement('canvas');
+    c.width = 22 * k; c.height = CROWN.length * k; const x = c.getContext('2d');
+    CROWN.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (pal[r[i]]) { x.fillStyle = pal[r[i]]; x.fillRect(i * k, j * k, k, k); } });
+    crown = c.toDataURL();
+  } catch (e) {}
+  st.textContent = `
+/* 3C · the défi: a thin band */
+#defiBtn.df-card{height:50px!important;background:rgba(15,26,33,.92)!important;box-shadow:inset 0 0 0 2px #33474f!important;display:flex!important;align-items:center;gap:10px;padding:0 14px!important}
+#defiBtn.df-card .bg,#defiBtn.df-card .sh{display:none!important}
+#defiBtn.df-card .t{position:static!important;flex:1;min-width:0;display:flex!important;flex-direction:row!important;align-items:center;justify-content:flex-start;gap:10px!important;inset:auto}
+#defiBtn.df-card .k{flex:none;font:700 10.5px/1 var(--f)!important;letter-spacing:.16em;color:var(--gold);padding-right:10px;box-shadow:inset -2px 0 0 #33474f;height:18px;display:flex;align-items:center;order:1}
+#defiBtn.df-card .w{order:2;flex:1;min-width:0;gap:7px!important}
+#defiBtn.df-card .w .n{font:600 15px/1 var(--f)!important}
+#defiBtn.df-card .w b{font:400 19px/1 var(--fb)!important;color:var(--gold)!important}
+#defiBtn.df-card .cr113{flex:none;order:0;width:27px;height:17px;image-rendering:pixelated;margin-right:0}
+#defiBtn.df-card .w>.px:first-child,#defiBtn.df-card .w>svg:first-child,#defiBtn.df-card .w>canvas:first-child{display:none!important}
+#defiBtn.df-card .go{position:static!important;transform:none!important;flex:none;width:auto!important;height:auto!important;padding:0!important;background:none!important;box-shadow:none!important;border:0!important;color:var(--gold)!important;display:grid;place-items:center}
+#defiBtn.df-card .go svg{width:8px;height:13px}
+/* 5A · the profile: the general only */
+#pfAcc{display:none!important}
+#pfNick{pointer-events:none}
+#pfNick .nm109{font-size:0!important}
+#pfNick .nm109::after{display:none!important}
+#pfNick .nm109::before{content:"Ton général";font:400 22px/1 var(--ft);color:#e0e5e6}
+#pfNick .tt100{display:none!important}
+.acc113{display:flex;align-items:center;gap:12px;width:100%;margin:0;padding:10px 14px 10px 10px;border:0;border-radius:0;background:#1b2b34;box-shadow:inset 0 0 0 2px var(--gold);color:#e0e5e6;font-family:var(--f);text-align:left;cursor:pointer}
+.acc113 canvas{flex:none;width:44px;height:44px;image-rendering:pixelated;background:#0f1a21}
+.acc113 .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.acc113 .cp113{font:700 10.5px/1 var(--f);letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.acc113 b{font:600 16px/1 var(--f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acc113 small{font:500 12.5px/1 var(--f);color:#8ea2a7;margin-left:8px}
+.acc113 svg{flex:none;color:var(--gold)}
+/* the profile's fourth tab: the décor of the end */
+#profil #pfTabs.t113{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
+#profil #pfTabs.t113 button{letter-spacing:.06em!important;font-size:11.5px!important;min-width:0;padding:0 2px!important;width:auto!important}
+#profil #pfList[data-tab="decor"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+.dc113{position:relative;width:100%;display:flex;flex-direction:column;gap:0;padding:0;border:0;border-radius:0;background:#13202a;box-shadow:inset 0 0 0 2px #2c4049;color:#e0e5e6;font-family:var(--f);cursor:pointer;overflow:hidden;text-align:left}
+.dc113 canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.dc113 span{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:9px 10px;font:600 14px/1 var(--f)}
+.dc113 em{font:700 9.5px/1 var(--f);font-style:normal;letter-spacing:.12em;text-transform:uppercase;color:#1b2b34;background:var(--gold);padding:4px 5px}
+.dc113[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--gold)}
+.dc113[aria-pressed="false"] em{display:none}
+.dcn113{grid-column:1/-1;margin:2px 0 0;font:500 13px/1.35 var(--f);color:#8ea2a7}
+/* 4A · the end of Line Towers */
+#endOv.fin .panel{grid-template-rows:auto auto minmax(var(--fin-scene,190px),1fr) auto auto auto auto!important}
+#endOv.fin .fin-rk.nm113{font:400 22px/1 var(--ft);color:#8a6a2c;text-shadow:0 1px 0 rgba(255,250,235,.5);white-space:nowrap;letter-spacing:.02em}
+#endOv.fin .pf-end.in113{position:static;grid-row:5;grid-column:1/-1;z-index:auto;margin:8px 0 0;max-width:none;width:100%;box-shadow:inset 0 0 0 1px #33474f;background:#16242d}
+#endOv.fin .pf-end.in113.open{box-shadow:inset 0 0 0 2px var(--gold)}
+#endOv.fin .pf-end.in113 .pf-line .pf-lv{display:block;font:600 13px/1 var(--f);color:#b9c4c6}
+#endOv.fin .pf-end.in113 .pf-line .pf-lv em{font-style:normal;color:var(--gold)}
+#endOv.fin .pf-end.in113 .pf-line .pf-n{display:none}
+#endOv.fin .pf-end.in113 .pf-line .pf-xp{order:9;font-size:22px}
+#endOv.fin #endMain{grid-row:6!important;grid-column:1!important;margin-top:12px!important}
+#endOv.fin #endAlt{grid-row:6!important;grid-column:2!important;margin-top:12px!important}
+#endOv.fin.host #endRe{grid-row:6!important;grid-column:1/-1!important;margin-top:12px!important}
+#endOv.fin.host #endMain{grid-row:7!important;grid-column:1!important;margin-top:8px!important}
+#endOv.fin.host #endAlt{grid-row:7!important;grid-column:2!important;margin-top:8px!important}
+#endOv.fin #endMain,#endOv.fin #endAlt,#endOv.fin #endRe{min-width:0;padding-left:6px;padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the gauge that fills */
+.pf-bar i{transition:none}
+.pf-bar.go113 i{transition:width .9s cubic-bezier(.3,.7,.3,1)}
+.pf-bar.go113 .g{background:#f4d97f;box-shadow:0 0 6px rgba(244,217,127,.55)}
+.pf-end.up113 .pf-lv{animation:up113 .7s steps(6) 1}
+.pf-end.up113 .pf-bar{animation:fl113 .5s steps(4) 1}
+@keyframes up113{0%{transform:scale(1)}40%{transform:scale(1.25);color:#fff6cc}100%{transform:scale(1)}}
+@keyframes fl113{0%{box-shadow:0 0 0 0 rgba(244,217,127,.9)}100%{box-shadow:0 0 0 8px rgba(244,217,127,0)}}
+.pf-lv{transform-origin:left center}
+@media (prefers-reduced-motion:reduce){.pf-bar.go113 i{transition:none}.pf-end.up113 .pf-lv,.pf-end.up113 .pf-bar{animation:none}}
+`;
+  document.head.appendChild(st);
+
+  // ---------------------------------------------------------------- 3C · the crown of the band
+  if (typeof dfCard === 'function' && crown) {
+    const base = dfCard;
+    dfCard = function () {
+      const r = base.apply(this, arguments);
+      try {
+        const b = $('defiBtn'); if (b) {
+          let im = b.querySelector('.cr113');
+          if (!im) { im = document.createElement('img'); im.className = 'cr113'; im.alt = ''; im.draggable = false; im.src = crown; b.insertBefore(im, b.firstChild); }
+        }
+      } catch (e) {}
+      return r;
+    };
+    try { dfCard(); } catch (e) {}
+  }
+
+  // ---------------------------------------------------------------- 5A · « Mon compte » in the settings
+  try {
+    const row = $('soundRow');
+    if (row && !$('acc113')) {
+      const g = document.createElement('div'); g.className = 'sh-grp'; g.id = 'accRow113';
+      g.innerHTML = '<span class="cp">Mon compte</span><button type="button" class="acc113" id="acc113"><canvas width="24" height="24"></canvas><span class="tx"><span class="cp113">Nom, code ami, récupération</span><b id="acc113N"></b></span>' +
+        '<svg width="9" height="14" viewBox="0 0 9 14" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M1.5 1.5l5.5 5.5-5.5 5.5"/></svg></button>';
+      row.parentNode.insertBefore(g, row);
+      const sync = () => {
+        let n = ''; try { n = localStorage.getItem('ddl-nick') || ''; } catch (e) {}
+        let code = ''; try { code = typeof AMI !== 'undefined' && AMI.code ? amiFmt(AMI.code) : ''; } catch (e) {}
+        $('acc113N').innerHTML = esc(n || 'Sans nom') + (code ? `<small>code ami ${esc(code)}</small>` : '');
+        const cv = g.querySelector('canvas'), m = EMB[myMaison] ? myMaison : 'cerf';
+        const draw = () => profCrop(cv, m, myCol, profCos(m).tenue, PROF_FACE, 24);
+        try { if (!draw()) profWhen(m, draw); } catch (e) {}
+      };
+      $('prefBtn').addEventListener('click', () => { try { sync(); } catch (e) {} });
+      $('acc113').addEventListener('click', () => { audioInit(); sfx('click'); try { sheetClose(true); } catch (e) {} accOpen(); });
+    }
+  } catch (e) {}
+
+  // ---------------------------------------------------------------- the profile's « Décor »: the background of the end
+  const DC_N = { nuit: 'Nuit sur le lac', lac: 'Lac doré', aube: 'Aube', cimes: 'Cimes' };
+  try {
+    const tabs = $('pfTabs');
+    if (tabs && !tabs.querySelector('[data-tab="decor"]')) {
+      tabs.classList.add('t113');
+      tabs.insertAdjacentHTML('beforeend', '<button type="button" role="tab" data-tab="decor" aria-selected="false">Décor</button>');
+    }
+    const base = profList;
+    profList = function (m, col, cos) {
+      if (PF.tab !== 'decor') return base.apply(this, arguments);
+      const box = $('pfList'); box.dataset.tab = 'decor';
+      const cur = podBgKey();
+      box.innerHTML = POD_BGS.map(k => `<button type="button" class="dc113" data-decor="${k}" aria-pressed="${k === cur}"><canvas width="96" height="60"></canvas><span>${DC_N[k] || k}<em>Choisi</em></span></button>`).join('') +
+        '<p class="dcn113">Le décor derrière le vainqueur, à la fin d’une partie de Line Towers.</p>';
+      box.querySelectorAll('.dc113').forEach(b => {
+        try { const cv = b.querySelector('canvas'), src = podBgCanvas(b.dataset.decor, 96, 60, 30, 46, 0), x = cv.getContext('2d'); x.drawImage(src, 0, 0); } catch (e) {}
+      });
+      PODX.art.bg = null;
+    };
+    $('pfList').addEventListener('click', e => {
+      const b = e.target.closest('[data-decor]'); if (!b) return;
+      sfx('click'); try { localStorage.setItem('ddl-fin-bg', b.dataset.decor); } catch (er) {}
+      profRender();
+    });
+  } catch (e) {}
+
+  // ---------------------------------------------------------------- 4A · the level's plate in the end's own column, folded, its gauge filling
+  function gauge(el, L) {
+    if (!el || !L || L.an113) return;
+    L.an113 = 1;
+    const L0 = pfLvlOf(L.xp0), L1 = pfLvlOf(L.xp1), pct = (xp, lv) => { const lo = PROF_XP[lv - 1] || 0, hi = PROF_XP[lv]; return hi === undefined ? 100 : Math.max(0, Math.min(100, (xp - lo) / (hi - lo) * 100)); };
+    const bars = [...el.querySelectorAll('.pf-bar')], lvs = [...el.querySelectorAll('.pf-lv')];
+    const set = (a, g, anim) => bars.forEach(b => { const A = b.querySelector('.a'), Gi = b.querySelector('.g'); if (!A || !Gi) return; b.classList.toggle('go113', !!anim); A.style.width = a + '%'; Gi.style.left = a + '%'; Gi.style.width = Math.max(0, g - a) + '%'; });
+    const flow = () => { bars.forEach(b => void b.offsetWidth); };
+    const end = lvs.map(e => e.innerHTML);
+    if (L1 > L0) {
+      const a0 = pct(L.xp0, L0);
+      lvs.forEach(e => { e.textContent = 'Niveau ' + L0; });
+      set(a0, a0, false); flow();
+      setTimeout(() => { set(a0, 100, true); }, 500);
+      setTimeout(() => {
+        if (!el.isConnected) return;
+        lvs.forEach((e, i) => { e.innerHTML = end[i]; }); el.classList.add('up113'); try { sfx('win'); } catch (e) {}
+        set(0, 0, false); flow();
+        setTimeout(() => set(0, pct(L.xp1, L1), true), 60);
+        setTimeout(() => el.classList.remove('up113'), 900);
+      }, 1550);
+    } else {
+      const a = pct(L.xp0, L1), g = pct(L.xp1, L1);
+      set(a, a, false); flow();
+      setTimeout(() => set(a, g, true), 500);
+    }
+  }
+  if (typeof pfDraw === 'function') {
+    const base = pfDraw;
+    pfDraw = function () {
+      const L = PFX.last, fresh = L && !L.an113;
+      const r = base.apply(this, arguments);
+      try {
+        const el = PFX.el;
+        if (el && L) {
+          if (el.classList.contains('in113')) { const lv = el.querySelector('.pf-line .pf-lv'), L0 = pfLvlOf(L.xp0), L1 = pfLvlOf(L.xp1); if (lv) lv.innerHTML = L1 > L0 ? `Niveau ${L0} → <em>${L1}</em>` : `${esc(EMB[L.m].n)} · niveau ${L1}`; }
+          if (fresh && !el.hidden) gauge(el, L);
+        }
+      } catch (e) {}
+      return r;
+    };
+  }
+  if (typeof pfShow === 'function') {
+    const base = pfShow;
+    pfShow = function (where) {
+      const r = base.apply(this, arguments);
+      try {
+        const el = PFX.el; if (!el) return r;
+        const lt = where === 'lt' && $('endOv').classList.contains('fin') && $('finPlate');
+        if (lt) {
+          if (el.parentNode !== $('finPlate').parentNode) $('finPlate').after(el);
+          el.classList.add('in113'); clearTimeout(PFX.tm);
+          PFX.open = false; el.classList.remove('open'); document.body.classList.add('pf-folded');
+          const L = PFX.last; if (L) L.an113 = 0;
+          pfDraw();
+          try { podLayout(); } catch (e) {}
+        } else if (el.classList.contains('in113')) { el.classList.remove('in113'); document.body.appendChild(el); }
+      } catch (e) {}
+      return r;
+    };
+    const fold0 = pfFold;
+    pfFold = function () { const r = fold0.apply(this, arguments); try { if (PFX.el && PFX.el.classList.contains('in113')) podLayout(); } catch (e) {} return r; };
+  }
+  // « Retour à la table » after a game against the bots
+  let toTable = false;
+  { const base = endButtons; endButtons = function () {
+      const r = base.apply(this, arguments);
+      try { if (NET.mode === 'solo' && !(G && (G.defi || G.guided || G.guide))) $('endAlt').textContent = 'Retour à la table'; } catch (e) {}
+      return r;
+  }; }
+  $('endAlt').addEventListener('click', () => { toTable = $('endAlt').textContent === 'Retour à la table'; }, true);
+  $('endAlt').addEventListener('click', () => { if (!toTable) return; toTable = false; try { showOv('startOv', true); showPanel('table'); } catch (e) {} });
+})();
+
 /* ================================================================ /version 112 */
 
 useTerrain(TERKEY);
