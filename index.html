@@ -15737,15 +15737,15 @@ function cosNorm(c) {
   return { tenue: TENUE_WIRE.includes(c.tenue) ? c.tenue : 'bois', motif: MOTIF_WIRE.includes(c.motif) ? c.motif : 'chevrons', title: tl ? tl.n : '', stars: Math.max(0, Math.min(3, c.stars | 0)) };
 }
 // on the network, four characters: outfit, pattern, title (z: none), stars
-const B36 = '0123456789abcdefghijklmnopqrstuvwxyz';
+const B36 = '0123456789abcdefghijklmnopqrstuvwxyz', B62 = B36 + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 function profWireOf(c) {
   const n = cosNorm(c), ti = TITLES.findIndex(t => t.n === n.title);
-  return B36[TENUE_WIRE.indexOf(n.tenue)] + B36[MOTIF_WIRE.indexOf(n.motif)] + (ti >= 0 ? B36[ti] : 'z') + B36[n.stars];
+  return B62[TENUE_WIRE.indexOf(n.tenue)] + B36[MOTIF_WIRE.indexOf(n.motif)] + (ti >= 0 && ti < 35 ? B36[ti] : ti >= 35 ? B62[ti + 1] : 'z') + B36[n.stars];
 }
 const profWire = m => profWireOf(profCos(m));
 function profUnwire(w) {
   if (typeof w !== 'string' || w.length !== 4) return null;
-  const a = B36.indexOf(w[0]), b = B36.indexOf(w[1]), t = w[2] === 'z' ? -1 : B36.indexOf(w[2]), s = B36.indexOf(w[3]);
+  const a = B62.indexOf(w[0]), b = B36.indexOf(w[1]), t = w[2] === 'z' ? -1 : B62.indexOf(w[2]) > 35 ? B62.indexOf(w[2]) - 1 : B36.indexOf(w[2]), s = B36.indexOf(w[3]);
   if (!(a >= 0 && a < TENUE_WIRE.length) || !(b >= 0 && b < MOTIF_WIRE.length) || !(t >= -1 && t < TITLES.length) || !(s >= 0 && s <= 3)) return null;
   return { tenue: TENUE_WIRE[a], motif: MOTIF_WIRE[b], title: t >= 0 ? TITLES[t].n : '', stars: s };
 }
