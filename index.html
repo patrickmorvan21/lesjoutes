@@ -26557,7 +26557,8 @@ body.jn112 #jn110 .jn-go{height:54px;font-size:15px}
 /* ================================================================ /version 112 */
 
 /* version 123 (16/11, Patrick: « mes deux créatures niveau 6 étaient plus fortes ensemble… que ma créature niveau 7 » ; « à 8 joueurs tout est coupé, fais 2 lignes »). Fusion TD: every monster of a rank holds about as strong a wave as the others of its rank, each rank about three times the one below, so that the monster two twins make is worth 1.2 to 2 times the two of them; a creature just freed from a hold (stun, black hole, wall, tide, tornado) resists the same kind for 1.5 s; the Ogre, the Titan and the Seigneur de la moisson hit the flyers; the creatures grow faster after the 20th wave (growLate 1.215) so that the games last as long as before. Line Towers: the spell's list of targets on two rows from five rivals. */
-/* version 130 (16/11, Patrick, 22 h 27 : « tu peux publier au moins le premier chapitre en ligne »). Le mode histoire, chapitre 1 : la Forêt.
+/* version 131 (16/11, 23 h 30) : la forêt derrière l'avant-manche, la fin de manche et la carte « Histoire » de l'accueil, sous un voile.
+   version 130 (16/11, Patrick, 22 h 27 : « tu peux publier au moins le premier chapitre en ligne »). Le mode histoire, chapitre 1 : la Forêt.
    Cinq manches de Line Towers contre un rival (Aubin, Mahaut, Maître Odon, Ysolde, le Gardien), sur la forêt avec un trait de terrain par manche
    (rochers à casser, étang, gué à deux ponts, deux entrées). Sur l'accueil, la carte « Histoire » au-dessus du Défi du jour ; elle ouvre la
    carte du chapitre (la route, les rivaux dans un cercle, la brume au-dessus), puis l'avant-manche, puis la partie. En partie le rival réagit
@@ -26675,6 +26676,7 @@ var HS = (function () {
 .hs-col{position:relative;width:100%;max-width:430px;height:100%;overflow:hidden}
 .hs-j{font-family:var(--ft,'Jersey 10',sans-serif);font-weight:400;line-height:.9}
 .hs-ey{font:700 11px/1 var(--f,'Barlow Semi Condensed',sans-serif);letter-spacing:.16em;text-transform:uppercase;color:#b9c7ca}
+.hs-rows div,.hs-obj div{text-shadow:0 1px 0 rgba(13,21,25,.7)}
 .hs-pan{background:#1c2a31;box-shadow:inset 0 0 0 2px #33474f}
 .hs-btn{appearance:none;border:0;display:flex;align-items:center;justify-content:center;height:52px;padding:0 18px;background:#d5bf7b;color:#1b2b34;font:700 18px/1 var(--f,'Barlow Semi Condensed',sans-serif);letter-spacing:.18em;text-transform:uppercase;box-shadow:inset 0 -4px 0 #b39a55,0 0 0 2px #1c2a31;cursor:pointer}
 .hs-btn.alt{background:#27373e;color:#e0e5e6;box-shadow:inset 0 0 0 2px #33474f;letter-spacing:.14em;font-size:16px}
@@ -26699,11 +26701,13 @@ var HS = (function () {
 .hs-sheet{position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);height:60px;padding:0 12px;display:flex;align-items:center;gap:12px;box-sizing:border-box}
 .hs-sheet .tx{flex:1;min-width:0}.hs-sheet .hs-j{font-size:28px;color:#d5bf7b;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hs-sheet .hs-btn{height:40px;font-size:16px;padding:0 20px}
+.hs-bg{position:absolute;inset:0;background-position:50% 40%;background-size:cover;image-rendering:pixelated}
+.hs-bg:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(27,43,52,.90) 0,rgba(27,43,52,.74) 55%,rgba(27,43,52,.62) 100%)}
 .hs-pre,.hs-end{position:absolute;inset:0;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 20px calc(env(safe-area-inset-bottom,0px) + 16px);box-sizing:border-box}
 .hs-pre .hd{text-align:center;margin-top:2px}.hs-pre .hd .hs-j{font-size:54px;color:#d5bf7b;margin-top:8px}.hs-pre .hd .sub{font-size:17px;font-weight:600;color:#a9b8bc;margin-top:4px}
 .hs-pre .intro{text-align:center;font-size:16px;line-height:1.35;margin:14px auto 0;max-width:300px}
-.hs-rows{margin-top:16px}.hs-rows div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;box-shadow:inset 0 -2px 0 #27373e;font-size:15px;font-weight:600}
-.hs-rows div:first-child{box-shadow:inset 0 -2px 0 #27373e,inset 0 2px 0 #27373e}.hs-rows span{font:700 11px/1 var(--f,sans-serif);letter-spacing:.16em;text-transform:uppercase;color:#8ea2a7;flex:none}.hs-rows b{font-weight:600;text-align:right}
+.hs-rows{margin-top:16px}.hs-rows div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;box-shadow:inset 0 -2px 0 rgba(142,162,167,.28);font-size:15px;font-weight:600}
+.hs-rows div:first-child{box-shadow:inset 0 -2px 0 rgba(142,162,167,.28),inset 0 2px 0 rgba(142,162,167,.28)}.hs-rows span{font:700 11px/1 var(--f,sans-serif);letter-spacing:.16em;text-transform:uppercase;color:#b9c7ca;flex:none}.hs-rows b{font-weight:600;text-align:right}
 .hs-low{position:relative;flex:1;min-height:0}
 .hs-gain{position:absolute;left:0;top:18px;width:160px}.hs-gain .hs-ey{color:#d5bf7b}
 .hs-gain .gg{display:flex;gap:14px;align-items:flex-end;margin-top:10px}.hs-gain .g{width:68px;text-align:center}.hs-gain .g canvas{display:block;margin:0 auto;height:92px;width:auto;max-width:68px}
@@ -26716,7 +26720,7 @@ var HS = (function () {
 .hs-end{align-items:stretch}
 .hs-end .hd{text-align:center;margin-top:10px}.hs-end .hd .hs-j{font-size:56px;color:#d5bf7b;margin-top:8px}.hs-end.lost .hd .hs-j{color:#e0e5e6}
 .hs-end .big{display:flex;justify-content:center;gap:8px;margin-top:12px}.hs-end .big img{width:42px;height:42px}
-.hs-obj{margin-top:16px}.hs-obj div{display:flex;align-items:center;gap:10px;padding:8px 0;box-shadow:inset 0 -2px 0 #27373e;font-size:16px;font-weight:600;color:#8ea2a7}
+.hs-obj{margin-top:16px}.hs-obj div{display:flex;align-items:center;gap:10px;padding:8px 0;box-shadow:inset 0 -2px 0 rgba(142,162,167,.28);font-size:16px;font-weight:600;color:#8ea2a7}
 .hs-obj div.ok{color:#e0e5e6}.hs-obj img{width:14px;height:14px;flex:none}.hs-obj em{margin-left:auto;font-style:normal;font-family:var(--fb,var(--ft,sans-serif));font-size:20px;line-height:.8}
 .hs-rew{display:flex;gap:10px;margin-top:14px}.hs-rew .r{flex:1;display:flex;align-items:center;gap:10px;padding:8px 10px;min-height:64px;box-sizing:border-box}
 .hs-rew .r canvas{height:46px;width:auto;flex:none}.hs-rew .r p{margin:0;font-size:14px;font-weight:600;line-height:1.2}.hs-rew .r p span{display:block;font:700 11px/1.2 var(--f,sans-serif);letter-spacing:.12em;text-transform:uppercase;color:#8ea2a7;margin-top:3px}
@@ -26725,8 +26729,10 @@ var HS = (function () {
 .hs-end .hs-low{margin-top:6px}.hs-end .hs-big{height:min(100%,230px);bottom:-60px;right:-14px}.hs-end .hs-bub{position:absolute;left:0;bottom:12px;max-width:200px}
 .hs-end .cta{position:relative;z-index:2;display:flex;gap:10px}.hs-end .cta .hs-btn{flex:1;padding:0 8px}
 #histBtn{appearance:none;border:0;position:relative;display:block;width:100%;height:92px;margin:0 0 8px;padding:0;background:#1b2930;box-shadow:inset 0 0 0 2px #24363e,0 0 0 1px #0b1216;overflow:hidden;text-align:left;cursor:pointer;color:#e0e5e6}
+#histBtn .k,#histBtn .w,#histBtn .hs-chev{z-index:1}
 #histBtn .pic{position:absolute;right:44px;top:6px;height:170px;width:auto}
-#histBtn .sh{position:absolute;inset:2px;background:linear-gradient(90deg,#1b2930 0,#1b2930 44%,rgba(27,41,48,0) 70%)}
+#histBtn .bgf{position:absolute;inset:2px;background-position:50% 30%;background-size:cover;image-rendering:pixelated}
+#histBtn .sh{position:absolute;inset:2px;background:linear-gradient(90deg,rgba(19,30,36,.90) 0,rgba(19,30,36,.72) 42%,rgba(19,30,36,.30) 100%)}
 #histBtn .k{position:absolute;left:14px;bottom:30px;font:400 30px/.9 var(--ft,'Jersey 10',sans-serif);text-shadow:0 2px 0 #0b1216}
 #histBtn .w{position:absolute;left:14px;bottom:12px;font:700 11px/1 var(--f,sans-serif);letter-spacing:.16em;text-transform:uppercase;color:#d5bf7b}
 #histBtn .hs-chev{position:absolute;right:16px;bottom:14px;color:#fff;filter:drop-shadow(0 2px 0 rgba(8,14,18,.6))}
@@ -26740,6 +26746,7 @@ var HS = (function () {
 @media (prefers-reduced-motion:reduce){.hs-ring i,#hsTaunt{animation:none}}`;
   const BACK = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 4 L7 12 L15 20" stroke="currentColor" stroke-width="3" stroke-linecap="square"/></svg>';
   const CHEV = '<svg class="hs-chev" width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true"><path d="M2 2l8 8-8 8" stroke="currentColor" stroke-width="3" stroke-linecap="square"/></svg>';
+  const BG = () => { let u = ''; try { u = TERPIX.riviere || ''; } catch (e) {} return `<i class="hs-bg" aria-hidden="true"${u ? ` style="background-image:url(${u})"` : ''}></i>`; };
   let ov = null;
   function el() {
     if (ov) return ov;
@@ -26794,7 +26801,7 @@ var HS = (function () {
   // before the manche: who the rival is, what there is to win
   function renderPre(col) {
     const s = STAGES[HS.sel], st = stars(s.id), k = sprOf(s);
-    col.innerHTML = `<div class="hs-pre"><div style="display:flex"><button type="button" class="hs-back hs-pan" data-hs="map" aria-label="Retour à la carte">${BACK}</button></div>` +
+    col.innerHTML = BG() + `<div class="hs-pre"><div style="display:flex"><button type="button" class="hs-back hs-pan" data-hs="map" aria-label="Retour à la carte">${BACK}</button></div>` +
       `<div class="hd"><div class="hs-ey">Manche ${s.i + 1} · ${esc(s.ter)}</div><div class="hs-j">${esc(nameOf(s))}</div><div class="sub">${esc(subOf(s))}</div></div>` +
       `<p class="intro">${esc(s.intro)}</p>` +
       `<div class="hs-rows"><div><span>Ses créatures</span><b>${esc(s.info[0])}</b></div><div><span>Son rythme</span><b>${esc(s.info[1])}</b></div><div><span>Le terrain</span><b>${esc(s.info[2])}</b></div></div>` +
@@ -26810,7 +26817,7 @@ var HS = (function () {
   function renderEnd(col) {
     const k = HS.k, s = STAGES[k.i], sp = sprOf(s);
     const obj = [['Battre ' + nameOf(s), k.o[0], ''], ['Garder 15 vies', k.o[1], String(k.lives)], ['Gagner en moins de ' + fmt(s.time), k.o[2], fmt(k.t)]];
-    col.innerHTML = `<div class="hs-end${k.won ? '' : ' lost'}"><div class="hd"><div class="hs-ey">Manche ${s.i + 1} · ${esc(nameOf(s))}</div><div class="hs-j">${k.won ? 'Victoire' : 'Défaite'}</div></div>` +
+    col.innerHTML = BG() + `<div class="hs-end${k.won ? '' : ' lost'}"><div class="hd"><div class="hs-ey">Manche ${s.i + 1} · ${esc(nameOf(s))}</div><div class="hs-j">${k.won ? 'Victoire' : 'Défaite'}</div></div>` +
       `<div class="big" role="img" aria-label="${k.n} étoile${k.n > 1 ? 's' : ''} sur 3">${[0, 1, 2].map(i => imgTag(i < k.n ? 'son' : 'soff')).join('')}</div>` +
       `<div class="hs-obj">${obj.map(([t, ok, v]) => `<div class="${ok ? 'ok' : ''}">${imgTag(ok ? 'son' : 'soff')}<span>${esc(t)}</span><em>${esc(v)}</em></div>`).join('')}</div>` +
       `<div class="hs-rew"><div class="r hs-pan${k.best >= 2 ? ' got' : ''}"><span id="hsBan"></span><p>Son étendard<span>${k.newBan ? 'Gagné' : k.best >= 2 ? 'Déjà à toi' : '2 étoiles'}</span></p></div>` +
@@ -26832,7 +26839,7 @@ var HS = (function () {
     }
     if (b.nextSibling !== d) d.parentNode.insertBefore(b, d);
     const n = next(), s = STAGES[Math.min(n, STAGES.length - 1)], done = n >= STAGES.length, line = done ? `Chapitre 1 · ${total()}/15` : `${nameOf(s)} t’attend`;
-    b.innerHTML = `<img class="pic" src="${A[sprOf(s)][2]}" alt=""><span class="sh"></span>` + `<span class="k">Histoire</span><span class="w">${esc(line)}</span>${CHEV}`;
+    b.innerHTML = `<span class="bgf" style="background-image:url(${(() => { try { return TERPIX.riviere || ''; } catch (e) { return ''; } })()})"></span><span class="sh"></span><img class="pic" src="${A[sprOf(s)][2]}" alt="">` + `<span class="k">Histoire</span><span class="w">${esc(line)}</span>${CHEV}`;
     b.setAttribute('aria-label', `Histoire, chapitre 1, la Forêt. ${done ? total() + ' étoiles sur 15' : nameOf(s) + ' t’attend'}`);
     b.hidden = !!d.hidden;
   }
