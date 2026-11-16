@@ -25222,6 +25222,276 @@ function st127Add(mode, won, secs) {
   window.ST127 = { open, render, add: st127Add };
 })();
 
+/* version 128 (16/11, Patrick 20 h 22, planches 18 to 20: « c'est très bien, tu peux publier en ligne »): « Tes amis » again —
+   the code in a small plate (copy, share), two tabs (Amis, Récents), « Une table t'attend » above its block, « Jouer » with a friend at home
+   (the mode, then the table opens: the friend sees it on his home), « Inviter un ami » shares a link that makes both friends at once
+   (#ami-CODE), the friend's message on arrival with the general and a check, the players met (our code goes in our presence in a room:
+   « ac »), « + Ami » on the end card of Line Towers. The face to face and the friends' ranking of the défi wait for the server. */
+const AM2 = { tab: 'amis', with: '', pick: 'farm', rec: [], quietInv: 0, saved: 0 };
+const AM2_CHECK = '<svg viewBox="0 0 8 6" width="16" height="12" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor"><path d="M7 0h1v2H7zM6 1h1v2H6zM5 2h1v2H5zM4 3h1v2H4zM3 4h1v2H3zM2 3h1v3H2zM1 2h1v3H1zM0 2h1v2H0z"/></svg>';
+const AM2_COPY = '<svg viewBox="0 0 12 12" width="18" height="18" shape-rendering="crispEdges" aria-hidden="true"><path d="M3 0h8v8H9V2H3zM0 3h8v9H0z" fill="currentColor"/></svg>';
+const AM2_SHARE = '<svg viewBox="0 0 12 12" width="18" height="18" shape-rendering="crispEdges" aria-hidden="true"><path d="M5 0h2v2h2v2H8V3H7v5H5V3H4v1H3V2h2zM1 6h2v4h6V6h2v6H1z" fill="currentColor"/></svg>';
+const am2Link = () => AMI_SITE + '#ami-' + AMI.code;
+// the players met (two weeks, twenty at most), kept in this browser
+function am2RecLoad() { try { const a = JSON.parse(localStorage.getItem('ddl-recents') || '[]'); return Array.isArray(a) ? a.filter(r => r && /^[A-Z2-9]{6}$/.test(r.code) && Date.now() - (Number(r.t) || 0) < 14 * 864e5).slice(0, 20) : []; } catch (e) { return []; } }
+function am2RecSave() { AM2.saved = Date.now(); try { localStorage.setItem('ddl-recents', JSON.stringify(AM2.rec.slice(0, 20))); } catch (e) {} }
+AM2.rec = am2RecLoad();
+function am2Met(pr) {
+  if (!pr || typeof pr !== 'object' || !/^[A-Z2-9]{6}$/.test(pr.ac || '') || pr.ac === AMI.code) return;
+  const col = Array.isArray(pr.w) && Number.isInteger(pr.w[2]) && pr.w[2] >= 0 ? pr.w[2] : Number.isInteger(pr.col) ? pr.col : 0;
+  const r = { code: pr.ac, n: cleanName(String(pr.name || 'Joueur')).slice(0, 16), h: EMB[pr.mai] ? pr.mai : 'cerf', c: col, m: typeof pr.pm === 'string' && MODE_NAME[pr.pm] ? pr.pm : (NET.pm && MODE_NAME[NET.pm] ? NET.pm : 'lt'), t: Date.now() };
+  const i = AM2.rec.findIndex(x => x.code === r.code), was = i >= 0 ? AM2.rec[i] : null;
+  if (was && was.n === r.n && Date.now() - was.t < 10 * 60e3) return;
+  if (i >= 0) AM2.rec.splice(i, 1);
+  AM2.rec.unshift(r); am2RecSave();
+}
+// a room: our code in our presence, the others' codes noted
+{ const base = mqRoom; mqRoom = function (L, name) {
+    const room = base.apply(this, arguments);
+    if (!room || name === 'lobby' || room.__am2) return room;
+    room.__am2 = true;
+    const p0 = room.presence;
+    room.presence = function (patch) { if (patch && typeof patch === 'object' && AMI.code && !('ac' in patch) && Object.keys(patch).length) patch = Object.assign({}, patch, { ac: AMI.code }); return p0.call(this, patch); };
+    room.onPeers(ch => { try { for (const p of ch.peers || []) if (!p.sameTab && p.presence) am2Met(p.presence); } catch (e) {} });
+    return room;
+}; }
+// the general, big, flush left, a little zoomed (the toast, the invitation on the home)
+function am2Skin(cv, m, col, u, H) {
+  m = EMB[m] ? m : 'cerf'; u = (typeof legOf === 'function' && legOf(u, m)) || TENUE_KEYS.includes(u) ? u : 'bois';
+  const draw = () => {
+    if (!cv.isConnected && cv.dataset.live) return;
+    const src = profStill(m, col | 0, u); if (!src) return;
+    const dpr = Math.min(3, window.devicePixelRatio || 1), z = H * 1.55 / src.height, w = Math.round(src.width * z * .78);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(H * dpr); cv.style.width = w + 'px'; cv.style.height = H + 'px';
+    const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.clearRect(0, 0, cv.width, cv.height);
+    x.drawImage(src, Math.round(-src.width * z * .11 * dpr), Math.round(-src.height * z * .03 * dpr), Math.round(src.width * z * dpr), Math.round(src.height * z * dpr));
+  };
+  if (profStill(m, col | 0, u)) draw(); else profWhen(m, draw);
+  setTimeout(draw, 900);
+}
+{ const st = document.createElement('style'); st.id = 'am128'; st.textContent = `
+.ami-sh.v128{gap:10px}
+.am2-dot{display:inline-block;width:8px;height:8px;background:#8fb08a;flex:none}
+.am2-code{display:flex;align-items:center;gap:10px;height:48px;padding:0 6px 0 12px;background:#16232a;box-shadow:inset 0 0 0 2px #33474f}
+.am2-code .lb{margin-right:auto;font:700 11px/1 var(--f);letter-spacing:.16em;text-transform:uppercase;color:#8ea2a7}
+.am2-code b{font:400 28px/1 var(--fb);letter-spacing:.06em;color:#f3e2a6}
+.am2-ib{display:grid;place-items:center;width:36px;height:36px;border:0;padding:0;background:#27373e;color:#e0e5e6;box-shadow:inset 0 -3px 0 #16232a;cursor:pointer}
+.am2-ib.g{background:#d5bf7b;color:#1b2b34;box-shadow:inset 0 -3px 0 #ad9150}
+.am2-ib[disabled]{opacity:.45;pointer-events:none}
+.am2-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.am2-tabs button{height:38px;border:0;background:none;box-shadow:inset 0 0 0 2px #33474f;color:#8ea2a7;font:700 13px/1 var(--f);letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.am2-tabs button[aria-selected="true"]{background:#d5bf7b;color:#1b2b34;box-shadow:none}
+.am2-wait{background:#2a3a31;box-shadow:inset 0 0 0 2px #ad9150,0 0 0 1px #0b1216;padding:10px 12px}
+.am2-wait .ami-row{background:none;padding:0;min-height:0}
+.ami-sh.v128 .ami-row{background:none;padding:8px 0;border-bottom:1px solid #33474f;min-height:0}
+.ami-sh.v128 .ami-row .av{width:48px;height:48px;box-shadow:inset 4px 0 0 var(--c,#7192b6)}
+.ami-sh.v128 .ami-row .av canvas{width:48px;height:48px}
+.ami-sh.v128 .ami-row .av i{right:-3px;bottom:-3px;box-shadow:0 0 0 2px #1c2a31}
+.ami-sh.v128 .ami-row .ami-b{height:34px;padding:0 12px;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.ami-b.dis{background:none;box-shadow:inset 0 0 0 2px #33474f;color:#8ea2a7;pointer-events:none}
+.ami-b.xl{height:40px;padding:0 16px}
+.am2-foot{display:grid;gap:6px;margin-top:4px}
+.am2-foot .lk{border:0;background:none;color:#8ea2a7;font:700 13px/1 var(--f);letter-spacing:.06em;padding:8px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.am2-lead{margin:0;font:500 13px/1.35 var(--f);color:#8ea2a7}
+.am2-pick-h{display:flex;align-items:center;gap:12px}
+.am2-pick-h .av{width:44px;height:44px;flex:none;background:#16232a;box-shadow:inset 4px 0 0 var(--c,#7192b6)}
+.am2-pick-h .av canvas{width:44px;height:44px;image-rendering:pixelated;display:block}
+.am2-pick-h span{display:block;font:700 11px/1 var(--f);letter-spacing:.16em;text-transform:uppercase;color:#d5bf7b}
+.am2-pick-h b{display:block;font:400 30px/1 var(--ft);color:#e0e5e6;margin-top:3px}
+.am2-mc{position:relative;display:block;width:100%;height:84px;padding:0;border:0;overflow:hidden;background:#1b2930;box-shadow:inset 0 0 0 2px #24363e,0 0 0 1px #0b1216;cursor:pointer}
+.am2-mc .art{position:absolute;inset:0;background-size:cover;background-position:center 50%;image-rendering:pixelated}
+.am2-mc .fd{position:absolute;inset:0;background:linear-gradient(90deg,rgba(13,21,25,.2),rgba(13,21,25,.75))}
+.am2-mc img{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:118px;image-rendering:pixelated;filter:drop-shadow(0 2px 0 rgba(8,14,18,.6))}
+.am2-mc .ml{position:absolute;right:12px;bottom:10px;font:700 12px/1 var(--f);letter-spacing:.06em;text-transform:uppercase;color:#e0e5e6;text-shadow:0 1px 0 #0b1216}
+.am2-mc::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 2px #24363e;pointer-events:none}
+.am2-mc[aria-pressed="true"]::after{box-shadow:inset 0 0 0 2px #d5bf7b}
+.am2-hi{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);z-index:45;transform:translateX(-50%);width:min(420px,calc(100% - 28px));height:76px;display:flex;align-items:center;gap:10px;padding-right:12px;box-sizing:border-box;overflow:hidden;background:#1a2a31;box-shadow:0 0 0 2px #24363e,0 0 0 3px #0b1216,0 8px 24px rgba(0,0,0,.45);animation:spin .24s ease-out}
+.am2-hi[hidden]{display:none}
+.am2-hi canvas{flex:none;align-self:stretch;image-rendering:pixelated}
+.am2-hi .ic{flex:1;min-width:0;display:grid;gap:3px}
+.am2-hi b{font:400 22px/1 var(--ft);color:#e0e5e6}
+.am2-hi .ic span{font:500 13px/1.2 var(--f);color:#8ea2a7}
+.am2-ok{flex:none;display:grid;place-items:center;width:28px;height:28px;border:0;padding:0;background:#d5bf7b;color:#16232a;box-shadow:inset 0 -2px 0 #ad9150;cursor:pointer}
+html body #waitPlate.inv128{height:76px!important;padding:0 12px 0 0!important;gap:10px!important;overflow:hidden;background:#1a2a31!important;box-shadow:0 0 0 2px #24363e,0 0 0 3px #0b1216!important}
+#waitPlate.inv128 .art{position:absolute;right:0;top:0;bottom:0;width:240px;background-size:cover;background-position:center;image-rendering:pixelated;-webkit-mask-image:linear-gradient(90deg,transparent,#000 70%);mask-image:linear-gradient(90deg,transparent,#000 70%)}
+#waitPlate.inv128>*{position:relative}
+#waitPlate.inv128 canvas{flex:none;align-self:stretch;image-rendering:pixelated}
+#waitPlate.inv128 .tx{gap:4px}
+#waitPlate.inv128 .t1{font:700 11px/1 var(--f)!important;letter-spacing:.16em!important;text-transform:uppercase;color:#f3e2a6!important;text-shadow:0 1px 0 #0b1216!important}
+#waitPlate.inv128 .t2{font:400 22px/1 var(--ft)!important;letter-spacing:0!important;text-transform:none!important;color:#fff!important;text-shadow:0 2px 0 rgba(8,14,18,.8)}
+#waitPlate.inv128 .go{flex:none;display:flex;align-items:center;height:34px;padding:0 12px;background:#d5bf7b;color:#1b2b34;font:700 13px/1 var(--f);letter-spacing:.08em;text-transform:uppercase;box-shadow:inset 0 -3px 0 #ad9150}
+#waitPlate.inv128 .dot,#waitPlate.inv128 .chev,#waitPlate.inv128 .sh{display:none}
+#endOv.fin .fin-row .fin-add{flex:none;height:24px;padding:0 8px;border:0;background:#d5bf7b;color:#1b2b34;font:700 11px/1 var(--f);letter-spacing:.08em;text-transform:uppercase;box-shadow:inset 0 -2px 0 #ad9150;cursor:pointer}
+#endOv.fin .fin-row .fin-add.done{background:none;color:#8ea2a7;box-shadow:inset 0 0 0 1.5px #33474f;pointer-events:none}
+`; document.head.appendChild(st); }
+// the rows
+const am2CanPlay = () => NET.mode === 'solo' && !(G && G.running && !G.ended && !G.quiet) && !GEMX.open && !FARMX.open;
+function am2When(t) {
+  const d = new Date(t), now = new Date(), day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(), n = Math.round((day(now) - day(d)) / 864e5);
+  return n <= 0 ? 'Aujourd’hui' : n === 1 ? 'Hier' : d.toLocaleDateString('fr-FR', { weekday: 'long' }).replace(/^./, c => c.toUpperCase());
+}
+function am2Row(a, i, btn, line, off) {
+  return `<div class="ami-row${off ? ' off' : ''}" data-ami="row" data-code="${a.code}" style="--c:${AMI_PC()[a.c] || '#7192b6'}"><span class="av"><canvas width="24" height="24" data-amif="${i}"></canvas>${a.lv ? `<b class="lv">${a.lv | 0}</b>` : ''}<i></i></span>` +
+    `<span class="tx"><b>${esc(cleanName(a.n))}</b><span>${line}</span></span>${btn}</div>`;
+}
+amiListHTML = function () {
+  const all = [], idx = a => { all.push(a); return all.length - 1; };
+  const tab = AM2.tab === 'rec' ? 'rec' : 'amis';
+  let h = `<div class="ami-sh v128" role="dialog" aria-label="Tes amis"><div class="ami-h"><h2>Tes amis</h2><button type="button" class="ami-x" data-ami="close" aria-label="Fermer">✕</button></div>` +
+    `<div class="am2-code"><span class="lb">Mon code</span><b id="amiCode">${AMI.code ? amiFmt(AMI.code) : '· · ·'}</b><button type="button" class="am2-ib" data-ami="copy" aria-label="Copier mon code"${AMI.code ? '' : ' disabled'}>${AM2_COPY}</button><button type="button" class="am2-ib g" data-ami="invite" aria-label="Partager mon lien d’ami"${AMI.code ? '' : ' disabled'}>${AM2_SHARE}</button></div>` +
+    `<div class="am2-tabs" role="tablist"><button type="button" role="tab" data-ami="tab" data-t="amis" aria-selected="${tab === 'amis'}">Amis</button><button type="button" role="tab" data-ami="tab" data-t="rec" aria-selected="${tab === 'rec'}">Récents</button></div>`;
+  if (!AMI.code && AMI.err) h += '<p class="ami-msg">Le serveur ne répond pas. Vérifie ta connexion.</p>';
+  if (tab === 'amis') {
+    const wait = AMI.amis.filter(amiCanJoin), on = AMI.amis.filter(a => amiOn(a) && !wait.includes(a)), off = AMI.amis.filter(a => !amiOn(a)).sort((x, y) => (x.ago | 0) - (y.ago | 0));
+    if (!AMI.amis.length) h += '<div class="ami-empty"><b>Pas encore d’amis</b><p>Touche « Inviter un ami » : ton ami ouvre le lien et vous êtes amis tout de suite. Les joueurs croisés en partie sont dans « Récents ».</p></div>';
+    if (wait.length) h += `<div class="ami-sec"><span>Une table t’attend</span></div>` + wait.map(a => `<div class="am2-wait">${am2Row(a, idx(a), `<button type="button" class="ami-b gold xl" data-ami="join" data-code="${a.code}">Rejoindre</button>`, `<i class="am2-dot"></i>${esc(MODE_NAME[a.m] || '')} · ${a.rk} sur ${a.rn} places`)}</div>`).join('');
+    if (on.length) h += `<div class="ami-sec"><span>En ligne</span><b>${on.length}</b></div><div class="ami-list">` + on.map(a => {
+      const del = AMI.del === a.code;
+      const btn = del ? `<button type="button" class="ami-b bad" data-ami="del" data-code="${a.code}">Retirer</button>` : a.st === 'home' && am2CanPlay() ? `<button type="button" class="ami-b" data-ami="play" data-code="${a.code}">Jouer</button>` : a.st === 'game' ? '<span class="ami-b dis">En partie</span>' : a.st === 'table' ? '<span class="ami-b dis">À sa table</span>' : '';
+      return am2Row(a, idx(a), btn, amiWhere(a).replace(/^((?:<[^>]+>)*)(\S)/, (x, t, c) => t + c.toUpperCase()));
+    }).join('') + '</div>';
+    if (off.length) h += `<div class="ami-sec"><span>Hors ligne</span><span>${off.length}</span></div><div class="ami-list">` + off.map(a => am2Row(a, idx(a), AMI.del === a.code ? `<button type="button" class="ami-b bad" data-ami="del" data-code="${a.code}">Retirer</button>` : '', 'Hors ligne · ' + amiWhere(a), true)).join('') + '</div>';
+  } else {
+    const rec = AM2.rec.filter(r => r.code !== AMI.code);
+    if (!rec.length) h += '<div class="ami-empty"><b>Personne pour l’instant</b><p>Les joueurs croisés dans tes parties en ligne s’affichent ici. Un toucher pour les ajouter.</p></div>';
+    else {
+      h += '<p class="am2-lead">Les joueurs croisés ces derniers jours.</p><div class="ami-list">';
+      h += rec.map(r => { const f = AMI.amis.some(a => a.code === r.code); return am2Row(r, idx(r), f ? '<span class="ami-b dis">Ami</span>' : `<button type="button" class="ami-b gold" data-ami="radd" data-code="${r.code}">+ Ajouter</button>`, `${am2When(r.t)} · ${esc(MODE_NAME[r.m] || 'Line Towers')}`, true); }).join('');
+      h += '</div>';
+    }
+  }
+  h += `<div class="am2-foot"><button type="button" class="ami-b gold wide" data-ami="invite"${AMI.code ? '' : ' disabled'}>${AM2_SHARE} Inviter un ami</button><button type="button" class="lk" data-ami="add">Ajouter avec un code</button></div></div>`;
+  return { h, all };
+};
+const am2ModeOk = m => { try { return typeof modeOk === 'function' ? modeOk(m) : m === 'lt'; } catch (e) { return m === 'lt'; } };
+function am2PickHTML() {
+  const f = AMI.amis.find(x => x.code === AM2.with); if (!f) return '';
+  const card = (m, line) => {
+    const b = document.querySelector(`#modes .ma-list .mb[data-mode="${m}"]`), pic = b && b.querySelector('.mb-pic'), lg = b && b.querySelector('.mb-logo');
+    const bg = pic ? (pic.style.backgroundImage || getComputedStyle(pic).backgroundImage) : 'none';
+    return `<button type="button" class="am2-mc" data-ami="pick" data-m="${m}" aria-pressed="${AM2.pick === m}"><span class="art" style='background-image:${bg.replace(/'/g, '%27')}'></span><span class="fd"></span>${lg ? `<img alt="${MODE_NAME[m]}" src="${lg.src}">` : `<b>${MODE_NAME[m]}</b>`}<span class="ml">${line}</span></button>`;
+  };
+  const nm = esc(cleanName(f.n));
+  return `<div class="ami-sh v128" role="dialog" aria-label="Jouer avec ${nm}"><div class="ami-h"><div class="am2-pick-h" style="--c:${AMI_PC()[f.c] || '#7192b6'}"><span class="av"><canvas width="24" height="24" id="am2PickCv"></canvas></span><div><span>Jouer avec</span><b>${nm}</b></div></div><button type="button" class="ami-x" data-ami="back" aria-label="Retour">✕</button></div>` +
+    [['lt', 'Line Towers · 2 à 8'], ['gem', 'Gem TD · à plusieurs'], ['farm', 'Fusion TD · à plusieurs']].filter(x => am2ModeOk(x[0])).map(x => card(x[0], x[1])).join('') +
+    `<button type="button" class="ami-b gold wide" data-ami="playgo">Ouvrir la table et inviter ${nm}</button><p class="am2-lead" style="text-align:center">${nm} la voit tout de suite sur son accueil.</p></div>`;
+}
+{ const base = amiDraw; amiDraw = function () {
+    const v = $('amiOv');
+    if (v && !v.hidden && AMI.open === 'play') {
+      const h = am2PickHTML(); if (!h) { AMI.open = 'list'; return base.apply(this, arguments); }
+      v.innerHTML = h; const f = AMI.amis.find(x => x.code === AM2.with), cv = $('am2PickCv'); if (cv && f) amiFace(cv, f); return;
+    }
+    return base.apply(this, arguments);
+}; }
+// opening the table in the chosen mode, then « Inviter des amis » without its sheet: the friend sees the table on his home
+function am2Play(m) {
+  const f = AMI.amis.find(x => x.code === AM2.with); amiClose();
+  if (!am2CanPlay()) return;
+  AM2.quietInv = Date.now(); AM2.quietName = f ? cleanName(f.n) : '';
+  showPanel('modes');
+  const b = document.querySelector(`#modes .ma-list .mb[data-mode="${m}"]`); if (b) b.click();
+  const want = m === 'lt' ? 'table' : m === 'gem' ? 'gtable' : 'ftable';
+  let n = 0; const t = setInterval(() => {
+    n++; const v = $('startOv').dataset.view;
+    if (v === want && NET.mode === 'solo') { clearInterval(t); const btn = $(m === 'lt' ? 'inviteBtn' : m === 'gem' ? 'gtInvite' : 'ftInvite'); if (btn && !btn.disabled) btn.click(); return; }
+    if (n > 480 || (v !== 'doors' && v !== 'modes' && v !== want) || NET.mode !== 'solo') { clearInterval(t); AM2.quietInv = 0; }
+  }, 250);
+}
+{ const base = ivOpen; ivOpen = function () {
+    if (AM2.quietInv && Date.now() - AM2.quietInv < 120000) { AM2.quietInv = 0; toast(AM2.quietName ? `Table ouverte : ${AM2.quietName} la voit sur son accueil` : 'Table ouverte', 'gold'); return; }
+    return base.apply(this, arguments);
+}; }
+function am2Share() {
+  if (!AMI.code) return;
+  const url = am2Link(), txt = 'Viens jouer aux Joutes avec moi !';
+  if (navigator.share) navigator.share({ title: 'Les Joutes', text: txt, url }).catch(() => {});
+  else { try { navigator.clipboard.writeText(txt + ' ' + url).then(() => toast('Lien copié', 'gold'), () => toast(url)); } catch (e) { toast(url); } }
+}
+function am2Add(code, done) {
+  if (!/^[A-Z2-9]{6}$/.test(code || '') || !amiOnline()) return;
+  amiPost('/ami/add', { key: RKX.key, code }).then(d => {
+    if (d && d.ok) { const r = AM2.rec.find(x => x.code === code); toast(`${r ? cleanName(r.n) : 'Ton ami'} et toi êtes amis`, 'gold'); if (done) done(true); amiPoll(); }
+    else { toast(d && d.why === 'plein' ? 'Ta liste est pleine (100 amis)' : 'Le serveur ne répond pas', 'bad'); if (done) done(false); }
+  }).catch(() => { toast('Le serveur ne répond pas', 'bad'); if (done) done(false); });
+}
+{ const base = amiClick; amiClick = function (e) {
+    const b = e.target.closest && e.target.closest('[data-ami]'); if (!b) return base.apply(this, arguments);
+    const a = b.dataset.ami;
+    if (a === 'tab') { sfx('click'); AM2.tab = b.dataset.t === 'rec' ? 'rec' : 'amis'; AMI.del = ''; amiDraw(); return; }
+    if (a === 'invite' || a === 'share') { sfx('click'); am2Share(); return; }
+    if (a === 'play') { const f = AMI.amis.find(x => x.code === b.dataset.code); if (!f) return; sfx('click'); AM2.with = f.code; AM2.pick = MODE_NAME[f.m] && am2ModeOk(f.m) ? f.m : 'lt'; AMI.open = 'play'; amiDraw(); return; }
+    if (a === 'pick') { sfx('click'); AM2.pick = b.dataset.m; amiDraw(); return; }
+    if (a === 'playgo') { sfx('click'); am2Play(am2ModeOk(AM2.pick) ? AM2.pick : 'lt'); return; }
+    if (a === 'back' && AMI.open === 'play') { sfx('back'); AMI.open = 'list'; amiDraw(); return; }
+    if (a === 'radd') { sfx('click'); b.disabled = true; am2Add(b.dataset.code, ok => { if (!ok) b.disabled = false; }); return; }
+    if (a === 'join') {
+      const f = AMI.amis.find(x => x.code === b.dataset.code); if (!f || !amiCanJoin(f)) return;
+      sfx('click'); amiClose(); friendName(); NET.pm = typeof pmOf === 'function' ? pmOf(f.m) : (f.m || 'lt'); PLAYMODE = 'lt'; clientJoin(f.room); return;
+    }
+    return base.apply(this, arguments);
+}; }
+// the friend's table on the home: his general flush left, the mode's picture, « Rejoindre »
+{ const base = waitPlate; waitPlate = function () {
+    const r = base.apply(this, arguments), p = $('waitPlate');
+    if (!WEB || !p || p.hidden) { if (p) p.classList.remove('inv128'); return r; }
+    const a = AMI.amis.find(x => amiCanJoin(x) && x.room === p.dataset.code); if (!a) { p.classList.remove('inv128'); return r; }
+    const m = MODE_NAME[a.m] ? a.m : 'lt', key = [a.code, a.room, a.rk, a.rn, m, a.h, a.c, a.u].join('|');
+    p.classList.add('inv128'); p.dataset.m = m;
+    if (p.dataset.k128 === key && p.querySelector('canvas')) return r;
+    p.dataset.k128 = key;
+    const b = document.querySelector(`#modes .ma-list .mb[data-mode="${m}"] .mb-pic`), bg = b ? (b.style.backgroundImage || getComputedStyle(b).backgroundImage) : 'none', nm = esc(cleanName(a.n));
+    p.innerHTML = `<span class="art" style='background-image:${bg.replace(/'/g, '%27')}'></span><canvas aria-hidden="true"></canvas><span class="tx"><span class="t1">${nm} t’invite</span><span class="t2">${esc(MODE_NAME[m])} · ${a.rk} sur ${a.rn}</span></span><span class="go">Rejoindre</span>`;
+    am2Skin(p.querySelector('canvas'), a.h, a.c, a.u, 76);
+    return r;
+}; }
+// arriving with a friend's link: both friends at once, then his message with his general and a check
+function am2Hello(w) {
+  let el = $('am2Hi');
+  if (!el) { el = document.createElement('div'); el.id = 'am2Hi'; el.className = 'am2-hi'; el.setAttribute('role', 'status'); document.body.appendChild(el); el.addEventListener('click', e => { if (e.target.closest('.am2-ok')) { try { sfx('click'); } catch (er) {} el.hidden = true; } }); }
+  el.innerHTML = `<canvas aria-hidden="true"></canvas><div class="ic"><b>${esc(cleanName(w.n))} et toi êtes amis</b><span>Sa table s’affichera sur ton accueil.</span></div><button type="button" class="am2-ok" aria-label="OK">${AM2_CHECK}</button>`;
+  el.hidden = false; am2Skin(el.querySelector('canvas'), w.h, w.c, w.u, 76);
+}
+function am2FromLink() {
+  const mm = /^#ami-([A-Za-z2-9]{6})$/.exec(location.hash || ''); if (!mm) return;
+  const code = mm[1].toUpperCase();
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  let n = 0; const t = setInterval(() => {
+    if (++n > 80) { clearInterval(t); return; }
+    if (!amiOnline() || !RKX.key || !AMI.code) return;
+    clearInterval(t);
+    if (code === AMI.code) return;
+    const known = AMI.amis.find(x => x.code === code); if (known) { am2Hello(known); return; }
+    amiPost('/ami/qui', { key: RKX.key, code }).then(d => {
+      if (!d || !d.ok) { toast('Ce lien d’ami ne marche plus', 'bad'); return; }
+      const w = { n: d.n, h: d.h, c: d.c, u: d.u, lv: d.lv, code: d.code || code };
+      return amiPost('/ami/add', { key: RKX.key, code: w.code }).then(r => { if (r && r.ok) { am2Hello(w); amiPoll(); } else toast(r && r.why === 'plein' ? 'Ta liste est pleine (100 amis)' : 'Le serveur ne répond pas', 'bad'); });
+    }).catch(() => toast('Le serveur ne répond pas', 'bad'));
+  }, 400);
+}
+if (WEB) { am2FromLink(); window.addEventListener('hashchange', am2FromLink); }
+// the end card of Line Towers: « + Ami » by a player met in this game who is not a friend yet
+{ const base = podRender; podRender = function () {
+    const r = base.apply(this, arguments);
+    try {
+      if (!WEB || NET.mode === 'solo' || !amiOnline()) return r;
+      const rows = document.querySelectorAll('#finPlate .fin-row:not(.me)');
+      rows.forEach(li => {
+        if (li.querySelector('.fin-add')) return;
+        const nm = (li.querySelector('.nm') || {}).textContent || '';
+        const rec = AM2.rec.find(x => x.n === cleanName(nm) && Date.now() - x.t < 3 * 3600e3); if (!rec) return;
+        const f = AMI.amis.some(a => a.code === rec.code);
+        li.querySelector('.sc').insertAdjacentHTML('beforebegin', f ? '<span class="fin-add done">Ami</span>' : `<button type="button" class="fin-add" data-code="${rec.code}">+ Ami</button>`);
+      });
+    } catch (e) {}
+    return r;
+}; }
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('#finPlate .fin-add[data-code]'); if (!b) return;
+  try { sfx('click'); } catch (er) {} b.disabled = true;
+  am2Add(b.dataset.code, ok => { if (ok) { b.classList.add('done'); b.textContent = 'Ami'; b.removeAttribute('data-code'); } else b.disabled = false; });
+});
+
 /* version 111 (11/11): anonymous statistics — a random id at each opening (never the profile's), time spent, games, tables */
 (function v111() {
   const ST = { sid: '', q: [], cur: null, t0: Date.now(), last: Date.now(), src: '', inNet: false, mute: false };
