@@ -2040,10 +2040,11 @@ body:has(#startOv:not([hidden]):not([data-view=home])[data-view=ftable]){backgro
 /* version 127 (16/11, Patrick 18 h 44): in Line Towers the four-squares button is gone; a plain pill above the bar says what it does: « Voir les autres » then « Mon terrain »;
    the sign of the next wave stands alone at the top (no shield around it), as in Fusion TD */
 #camBtn{display:none!important}
-.cam-pill{position:absolute;right:calc(var(--u)*4);bottom:100%;margin-bottom:8px;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:0;border-radius:0;background:rgba(27,41,48,.94);box-shadow:inset 0 0 0 2px #33474f,0 0 0 1px #0b1216;color:var(--ink);font:700 13px/1 var(--f);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.cam-pill[hidden]{display:none}
-.cam-pill:active{transform:translateY(2px)}
-.cam-pill svg{color:var(--gold);flex:none;image-rendering:pixelated}
+.wcam{flex:none;margin-left:auto;display:flex;align-items:center;gap:6px;height:34px;padding:0 12px 0 9px;border:0;border-radius:0;background:var(--panel2);color:var(--ink);font:700 14px/1 var(--f);box-shadow:0 var(--u) 0 var(--line),0 calc(var(--u)*2) 0 rgba(0,0,0,.22);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.wcam[hidden]{display:none}
+.wcam:active{transform:translateY(1px)}
+.wcam img{width:15px;height:17px;image-rendering:pixelated}.wcam .shs{display:flex}.wcam .shs img+img{margin-left:-5px}
+.dock-top .seg button{padding-inline:calc(var(--u)*4)}
 #stats{background:#16232a;z-index:3}
 #stats .sp-col{padding:calc(env(safe-area-inset-top,0px) + 6px) 18px calc(env(safe-area-inset-bottom,0px) + 28px);min-height:100%;justify-content:flex-start}
 #stats .st-top{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;height:56px;margin:0 -8px}
@@ -2254,9 +2255,10 @@ html body #defiBtn.df-card>.cr113{display:none!important}
     </div>
     <span class="ghost-h" id="ghostH" hidden>Fantôme · choisis un pouvoir</span>
     <button class="cam" id="camBtn" type="button"></button>
+    <button class="wcam" id="camPill" type="button" hidden></button>
   </div>
   <div class="items" id="items"></div>
-</div><button class="cam-pill" id="camPill" type="button" hidden></button></footer>
+</div></footer>
 <div class="spec" id="specBar" hidden>Tu regardes la partie</div>
 
 <div class="ov scene" id="startOv" data-view="home">
@@ -4327,9 +4329,12 @@ $('rivals').addEventListener('click', e => {
 const CAMP_R = '<svg width="9" height="15" viewBox="0 0 6 10" aria-hidden="true"><path d="M0 0h2v2h2v2h2v2H4v2H2v2H0V8h2V6h2V4H2V2H0z" fill="currentColor"/></svg>';
 function camPillSet(key) {
   const p = $('camPill'); if (!p) return;
-  p.innerHTML = key === 'all' ? `Voir les autres${CAMP_R}` : `<span style="display:inline-block;transform:scaleX(-1);line-height:0">${CAMP_R}</span>Mon terrain`;
-  p.setAttribute('aria-label', key === 'all' ? 'Voir les terrains des autres' : 'Revenir à mon terrain');
-  p.hidden = !(G && G.N > 1);
+  const show = !!(G && G.N > 1 && G.b && G.b[G.me]); if (p.hidden === show) p.hidden = !show;
+  if (!show) return;
+  const sh = b => `<img alt="" src="${shieldSrc(pcol(b.k), b.jt && b.jt.maison)}">`;
+  const html = key === 'all' ? `<span class="shs">${G.b.filter(b => b.k !== G.me).slice(0, 3).map(sh).join('')}</span><span>Voir les autres</span>` : `${sh(G.b[G.me])}<span>Ton terrain</span>`;
+  if (p.dataset.h !== html) { p.dataset.h = html; p.innerHTML = html; }
+  p.setAttribute('aria-label', key === 'all' ? 'Voir les terrains des autres' : 'Revenir à ton terrain');
 }
 $('camPill').addEventListener('click', () => $('camBtn').click());
 $('camBtn').addEventListener('click', () => { if (!G) return; sfx('click'); closePop(); if (isHome()) goCam(allCam()); else goCam(homeCam()); });
@@ -7904,7 +7909,7 @@ function updateUI() {
   if (G.techPick && G.t > G.techPickT + 4) { G.techPick = ''; renderItems(); }
   if (me.ghost && !me.alive) $('items').querySelectorAll('[data-cd]').forEach(el => { const v = me.gcd[+el.dataset.cd]; el.hidden = v <= 0; if (v > 0) el.textContent = Math.ceil(v) + ' s'; });
   const camKey = isHome() ? 'all' : 'home';
-  if (cache.cam !== camKey) { cache.cam = camKey; camPillSet(camKey); $('camBtn').innerHTML = camKey === 'all' ? `${CAM_ICON.all}<span class="lbl">Vue d'ensemble</span>` : `${CAM_ICON.home}<span class="lbl">Mon couloir</span>`; $('camBtn').setAttribute('aria-label', camKey === 'all' ? "Vue d'ensemble" : 'Revenir à mon couloir'); }
+  camPillSet(camKey); if (cache.cam !== camKey) { cache.cam = camKey; $('camBtn').innerHTML = camKey === 'all' ? `${CAM_ICON.all}<span class="lbl">Vue d'ensemble</span>` : `${CAM_ICON.home}<span class="lbl">Mon couloir</span>`; $('camBtn').setAttribute('aria-label', camKey === 'all' ? "Vue d'ensemble" : 'Revenir à mon couloir'); }
   placePop();
 }
 
