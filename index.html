@@ -2149,6 +2149,8 @@ html body .st-ban .chev{width:12px!important;height:20px!important;margin-top:-1
 .fi133 .fi-now.on .tx i{background:#8fb08a}
 .fi133 .fi-now .tx img{height:14px;image-rendering:pixelated}
 .fi133 .fi-now .ami-b{flex:none;height:34px;padding:0 14px;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.fi133 .fi-wide{display:flex;align-items:center;justify-content:center;width:100%;height:44px !important;min-height:44px;line-height:1 !important;margin:6px 0 4px;font:700 14px/1 var(--f);letter-spacing:.08em;text-transform:uppercase;box-sizing:border-box}
+.fi133 .fi-wide.dis{height:auto;min-height:38px;padding:8px;background:#22343c;color:#8ea2a7;letter-spacing:.04em;text-transform:none;font-weight:500;font-size:13px;text-align:center}
 .fi133 .fi-msg{padding:18px 0;text-align:center}
 .fi133 .fi-vs{display:flex;flex-direction:column;background:#22343c}
 .fi133 .fi-vh{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:10px 12px;background:#2a3e47}
@@ -25687,7 +25689,7 @@ function storyBanner(id) { if (!X129_BOSS[id]) return false; PMETA.sb = sb129Fix
    et aussi le versus entre lui et moi ». The server (version 6) keeps each player's numbers (POST /fiche/save) and gives them only to a friend
    (POST /fiche, with both players' records). A touch on a friend in « Tes amis » opens his card: who he is, where he is (« Rejoindre » / « Jouer »),
    the face to face (the winner of each line in gold), the generals, the records, « Retirer de mes amis » (asked twice). */
-const FI = { code: '', st: '', d: null, sent: '', at: 0, del: false };
+const FI = { code: '', st: '', d: null, sent: '', at: 0, del: false, back: false };
 function ficheMe() {
   const hs = {}; for (const h of Object.keys(EMB)) { const H = (PMETA.houses && PMETA.houses[h]) || {}; hs[h] = [profLvl(h), H.games | 0, H.wins | 0]; }
   const m = EMB[myMaison] ? myMaison : 'cerf', e = (PMETA.eq && PMETA.eq[m]) || {};
@@ -25727,9 +25729,10 @@ function ficheHTML() {
   const d = FI.d, o = d && d.fi, me = ficheMe(), nm = esc(cleanName(f.n)), col = AMI_PC()[f.c] || '#7192b6', mine = esc(cleanName(nick || 'Toi'));
   const ti = o && TITLE_OF[o.ty] ? TITLE_OF[o.ty].n : '';
   let h = `<div class="ami-sh v128 fi133" role="dialog" aria-label="${nm}"><div class="ami-h"><div class="fi-hd" style="--c:${col}"><span class="av"><canvas width="24" height="24" id="fiCv"></canvas><b class="lv">${f.lv | 0}</b></span><div><b>${nm}</b><span>${esc((EMB[f.h] || {}).n || '')}${ti ? ' · <em>' + esc(ti) + '</em>' : ''}</span></div></div><button type="button" class="ami-x" data-ami="back" aria-label="Retour">✕</button></div>`;
-  const act = amiCanJoin(f) ? `<button type="button" class="ami-b gold" data-ami="join" data-code="${f.code}">Rejoindre</button>` : f.st === 'home' && am2CanPlay() ? `<button type="button" class="ami-b gold" data-ami="play" data-code="${f.code}">Jouer</button>` : '';
+  const act = amiCanJoin(f) ? `<button type="button" class="ami-b gold" data-ami="join" data-code="${f.code}">Rejoindre</button>` : '';
+  const inv = !amiOn(f) ? '<span class="fi-wide dis">Hors ligne : il verra ta table à son retour</span>' : f.st === 'home' ? (am2CanPlay() ? `<button type="button" class="ami-b gold wide fi-wide" data-ami="play" data-code="${f.code}">Inviter à jouer</button>` : '<span class="fi-wide dis">Termine ta partie pour l’inviter</span>') : f.st === 'game' ? '<span class="fi-wide dis">En partie</span>' : '';
   const w = amiWhere(f).replace(/^((?:<[^>]+>)*)(\S)/, (x, t, c) => t + c.toUpperCase());
-  h += `<div class="fi-now${amiOn(f) ? ' on' : ''}"><span class="tx"><i></i>${amiOn(f) ? w : 'Hors ligne · ' + amiWhere(f)}</span>${act}</div>`;
+  h += `<div class="fi-now${amiOn(f) ? ' on' : ''}"><span class="tx"><i></i>${amiOn(f) ? w : 'Hors ligne · ' + amiWhere(f)}</span>${act}</div>${inv}`;
   if (FI.st === 'load') return h + '<p class="am2-lead fi-msg">Chargement…</p>' + ficheFoot(nm) + '</div>';
   if (FI.st === 'err') return h + '<p class="am2-lead fi-msg">Le serveur ne répond pas. Réessaie dans un instant.</p>' + ficheFoot(nm) + '</div>';
   const rows = [], row = (lab, a, b, fa, fb) => rows.push({ lab, a, b, fa: fa === undefined ? fiNum(a) : fa, fb: fb === undefined ? fiNum(b) : fb });
@@ -25773,6 +25776,9 @@ const ficheFoot = nm => `<div class="am2-foot">${FI.del ? `<p class="fi-ask">Ret
     const b = e.target.closest && e.target.closest('[data-ami]'); if (!b) return base.apply(this, arguments);
     const a = b.dataset.ami;
     if (a === 'row' && !e.target.closest('button') && AMI.amis.some(x => x.code === b.dataset.code)) { sfx('click'); ficheOpen(b.dataset.code); return; }
+    if (a === 'play' && AMI.open === 'fiche') FI.back = true;
+    if (a === 'back' && AMI.open === 'play' && FI.back) { sfx('back'); FI.back = false; AMI.open = 'fiche'; amiDraw(); return; }
+    if (a === 'playgo') FI.back = false;
     if (a === 'fdel') { sfx('click'); FI.del = true; amiDraw(); return; }
     if (a === 'fdel0') { sfx('back'); FI.del = false; amiDraw(); return; }
     if (a === 'fdel2') {
