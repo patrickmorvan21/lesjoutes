@@ -2183,6 +2183,9 @@ html body #defiBtn.df-card.df-card.df-card{height:92px!important}
 .rk-st b{display:block;margin-top:8px;font:700 12px/1.1 var(--f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rk-st[aria-checked=true] .im{box-shadow:0 0 0 2px #0b1216,0 0 0 4px var(--gold)}
 .rk-st[aria-checked=true] b{color:var(--gold)}
+.rk-st[data-k=all] .im{display:grid;place-items:center}
+.rk-st[data-k=all] .im::after{content:'Tous';font:400 22px/1 var(--ft);color:#8ea2a7;letter-spacing:.04em}
+.rk-st[data-k=all][aria-checked=true] .im::after{color:var(--gold)}
 </style>
 <style id="md126">
 /* version 126 (16/11, Patrick 18 h 20, planches 13 to 17): the screen of the modes in banners: each mode on its pixel picture (made with Higgsfield,
@@ -19152,8 +19155,8 @@ var RKX = { ter: 'nuit', pid: '', meta: {}, store: {}, links: {}, tried: 0, stat
 const RK_TOPIC = 'domus-td/rec/v1/', RK_MAX = 100;
 const RK_CAP = { lt: 500000, gem: 20000000, farm: 50000000 };
 const RK_LT = ['nuit', 'riviere', 'champs', 'neige', 'automne', 'desert'];   // version 137: Line Towers' records by terrain
-const RK_KEYS = RK_LT.map(t => 'lt/' + t).concat(GEM_MAPS.map(m => 'gem/' + m.id), FARM_MAPS.map(m => 'farm/' + m.id));
-const rkKeyOf = (mode, map) => mode === 'gem' ? 'gem/' + (GEM_MAPS.some(m => m.id === map) ? map : 'croix') : mode === 'farm' ? 'farm/' + (FARM_MAPS.some(m => m.id === map) ? map : 'trefle') : 'lt/' + (RK_LT.includes(map) ? map : 'nuit');
+const RK_KEYS = ['lt/all'].concat(RK_LT.map(t => 'lt/' + t), GEM_MAPS.map(m => 'gem/' + m.id), FARM_MAPS.map(m => 'farm/' + m.id));
+const rkKeyOf = (mode, map) => mode === 'gem' ? 'gem/' + (GEM_MAPS.some(m => m.id === map) ? map : 'croix') : mode === 'farm' ? 'farm/' + (FARM_MAPS.some(m => m.id === map) ? map : 'trefle') : 'lt/' + (RK_LT.includes(map) || map === 'all' ? map : 'nuit');
 const RK_MODE = { lt: 'Line Towers', gem: 'Gem TD', farm: 'Fusion TD' };
 const rkPal = () => Object.assign({}, PROF_CROWN_PAL, PROF_CROWN && PROF_CROWN.pal || {});
 const rkCrown = s => PROF_CROWN && PROF_CROWN.rows ? profPx(PROF_CROWN.rows, rkPal(), s, '') : profPx(PROF_CROWN7, rkPal(), s, '');
@@ -19166,6 +19169,8 @@ function rkMetaLoad() {
   for (const k of Object.keys(m)) { const o = m[k]; if (!RK_KEYS.includes(k) || !o || !(Math.floor(+o.s) > 0)) delete m[k]; }
   const up = (k, s, w) => { s = Math.floor(+s || 0); if (s > 0 && !(m[k] && m[k].s >= s)) m[k] = { s, w: Math.max(0, Math.floor(+w || 0)), t: 0 }; };
   RK_LT.forEach(t => up('lt/' + t, podBest(t), 0));
+  try { if (localStorage.getItem('ddl-best-old') === null) localStorage.setItem('ddl-best-old', String(podBest())); } catch (e) {}   // v137: the scores made before the terrains stay, frozen, in « Anciens records »
+  up('lt/all', parseInt((() => { try { return localStorage.getItem('ddl-best-old'); } catch (e) { return 0; } })(), 10) || 0, 0);
   const g = gemRecs(); GEM_MAPS.forEach(x => up('gem/' + x.id, g[x.id], 0));
   const f = farmRec(); up('farm/trefle', f.score, f.wave);
   return m;
@@ -19334,7 +19339,7 @@ function rkRender(keep) {
   $('rkMaps').querySelectorAll('[data-map]').forEach(b => b.setAttribute('aria-pressed', String('gem/' + b.dataset.map === key)));
   const box = $('rkList'), y = keep ? box.scrollTop : 0, shown = list.slice(0, RK_MAX), meI = list.findIndex(o => o.me);
   box.innerHTML = shown.length ? shown.map((o, i) => i ? rkLine(o, i + 1) : rkPlate(o)).join('') : '<p class="rk-empty">Aucun record pour l’instant</p>';
-  box.setAttribute('aria-label', 'Records · ' + RK_MODE[mode] + (mode === 'gem' ? ' · ' + (GEM_MAPS.find(m => 'gem/' + m.id === key) || {}).n : mode === 'farm' ? ' · ' + (FARM_MAPS.find(m => 'farm/' + m.id === key) || {}).n : ' · ' + ((TERRAINS[RKX.ter] || {}).n || '')));
+  box.setAttribute('aria-label', 'Records · ' + RK_MODE[mode] + (mode === 'gem' ? ' · ' + (GEM_MAPS.find(m => 'gem/' + m.id === key) || {}).n : mode === 'farm' ? ' · ' + (FARM_MAPS.find(m => 'farm/' + m.id === key) || {}).n : ' · ' + (RKX.ter === 'all' ? 'Anciens records' : (TERRAINS[RKX.ter] || {}).n || '')));
   box.scrollTop = y; rkFaces(box);
   const pin = $('rkPin');
   pin.innerHTML = meI >= 1 ? '<div class="rk-more" aria-hidden="true"><i></i><i></i><i></i></div>' + rkLine(list[meI], meI + 1) : '';
@@ -25834,7 +25839,7 @@ const ficheFoot = nm => `<div class="am2-foot">${FI.del ? `<p class="fi-ask">Ret
     const m = RKX.mode, k = b.dataset.k; if (m === 'lt') RKX.ter = k; else if (m === 'gem') RKX.map = k; else RKX.fmap = k;
     rkRender(false);
   });
-  const terOf = m => m === 'lt' ? RK_LT.map(k => [k, (TERRAINS[k] || {}).n || k, (typeof TERPIX !== 'undefined' && TERPIX[k]) || '']) :
+  const terOf = m => m === 'lt' ? RK_LT.map(k => [k, (TERRAINS[k] || {}).n || k, (typeof TERPIX !== 'undefined' && TERPIX[k]) || '']).concat([['all', 'Anciens records', '']]) :
     m === 'gem' ? GEM_MAPS.map(x => [x.id, x.n, (typeof GEM_BG !== 'undefined' && GEM_BG[x.id]) || '']) :
     FARM_MAPS.map(x => [x.id, x.n, (typeof FARM_BGS !== 'undefined' && FARM_BGS[x.id]) || '']);
   const base = rkRender;
