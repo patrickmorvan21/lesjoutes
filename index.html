@@ -2134,6 +2134,35 @@ html body .st-ban .chev{width:12px!important;height:20px!important;margin-top:-1
 #pfPick{appearance:none;border:0;height:40px;padding:0 20px;margin-top:4px;background:#d5bf7b;color:#1b2b34;font:700 14px/1 var(--f);letter-spacing:.14em;text-transform:uppercase;box-shadow:inset 0 -3px 0 #b39a55;cursor:pointer}
 #pfPick[hidden]{display:none}
 </style>
+<style id="fi133">
+.fi133 .fi-hd{display:flex;align-items:center;gap:12px;min-width:0}
+.fi133 .fi-hd .av{position:relative;width:48px;height:48px;flex:none;background:#16232a;box-shadow:inset 4px 0 0 var(--c,#7192b6)}
+.fi133 .fi-hd .av canvas{width:48px;height:48px;image-rendering:pixelated;display:block}
+.fi133 .fi-hd .lv{position:absolute;left:-4px;top:-4px;min-width:16px;height:16px;background:#d5bf7b;color:#1b2b34;font:400 14px/16px var(--fb);text-align:center;padding:0 2px;box-sizing:border-box}
+.fi133 .fi-hd>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fi133 .fi-hd b{font:700 20px/1 var(--f);color:#e0e5e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi133 .fi-hd span{font:500 13px/1.1 var(--f);color:#8ea2a7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi133 .fi-hd em{font-style:normal;color:#d5bf7b}
+.fi133 .fi-now{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #33474f;margin-bottom:4px}
+.fi133 .fi-now .tx{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font:500 14px/1.2 var(--f);color:#aab9bd}
+.fi133 .fi-now .tx i{width:10px;height:10px;flex:none;background:#4a5b61}
+.fi133 .fi-now.on .tx i{background:#8fb08a}
+.fi133 .fi-now .tx img{height:14px;image-rendering:pixelated}
+.fi133 .fi-now .ami-b{flex:none;height:34px;padding:0 14px;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.fi133 .fi-msg{padding:18px 0;text-align:center}
+.fi133 .fi-vs{display:flex;flex-direction:column;background:#22343c}
+.fi133 .fi-vh{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:10px 12px;background:#2a3e47}
+.fi133 .fi-vh b{font:700 15px/1 var(--f);color:#e0e5e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi133 .fi-vh b:last-child{text-align:right}
+.fi133 .fi-vh span{font:700 12px/1 var(--f);letter-spacing:.08em;text-transform:uppercase;color:#d5bf7b;text-align:center}
+.fi133 .fi-r{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid #2f444d}
+.fi133 .fi-r span{font:500 13px/1.1 var(--f);color:#8ea2a7;text-align:center;max-width:150px}
+.fi133 .fi-r b{font:700 18px/1 var(--f);color:#aab9bd}
+.fi133 .fi-r b:last-child{text-align:right}
+.fi133 .fi-r b.w{color:#d5bf7b}
+.fi133 .fi-ask{margin:0 0 8px;text-align:center;font:500 14px/1.3 var(--f);color:#aab9bd}
+.fi133 .fi-yn{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style>
 <style id="md126">
 /* version 126 (16/11, Patrick 18 h 20, planches 13 to 17): the screen of the modes in banners: each mode on its pixel picture (made with Higgsfield,
    brought to big pixels), its logo centred above the line, one short line, « Solo » over the players, right; « Rejoindre une table » at the
@@ -25654,6 +25683,105 @@ function storyBanner(id) { if (!X129_BOSS[id]) return false; PMETA.sb = sb129Fix
 }; }
 
 /* version 132 (17/11) : un seul chevron (celui de l'Histoire) partout ; le général du profil se prend avec « Jouer avec ce général » ; les flottants de Line Towers sans contour noir (ombre d'un pixel, comme Fusion TD) ; mode histoire : plus de répliques (sacs mélangés, vagues, avance, horloge, rochers, silence), le prix sur chaque rocher et le toucher qui prend le rocher le plus proche. */
+/* version 133 (17/11): a friend's card and the face to face. Patrick, 17/11: « quand je clique sur un ami, normalement je suis censé voir un peu son profil
+   et aussi le versus entre lui et moi ». The server (version 6) keeps each player's numbers (POST /fiche/save) and gives them only to a friend
+   (POST /fiche, with both players' records). A touch on a friend in « Tes amis » opens his card: who he is, where he is (« Rejoindre » / « Jouer »),
+   the face to face (the winner of each line in gold), the generals, the records, « Retirer de mes amis » (asked twice). */
+const FI = { code: '', st: '', d: null, sent: '', at: 0, del: false };
+function ficheMe() {
+  const hs = {}; for (const h of Object.keys(EMB)) { const H = (PMETA.houses && PMETA.houses[h]) || {}; hs[h] = [profLvl(h), H.games | 0, H.wins | 0]; }
+  const m = EMB[myMaison] ? myMaison : 'cerf', e = (PMETA.eq && PMETA.eq[m]) || {};
+  return { g: PMETA.games | 0, w: PMETA.wins | 0, s: PMETA.secs | 0, bw: PMETA.bestWave | 0, d: PMETA.defis | 0, tw: PMETA.towers | 0, sv: PMETA.stolen | 0, bo: PMETA.bosses | 0,
+    ti: (PMETA.titles || []).length, ty: TITLE_OF[e.title] ? e.title : '', hs };
+}
+// the numbers go to the server when they change (and every ten minutes), with the friends' poll
+function ficheSend(force) {
+  if (!amiOnline() || !RKX.key) return;
+  const fi = ficheMe(), sig = JSON.stringify(fi);
+  if (!force && sig === FI.sent && Date.now() - FI.at < 600000) return;
+  FI.sent = sig; FI.at = Date.now();
+  amiPost('/fiche/save', { key: RKX.key, fi }).then(d => { if (!d || !d.ok) FI.sent = ''; }).catch(() => { FI.sent = ''; });
+}
+{ const base = amiPoll; amiPoll = function () { const r = base.apply(this, arguments); try { ficheSend(); } catch (e) {} return r; }; }
+function ficheOpen(code) {
+  FI.code = code; FI.st = 'load'; FI.d = null; FI.del = false; AMI.open = 'fiche'; amiDraw();
+  try { ficheSend(true); } catch (e) {}
+  amiPost('/fiche', { key: RKX.key, code }).then(d => {
+    if (FI.code !== code) return;
+    if (d && d.ok) { FI.d = d; FI.st = 'ok'; } else FI.st = 'err';
+    if (AMI.open === 'fiche') amiDraw();
+  }).catch(() => { if (FI.code === code) { FI.st = 'err'; if (AMI.open === 'fiche') amiDraw(); } });
+}
+const fiNum = n => (n | 0).toLocaleString('fr-FR');
+const fiTime = s => s >= 3600 ? `${Math.floor(s / 3600)} h ${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}` : `${Math.floor(s / 60)} min`;
+const fiRate = (w, g) => g > 0 ? Math.round(w * 100 / g) + ' %' : '–';
+function fiBoard(b, today) {
+  if (b === 'lt/all') return ['Line Towers', 0];
+  let m;
+  if ((m = /^gem\/(.+)$/.exec(b))) { const x = GEM_MAPS.find(y => y.id === m[1]); return ['Gem TD · ' + (x ? x.n : m[1]), 1]; }
+  if ((m = /^farm\/(.+)$/.exec(b))) { const x = FARM_MAPS.find(y => y.id === m[1]); return ['Fusion TD · ' + (x ? x.n : m[1]), 2]; }
+  return [b === 'defi/' + today ? 'Défi du jour' : 'Défi d’hier', 3];
+}
+function ficheHTML() {
+  const f = AMI.amis.find(x => x.code === FI.code); if (!f) return '';
+  const d = FI.d, o = d && d.fi, me = ficheMe(), nm = esc(cleanName(f.n)), col = AMI_PC()[f.c] || '#7192b6', mine = esc(cleanName(nick || 'Toi'));
+  const ti = o && TITLE_OF[o.ty] ? TITLE_OF[o.ty].n : '';
+  let h = `<div class="ami-sh v128 fi133" role="dialog" aria-label="${nm}"><div class="ami-h"><div class="fi-hd" style="--c:${col}"><span class="av"><canvas width="24" height="24" id="fiCv"></canvas><b class="lv">${f.lv | 0}</b></span><div><b>${nm}</b><span>${esc((EMB[f.h] || {}).n || '')}${ti ? ' · <em>' + esc(ti) + '</em>' : ''}</span></div></div><button type="button" class="ami-x" data-ami="back" aria-label="Retour">✕</button></div>`;
+  const act = amiCanJoin(f) ? `<button type="button" class="ami-b gold" data-ami="join" data-code="${f.code}">Rejoindre</button>` : f.st === 'home' && am2CanPlay() ? `<button type="button" class="ami-b gold" data-ami="play" data-code="${f.code}">Jouer</button>` : '';
+  const w = amiWhere(f).replace(/^((?:<[^>]+>)*)(\S)/, (x, t, c) => t + c.toUpperCase());
+  h += `<div class="fi-now${amiOn(f) ? ' on' : ''}"><span class="tx"><i></i>${amiOn(f) ? w : 'Hors ligne · ' + amiWhere(f)}</span>${act}</div>`;
+  if (FI.st === 'load') return h + '<p class="am2-lead fi-msg">Chargement…</p>' + ficheFoot(nm) + '</div>';
+  if (FI.st === 'err') return h + '<p class="am2-lead fi-msg">Le serveur ne répond pas. Réessaie dans un instant.</p>' + ficheFoot(nm) + '</div>';
+  const rows = [], row = (lab, a, b, fa, fb) => rows.push({ lab, a, b, fa: fa === undefined ? fiNum(a) : fa, fb: fb === undefined ? fiNum(b) : fb });
+  if (o) {
+    row('Niveau', profLvl(EMB[myMaison] ? myMaison : 'cerf'), f.lv | 0);
+    row('Parties', me.g, o.g); row('Victoires', me.w, o.w);
+    row('Taux de victoire', me.g ? me.w / me.g : 0, o.g ? o.w / o.g : 0, fiRate(me.w, me.g), fiRate(o.w, o.g));
+    row('Temps de jeu', me.s, o.s, fiTime(me.s), fiTime(o.s));
+    row('Meilleure vague', me.bw, o.bw); row('Défis du jour', me.d, o.d); row('Titres', me.ti, o.ti); row('Vies volées', me.sv, o.sv);
+  }
+  if (!o) h += `<p class="am2-lead fi-msg">${nm} n’a pas encore envoyé ses chiffres : ils arrivent dès qu’il rouvre le jeu.</p>`;
+  else {
+    const lead = rows.filter(r => r.a > r.b).length, back = rows.filter(r => r.b > r.a).length;
+    h += `<div class="ami-sec"><span>Face à face</span></div><div class="fi-vs"><div class="fi-vh"><b>${mine}</b><span>${lead > back ? 'Tu mènes ' + lead + ' à ' + back : lead < back ? nm + ' mène ' + back + ' à ' + lead : 'Égalité ' + lead + ' à ' + back}</span><b>${nm}</b></div>` +
+      rows.map(r => `<div class="fi-r"><b${r.a > r.b ? ' class="w"' : ''}>${r.fa}</b><span>${r.lab}</span><b${r.b > r.a ? ' class="w"' : ''}>${r.fb}</b></div>`).join('') + '</div>';
+    h += `<div class="ami-sec"><span>Les généraux</span></div><div class="fi-vs">` + Object.keys(EMB).map(k => {
+      const a = me.hs[k] || [1, 0, 0], b = o.hs && o.hs[k] || [1, 0, 0];
+      return `<div class="fi-r"><b${a[0] > b[0] ? ' class="w"' : ''}>${a[0]}</b><span>${esc(EMB[k].n)}</span><b${b[0] > a[0] ? ' class="w"' : ''}>${b[0]}</b></div>`;
+    }).join('') + '</div>';
+  }
+  const rb = d && d.recs || {}, today = d && d.today || '', keys = Object.keys(rb).filter(k => rb[k] && (rb[k].a || rb[k].o)).sort((x, y) => fiBoard(x, today)[1] - fiBoard(y, today)[1] || (x < y ? -1 : 1));
+  if (keys.length) {
+    h += '<div class="ami-sec"><span>Records</span></div><div class="fi-vs">' + keys.map(k => {
+      const e = rb[k], a = e.a ? e.a.s : 0, b = e.o ? e.o.s : 0;
+      return `<div class="fi-r"><b${a > b ? ' class="w"' : ''}>${a ? fiNum(a) : '–'}</b><span>${esc(fiBoard(k, today)[0])}</span><b${b > a ? ' class="w"' : ''}>${b ? fiNum(b) : '–'}</b></div>`;
+    }).join('') + '</div>';
+  }
+  return h + ficheFoot(nm) + '</div>';
+}
+const ficheFoot = nm => `<div class="am2-foot">${FI.del ? `<p class="fi-ask">Retirer ${nm} de tes amis ?</p><div class="fi-yn"><button type="button" class="ami-b bad" data-ami="fdel2">Retirer</button><button type="button" class="ami-b" data-ami="fdel0">Garder</button></div>` : '<button type="button" class="lk" data-ami="fdel">Retirer de mes amis</button>'}</div>`;
+{ const base = amiDraw; amiDraw = function () {
+    const v = $('amiOv');
+    if (v && !v.hidden && AMI.open === 'fiche') {
+      const keep = v.firstChild ? v.firstChild.scrollTop : 0, h = ficheHTML(); if (!h) { AMI.open = 'list'; return base.apply(this, arguments); }
+      v.innerHTML = h; if (v.firstChild) v.firstChild.scrollTop = keep;
+      const f = AMI.amis.find(x => x.code === FI.code), cv = $('fiCv'); if (cv && f) amiFace(cv, f); return;
+    }
+    return base.apply(this, arguments);
+}; }
+{ const base = amiClick; amiClick = function (e) {
+    const b = e.target.closest && e.target.closest('[data-ami]'); if (!b) return base.apply(this, arguments);
+    const a = b.dataset.ami;
+    if (a === 'row' && !e.target.closest('button') && AMI.amis.some(x => x.code === b.dataset.code)) { sfx('click'); ficheOpen(b.dataset.code); return; }
+    if (a === 'fdel') { sfx('click'); FI.del = true; amiDraw(); return; }
+    if (a === 'fdel0') { sfx('back'); FI.del = false; amiDraw(); return; }
+    if (a === 'fdel2') {
+      sfx('click'); const code = FI.code, f = AMI.amis.find(x => x.code === code);
+      amiPost('/ami/del', { key: RKX.key, code }).then(d => { if (d && d.ok) { AMI.amis = AMI.amis.filter(x => x.code !== code); if (f) toast(`${cleanName(f.n)} n’est plus dans tes amis`); amiRender(); amiOpen('list'); } else toast('Le serveur ne répond pas', 'bad'); }).catch(() => toast('Le serveur ne répond pas', 'bad'));
+      return;
+    }
+    return base.apply(this, arguments);
+}; }
 /* version 111 (11/11): anonymous statistics — a random id at each opening (never the profile's), time spent, games, tables */
 (function v111() {
   const ST = { sid: '', q: [], cur: null, t0: Date.now(), last: Date.now(), src: '', inNet: false, mute: false };
