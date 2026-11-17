@@ -2724,7 +2724,7 @@ const DIRS = [[0, 1], [1, 0], [-1, 0], [0, -1]];
 const TYPES = ['arrow', 'cannon', 'frost', 'tesla', 'ballista', 'bombard'];
 const TCODES = ['wall'];
 for (const ty of TYPES) { TCODES.push(ty + ':1', ty + ':2'); if (EVO[ty]) { for (const lv of [3, 4]) for (const e of Object.keys(EVO[ty])) TCODES.push(ty + ':' + lv + ':' + e); } else TCODES.push(ty + ':3', ty + ':4'); }
-const TCHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const TCHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_~*!@';
 const KCODE = { rat: 'r', swarm: 's', crow: 'c', golem: 'g', wave: 'v', gold: 'o', boss: 'b', spirit: 'p', slime: 'j', mini: 'q', shaman: 'h', knight: 'k', mole: 't',
   skel: 'l', brood: 'u', spiderling: 'a', spectre: 'x', troll: 'z', wyvern: 'y', ogre: 'w', lich: 'e', dragon: 'd', colossus: 'm',
   beetle: 'f', shieldskel: 'i', wolf: 'n', boar: 'A', bat: 'B', wisp: 'C', imp: 'D', brute: 'E' };
@@ -3069,7 +3069,7 @@ function stat(t, b) {
   if (b && b.rage > 0) dmg *= 1.5;
   if (b && b.jam > 0) rate *= 2;
   if (G && G.spc === 'eclipse') range *= 0.75;
-  const o = { range, dmg, rate, splash, slowDur, slowF }; if (b && b.jt) jtStat(t, b, o); return o;
+  const o = { range, dmg, rate, splash, slowDur, slowF }; if (b && b.jt) jtStat(t, b, o); { const hs = HX.stats[hmEv(b || (G && G.b && G.b[G.me]), t)]; if (hs) hs(t, o); } return o;
 }
 const convertCost = type => T[type].cost - (T[type].tech === 'chef' ? 0 : T.wall.cost);
 const upCost = t => Math.round(T[t.type].cost * 0.8 * t.lvl);
@@ -3512,6 +3512,7 @@ function inRange(b, x, y, range) {
   return out.sort((a, c) => c.prog - a.prog);
 }
 function stepTowers(b, dt, real) {
+  if (HX.step) HX.step(b, dt, real);
   for (const t of b.grid) {
     if (!t || t.type === 'wall' || t.stoneT > G.t || t.stunT > G.t) continue;
     const st = stat(t, b), tx = t.c + 0.5, ty = t.r + 0.5;
@@ -3522,7 +3523,7 @@ function stepTowers(b, dt, real) {
       if (list.length) { t.kick = G.t; if (real) for (const cr of list) { slow(cr, 0.45, 0.6); damage(b, cr, st.dmg * 0.25, t, true); } }
       continue;
     }
-    if (isChef(t.type)) { jtChefFire(b, t, st, tx, ty, real); continue; }
+    if (isChef(t.type) && !HMCT_M[t.type]) { jtChefFire(b, t, st, tx, ty, real); continue; }
     if (t.type === 'tesla') {
       const list = inRange(b, tx, ty, st.range);
       if (!list.length) { t.cd = 0.05; continue; }
@@ -3548,8 +3549,8 @@ function stepTowers(b, dt, real) {
 }
 function launch(b, t, st, target, real, x, y) {
   if (t.type === 'ballista') { const dx = target.x - x, dy = target.y - y, d = Math.hypot(dx, dy) || 1; b.proj.push({ type: 'ballista', real, src: t, x, y, sx: x, sy: y, ux: dx / d, uy: dy / d, ang: Math.atan2(dy, dx), speed: 15, left: st.range + 0.8, w: t.lvl >= 3 ? 0.42 : 0.3, dmg: st.dmg, hit: [], t: 0 }); return; }
-  const sp = { arrow: 13, cannon: 6.5, frost: 9, bombard: 3.8 }[t.type];
-  const p = { type: t.type, evo: t.evo, src: t, real, x, y, sx: x, sy: y, tgt: target, tx: target.x, ty: target.y, speed: sp, dmg: st.dmg, splash: st.splash, slowDur: st.slowDur, slowF: st.slowF, t: 0, chain: t.evo === 'chain' ? 2 : 0, hitList: null };
+  const ty0 = HMCT_M[t.type] ? 'frost' : t.type, sp = { arrow: 13, cannon: 6.5, frost: 9, bombard: 3.8 }[ty0];
+  const p = { type: ty0, evo: t.evo, hev: hmEv(b, t), src: t, real, x, y, sx: x, sy: y, tgt: target, tx: target.x, ty: target.y, speed: sp, dmg: st.dmg, splash: st.splash, slowDur: st.slowDur, slowF: st.slowF, t: 0, chain: t.evo === 'chain' ? 2 : 0, hitList: null };
   if (t.type === 'cannon' || t.type === 'bombard') p.dur = Math.max(0.2, Math.hypot(target.x - x, target.y - y) / sp) * (t.evo === 'mortar' ? 1.25 : 1);
   b.proj.push(p);
 }
@@ -3563,6 +3564,7 @@ function hitCreep(b, p, cr) {
     if (p.evo === 'shatter') cr.brittleUntil = G.t + 3;
   }
   if (p.evo === 'poison') cr.poison = { dps: p.dmg * 0.6, until: G.t + 3, src: p.src };
+  { const hh = HX.hits[p.hev || p.evo]; if (hh) hh(b, p, cr); }
   damage(b, cr, dmg, p.src);
 }
 function explode(b, p, x, y, r, dmg, main) {
@@ -5609,10 +5611,11 @@ function crossbowSprite(dir, lvl, kick) {
 const TOWER_BODY = { arrow: arrowBody, cannon: cannonBody, frost: frostBody, tesla: teslaBody, ballista: ballistaBody, bombard: bombardBody };
 function towerSprite(type, lvl, evo, k) {
   const own = [PCOL[k] || NEUTRAL[0], PDARK[k] || NEUTRAL[1]];
-  return sprGet(`t${type}${lvl}${evo}${k}`, () => bakeStruct((x, y) => (TOWER_BODY[type] || frostBody)(x, y, lvl, evo, own)));
+  return sprGet(`t${type}${lvl}${evo}${k}`, () => bakeStruct((x, y) => HX.bodies[evo] ? HX.bodies[evo](x, y, lvl, evo, own, type) : (TOWER_BODY[type] || frostBody)(x, y, lvl, evo, own)));
 }
 // where the moving part sits on each tower (relative to the cell origin)
 function towerTopAt(type, lvl, evo) {
+  if (HX.at[evo]) return HX.at[evo](type, lvl);
   if (CHF_AT[type]) return CHF_AT[type];
   const base = 23, Hb = towerH(type, lvl, evo);
   if (type === 'arrow') return [14, base - Hb + 9 - 3];
@@ -5674,6 +5677,1402 @@ function topSprite(type, lvl, evo, k, ang = 1.2, kick = false) {
   const d16 = ((Math.round(ang / (Math.PI * 2) * 16) % 16) + 16) % 16;
   return type === 'arrow' ? archerSprite(k, Math.cos(ang) < -0.15, kick, evo === 'double', evo === 'sniper') : type === 'cannon' ? barrelSprite(d16, evo || '', kick) : type === 'tesla' ? orbSprite(lvl, kick) : type === 'ballista' ? crossbowSprite(d16, lvl, kick) : type === 'bombard' ? bombardSprite(d16, lvl, kick) : crystalSprite(lvl, evo || '');
 }
+/* ================================================================ version 139 · les tours de chaque Maison : dessins et réglages (planche du 17/11) */
+/* ===== HX: prototype towers per House (planche 17/11), drawn with the game's own kit ===== */
+const HX = { bodies: {}, at: {}, tops: {}, shots: {}, stats: {}, hits: {}, booms: {}, D: {} };
+window.HX = HX;
+const HXC = { fox: '#c9783f', fox0: '#97572b', foxw: '#eadfcb', crow: '#2b2d36', crow1: '#4a4d5c', beak: '#d0a04f', earth: '#6b5a45', earth0: '#4d3f31', spark: '#f3c48a' };
+const hxD16 = a => ((Math.round(a / (Math.PI * 2) * 16) % 16) + 16) % 16;
+function hxGold(fn) { const sv = [K.s1, K.s2, K.s3, K.s4, K.s5]; K.s1 = shade(K.au0, .78); K.s2 = K.au0; K.s3 = K.ua; K.s4 = K.ua; K.s5 = K.au2; try { return fn(); } finally { [K.s1, K.s2, K.s3, K.s4, K.s5] = sv; } }
+// a stone shaft with the game's level marks; returns its landmarks
+function hxShaft(x, y, lvl, own, H, w, inner, o = {}) {
+  const cx = x + 12, base = y + 23, top = base - H + 7, rim = o.gold || lvl >= 3 ? 'gold' : { own };
+  castEll(cx, base - 5, 11, 5, H + 2);
+  const ledge = o.gold ? hxGold(() => towerBody(x, top, base, w)) : towerBody(x, top, base, w);
+  if (!o.noDoor) { P.vl(cx - 1, base - 8, 4, K.dk); P.vl(cx, base - 8, 4, K.dk); }
+  band(cx, top + 1, w, o.gold ? 4 : lvl, own);
+  rankPips(cx, top + 6, o.gold ? 4 : lvl, own);
+  if (lvl >= 2 && !o.noMerlons) merlons(cx, top - 9, w + 2, rim);
+  octTop(cx, top - 9, inner, rim, w + 2);
+  if (lvl >= 4) masteryCrown(cx, top - 9, w + 2);
+  return { cx, base, top, ledge };
+}
+// register a tower: H(lvl), w, inner, extra(body landmarks), top(dir, kick, lvl, k) -> sprite, lift
+function hxDef(evo, d) {
+  HX.D[evo] = d;
+  HX.bodies[evo] = (x, y, lvl, e, own, type) => { const L = hxShaft(x, y, lvl, own, d.H(lvl), d.w, d.inner || 'dark', d); if (d.extra) d.extra(L, lvl, own, x, y); };
+  HX.at[evo] = (type, lvl) => [12, 23 - d.H(lvl) + 2 + (d.dy || 0)];
+  if (d.top) HX.tops[evo] = (x, b, t, s, tx, ty, kick) => {
+    const k = pcol(b.k), dir = hxD16(t.ang ?? 1.57), kk = kick < (d.kickT || 0.16), bob = d.bob ? (Math.sin(G.t * 2.2 + t.id) > 0.3 ? -1 : 0) : 0;
+    blit(x, sprGet(`hx${evo}|${dir}|${+kk}|${t.lvl}|${k}`, () => d.top(dir, kk, t.lvl, k)), s.x + tx, s.y + ty + bob);
+    if (d.live) d.live(x, b, t, s, tx, ty, kick);
+  };
+}
+HX.topSprite = (evo, dir, kk, lvl, k) => sprGet(`hx${evo}|${dir}|${+kk}|${lvl}|${k}`, () => HX.D[evo].top(dir, kk, lvl, k));
+
+/* ---------- tinted common towers: the Archer and the Canon of each House ---------- */
+const HX_EL = {
+  cerf:    { a: () => K.c3, b: () => K.c1, n: 'givre' },
+  ours:    { a: () => HXC.spark, b: () => K.i1, n: 'choc' },
+  corbeau: { a: () => K.poison, b: () => K.poison0, n: 'poison' },
+  renard:  { a: () => K.ua, b: () => K.au0, n: 'butin' },
+};
+for (const h in HX_EL) {
+  const el = HX_EL[h], evo = 'hx_' + h;
+  HX.bodies[evo] = (x, y, lvl, e, own, type) => {
+    (type === 'cannon' ? cannonBody : arrowBody)(x, y, lvl, '', own);
+    const cx = x + 12, base = y + 23;
+    // the House's mark at the foot of the tower: a quiver / a keg in the element's colour
+    if (type === 'cannon') { P.rect(cx + 5, base - 4, 4, 3, el.b()); P.hl(cx + 5, base - 5, 4, el.a()); P.px(cx + 6, base - 3, el.a()); }
+    else { P.rect(cx + 6, base - 6, 2, 5, K.w0); P.px(cx + 6, base - 7, el.a()); P.px(cx + 7, base - 8, el.a()); P.px(cx + 7, base - 6, el.a()); }
+  };
+  HX.shots[evo] = (x, b, p, px, py) => {
+    if (p.type === 'arrow') {
+      const tx = AX0 + (p.tx ?? p.x) * CS, ty = AY0 + (p.ty ?? p.y) * CS, dist = Math.hypot(tx - px, ty - py), hh = 7 + Math.min(20, dist * 0.45);
+      const a = p.ang ?? Math.atan2(ty - py, tx - px), ux = Math.cos(a), uy = Math.sin(a), ex = px, ey = py - hh, sh = el.a();
+      x.globalAlpha = .45; P.line(ex - ux * 15, ey - uy * 15 + 1, ex - ux * 8, ey - uy * 8 + 1, sh); x.globalAlpha = 1;
+      P.line(ex - ux * 7, ey - uy * 7 + 1, ex, ey + 1, K.dk2); P.line(ex - ux * 7, ey - uy * 7, ex, ey, h === 'ours' ? K.w2 : sh);
+      P.px(Math.round(ex), Math.round(ey), h === 'ours' ? K.i0 : '#ffffff'); P.px(Math.round(ex - ux), Math.round(ey - uy), h === 'ours' ? K.i1 : sh);
+      if (h === 'ours') { P.px(Math.round(ex + ux), Math.round(ey + uy), K.i0); P.px(Math.round(ex - uy), Math.round(ey + ux), K.i1); P.px(Math.round(ex + uy), Math.round(ey - ux), K.i1); }
+      return true;
+    }
+    if (p.type === 'cannon') {
+      const lift = hh => hh * CS + 6;
+      for (let k = 1; k <= 3; k++) {
+        const u = Math.max(0, Math.min(1, (p.t - k * .05) / p.dur)); if (u <= 0) break;
+        const sx = AX0 + (p.sx + (p.tx - p.sx) * u) * CS, sy = AY0 + (p.sy + (p.ty - p.sy) * u) * CS - lift(Math.sin(u * Math.PI) * .6);
+        x.globalAlpha = .6 - k * .13; P.rect(Math.round(sx) - 1, Math.round(sy) - 1, 3 - (k > 2 ? 1 : 0), 3 - (k > 2 ? 1 : 0), h === 'ours' ? K.sm1 : el.a()); x.globalAlpha = 1;
+      }
+      const bx = Math.round(px), by = Math.round(py - lift(p.h || 0));
+      if (h === 'cerf') { P.spr(['.www.', 'wwwww', 'wwwcw', 'wwccw', '.ccc.'], { w: '#ffffff', c: K.c2 }, bx - 2, by - 2); }
+      else if (h === 'corbeau') { P.spr(['..n..', '.ggg.', 'gGGgd', 'gGggd', '.ddd.'], { n: K.w2, g: K.poison, G: '#e4f3d2', d: K.poison0 }, bx - 2, by - 2); }
+      else if (h === 'renard') { P.spr(['..t..', '.aaa.', 'aAaad', 'aaaad', '.ddd.'], { t: K.w2, a: K.ua, A: K.au2, d: K.au0 }, bx - 2, by - 2); }
+      else { P.spr(['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], { d: K.dk2, b: K.i0 }, bx - 2, by - 2); P.px(bx - 1, by - 1, K.i2); P.px(bx + 2, by + 2, K.fire1); }
+      return true;
+    }
+    return false;
+  };
+}
+/* what the element does on a hit (the planche's stand-ins for the real rules) */
+HX.hits.hx_cerf = (b, p, cr) => { if (cr.noSlow) return; cr.slowF = G.t < cr.slowUntil ? Math.max(0.35, cr.slowF - 0.15) : 0.75; cr.slowUntil = G.t + 1.6; };
+HX.booms.hx_cerf = (b, p, cr) => { if (G.t < cr.slowUntil && !cr.noStun) { cr.stunUntil = Math.max(cr.stunUntil, G.t + 1.2); cr.iceUntil = G.t + 1.2; cr.brittleUntil = G.t + 1.2; } else slow(cr, 0.6, 1.6); };
+HX.hits.hx_ours = (b, p, cr) => { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + 0.18); };
+HX.booms.hx_ours = (b, p, cr) => { HX.push(b, cr, 0.6); };
+HX.hits.hx_corbeau = (b, p, cr) => { const d = cr.poison && G.t < cr.poison.until ? cr.poison.dps : 0; cr.poison = { dps: d + p.dmg * 0.4, until: G.t + 3, src: p.src }; };
+HX.booms.hx_corbeau = (b, p, cr) => { const d = cr.poison && G.t < cr.poison.until ? cr.poison.dps : 0; cr.poison = { dps: d + p.dmg * 0.3, until: G.t + 3, src: p.src }; };
+HX.hits.hx_renard = (b, p, cr) => { cr.chfGold = G.t + 3; };
+HX.booms.hx_renard = (b, p, cr) => { cr.chfGold = G.t + 3; };
+// push a creature back along the way it came (the Ours' shock)
+HX.push = (b, cr, cells) => { if (cr.fly || cr.noStun) return; cr.backT = Math.max(cr.backT || 0, G.t + cells * 0.55); };
+
+/* ---------- the signature towers ---------- */
+// OURS · Le Marteau: a war hammer on a pivot, raised, then slammed toward the creature
+function hxHammer(o) {
+  return (dir, kk, lvl) => bakeAt(40, 40, 20, 24, (cx, cy) => {
+    const a = dir / 16 * Math.PI * 2, ux = Math.cos(a), uy = Math.sin(a) * .8, gold = o.gold || lvl >= 3;
+    const L = kk ? o.L + 2 : o.L - 2, lift = kk ? 0 : o.lift, hx = cx + ux * L, hy = cy + uy * L - lift;
+    const iron = o.gold ? [K.au2, K.ua, K.au0] : [K.i2, K.i1, K.i0];
+    // the pivot, the handle, its shadow
+    P.rect(cx - 2, cy - 1, 4, 3, K.i1); P.hl(cx - 2, cy - 1, 4, K.i2);
+    P.line(cx, cy + 1, hx, hy + 2, K.dk2); P.line(cx, cy, hx, hy, '#c9a86f'); P.line(cx, cy - 1, hx, hy - 1, '#e2c58e');
+    // the head: a block across the handle
+    const w = o.hw, hh = o.hh; P.rect(hx - (w >> 1), hy - (hh >> 1) - 1, w, hh, iron[1]); P.hl(hx - (w >> 1), hy - (hh >> 1) - 1, w, iron[0]); P.hl(hx - (w >> 1), hy - (hh >> 1) - 2 + hh, w, iron[2]); P.vl(hx - (w >> 1) + w - 1, hy - (hh >> 1) - 1, hh, iron[2]);
+    if (gold && !o.gold) { P.px(hx - (w >> 1), hy - (hh >> 1) - 1, K.au2); P.px(hx - (w >> 1) + w - 1, hy - (hh >> 1) - 1, K.ua); }
+    if (o.stun) { P.px(hx - (w >> 1) - 1, hy - 1, K.stun); P.px(hx + (w >> 1) + 1, hy - 1, K.stun); }
+    if (kk) for (const [dx, dy] of [[-4, 1], [4, 1], [-3, 3], [3, 3], [0, 4]]) P.px(hx + dx, hy + dy, HXC.spark);
+  });
+}
+// the catapult: an arm and its spoon; the rock is gone just after the throw
+function hxCatapult(dir, kk, lvl) {
+  return bakeAt(40, 40, 20, 24, (cx, cy) => {
+    const a = dir / 16 * Math.PI * 2, ux = Math.cos(a), uy = Math.sin(a) * .8;
+    const L = 8, s = kk ? 1 : -1, ex = cx + ux * L * s, ey = cy + uy * L * s - (kk ? 5 : 2);
+    P.rect(cx - 3, cy - 1, 6, 3, K.w0); P.hl(cx - 3, cy - 1, 6, K.w2);
+    P.line(cx, cy + 1, ex, ey + 2, K.dk2); P.line(cx, cy, ex, ey, K.w2); P.line(cx, cy - 1, ex, ey - 1, '#c9a86f');
+    P.rect(ex - 2, ey - 1, 4, 2, K.w0);
+    if (!kk) { P.spr(['.ss.', 'sSSs', 'sSss', '.ss.'], { s: K.s2, S: K.s4 }, ex - 2, ey - 5); }
+  });
+}
+hxDef('hx_marteau',   { H: l => 20 + 2 * (Math.min(4, l) - 1), w: 20, inner: 'dark', kickT: 0.22, top: hxHammer({ L: 8, lift: 7, hw: 6, hh: 5 }) });
+hxDef('hx_enclume',   { H: l => 20 + 2 * (Math.min(4, l) - 1), w: 20, inner: 'dark', kickT: 0.22, top: hxHammer({ L: 8, lift: 7, hw: 9, hh: 6, stun: true }),
+  extra: (L, lvl, own) => { for (let i = 0; i < 4; i++) P.px(L.cx - 6 + i * 4, L.ledge - 2, K.stun); } });
+hxDef('hx_catapulte', { H: l => 20 + 2 * (Math.min(4, l) - 1), w: 20, inner: 'planks', kickT: 0.3, top: hxCatapult });
+HX.stats.hx_marteau = (t, o) => { o.range = 1.35 + 0.1 * (t.lvl - 1); o.rate = 1.5; o.splash = 0.95; o.dmg *= 1.5; };
+HX.stats.hx_enclume = (t, o) => { o.range = 1.4 + 0.1 * (t.lvl - 1); o.rate = 1.9; o.splash = 1.25; o.dmg *= 1.3; };
+HX.stats.hx_catapulte = (t, o) => { o.range = 3.3; o.rate = 2.6; o.splash = 0.7; o.dmg *= 2.4; };
+// the hammer does not throw anything: the blow lands at once, where the creature stands
+HX.shots.hx_marteau = HX.shots.hx_enclume = () => true;
+HX.booms.hx_marteau = (b, p, cr) => { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + 0.35); };
+HX.booms.hx_enclume = (b, p, cr) => { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + 0.7); };
+HX.shots.hx_catapulte = (x, b, p, px, py) => {
+  const bx = Math.round(px), by = Math.round(py - ((p.h || 0) * CS * 1.5 + 6));
+  P.spr(['.sss.', 'sSSss', 'sSsss', 'sssss', '.sss.'], { s: K.s2, S: K.s4 }, bx - 2, by - 2); P.px(bx + 2, by + 2, K.s1); return true;
+};
+HX.booms.hx_catapulte = (b, p, cr) => { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + 0.4); };
+
+// CORBEAU · La Volière: a tall tower, a perch, a crow that turns toward its prey and dives
+const HX_CROW = ['....kk.', '...kekn', '.kkKKk.', 'kkkKk..', '.kkk...', '...l...'];
+const HX_CROWUP = ['k.....k', 'kk.kekn', '.kkKKk.', '..kKk..', '...k...'];
+const HX_CROWFLY = [['...........', '..kk.......', '.kkKk......', 'kkkkkkkkken', '..kkKKkk...', '....kk.....'], ['....kk.....', '...kKk.....', '..kkKk.....', 'kkkkkkkkken', '..kkkkkk...', '...........']];
+const hxCrowPal = big => ({ k: HXC.crow, K: HXC.crow1, e: big ? K.au2 : '#e8e1cf', n: HXC.beak, l: HXC.beak });
+function hxPerch(o) {
+  return (dir, kk, lvl) => bakeAt(44, 40, 22, 30, (cx, cy) => {
+    const left = Math.cos(dir / 16 * Math.PI * 2) < -0.15, pal = hxCrowPal(o.big), gold = lvl >= 3 || o.gold;
+    // the perch: a post and its bar
+    P.vl(cx, cy - 7, 8, K.w0); P.vl(cx - 1, cy - 7, 8, K.w2); P.hl(cx - 5, cy - 8, 11, gold ? K.ua : K.w2); P.hl(cx - 5, cy - 7, 11, gold ? K.au0 : K.w0);
+    const one = (ox, oy) => { if (kk) P.spr(HX_CROWUP, pal, cx + ox - 3, cy - 8 - 8 + oy, left); else P.spr(HX_CROW, pal, cx + ox - 3, cy - 8 - 6 + oy, left); };
+    if (o.n === 3) { one(-5, 0); one(5, 0); one(0, -1); } else if (o.big) {
+      const rows = kk ? ['kk......k', '.kk.kkekn', '..kkKKKk.', '...kKKk..', '....kk...'] : ['.....kkk.', '....kkekn', '..kkkKKk.', '.kkkKKKk.', 'kkkkKKk..', '.kkkkk...', '....l.l..'];
+      P.spr(rows, pal, cx - 4, cy - 8 - rows.length, left);
+    } else one(0, 0);
+  });
+}
+const hxVolExtra = (L, lvl, own) => { P.rect(L.cx - 1, L.ledge - 6, 2, 3, K.dk); P.rect(L.cx - 5, L.ledge + 5, 2, 3, K.dk); P.rect(L.cx + 3, L.ledge + 5, 2, 3, K.dk); };
+hxDef('hx_voliere', { H: l => 30 + 2 * (Math.min(4, l) - 1), w: 16, inner: 'planks', extra: hxVolExtra, top: hxPerch({}) });
+hxDef('hx_nuee',    { H: l => 30 + 2 * (Math.min(4, l) - 1), w: 16, inner: 'planks', extra: hxVolExtra, top: hxPerch({ n: 3 }) });
+hxDef('hx_oeil',    { H: l => 34 + 2 * (Math.min(4, l) - 1), w: 16, inner: 'planks', extra: hxVolExtra, top: hxPerch({ big: true }) });
+HX.stats.hx_voliere = (t, o) => { o.range = 4.2 + 0.3 * (t.lvl - 1); o.rate = 1.25; o.splash = 0.01; o.dmg *= 0.9; };
+HX.stats.hx_nuee = (t, o) => { o.range = 4.4; o.rate = 0.9; o.splash = 0.9; o.dmg *= 0.6; };
+HX.stats.hx_oeil = (t, o) => { o.range = 7; o.rate = 2.4; o.splash = 0.01; o.dmg *= 3.2; };
+function hxCrowShot(n) {
+  return (x, b, p, px, py) => {
+    const u = Math.min(1, p.t / p.dur), hgt = 14 * (1 - u) + 4, left = p.tx < p.sx, f = fmod(G.t * 10, 2), pal = hxCrowPal(false);
+    for (let i = 0; i < n; i++) { const ox = i ? (i === 1 ? -7 : 6) : 0, oy = i ? (i === 1 ? -3 : 4) : 0; P.spr(HX_CROWFLY[(f + i) % 2], pal, Math.round(px) - 5 + ox, Math.round(py - hgt) - 3 + oy, left); }
+    return true;
+  };
+}
+HX.shots.hx_voliere = hxCrowShot(1); HX.shots.hx_oeil = hxCrowShot(1); HX.shots.hx_nuee = hxCrowShot(3);
+for (const e of ['hx_voliere', 'hx_nuee', 'hx_oeil']) HX.booms[e] = (b, p, cr) => { const d = cr.poison && G.t < cr.poison.until ? cr.poison.dps : 0; cr.poison = { dps: d + p.dmg * 0.5, until: G.t + 3.5, src: p.src }; };
+
+// RENARD · Le Terrier: a low stone curb around a burrow; the fox peeks out, looks at its prey, throws
+function hxFox(o) {
+  return (dir, kk, lvl) => bakeAt(40, 40, 20, 26, (cx, cy) => {
+    const lk = Math.cos(dir / 16 * Math.PI * 2), sx = lk < -0.3 ? -1 : lk > 0.3 ? 1 : 0, up = kk ? 3 : 0, gold = o.gold;
+    const pal = { O: gold ? K.ua : HXC.fox, o: gold ? K.au0 : HXC.fox0, W: gold ? K.au2 : HXC.foxw, e: K.dk2, n: K.dk2 };
+    const face = sx < 0 ? ['O....O.', 'OO..OO.', 'OOOOOO.', 'eOOeOOo', 'WWnWWo.', '.WWW...'] : sx > 0 ? ['.O....O', '.OO..OO', '.OOOOOO', 'oOOeOOe', '.oWWnWW', '...WWW.'] : ['O.....O', 'OO...OO', 'OOOOOOO', 'OeOOOeO', 'oWWnWWo', '..WWW..'];
+    P.spr(face, pal, cx - 3, cy - 6 - up);
+    if (up) { P.rect(cx - 2, cy - 3, 5, 3, pal.O); P.vl(cx + 2, cy - 3, 3, pal.o); }
+    if (o.crown) { P.hl(cx - 1, cy - 8 - up, 3, K.ua); P.px(cx - 1, cy - 9 - up, K.au2); P.px(cx + 1, cy - 9 - up, K.au2); P.px(cx, cy - 9 - up, '#ffffff'); }
+    if (o.dummy) { P.vl(cx + 7, cy - 7, 7, K.w2); P.hl(cx + 5, cy - 5, 5, K.w2); P.rect(cx + 6, cy - 10, 3, 3, '#d9c27a'); P.px(cx + 7, cy - 11, K.w0); }
+    if (o.trap) { P.px(cx - 6, cy - 1, K.i1); P.px(cx - 5, cy - 2, K.i2); P.px(cx + 5, cy - 2, K.i2); P.px(cx + 6, cy - 1, K.i1); }
+  });
+}
+const hxTerExtra = (L, lvl, own) => {
+  // the earth thrown up around the burrow, a few tufts
+  P.rect(L.cx - 9, L.base - 3, 5, 3, HXC.earth); P.hl(L.cx - 9, L.base - 3, 4, '#85705a'); P.rect(L.cx + 5, L.base - 2, 4, 2, HXC.earth); P.px(L.cx + 6, L.base - 3, '#85705a');
+};
+hxDef('hx_terrier', { H: l => 13 + 2 * (Math.min(4, l) - 1), w: 18, inner: 'dark', noDoor: true, extra: hxTerExtra, top: hxFox({}) });
+hxDef('hx_piege',   { H: l => 13 + 2 * (Math.min(4, l) - 1), w: 18, inner: 'dark', noDoor: true, extra: hxTerExtra, top: hxFox({ trap: true }) });
+hxDef('hx_leurre',  { H: l => 13 + 2 * (Math.min(4, l) - 1), w: 18, inner: 'dark', noDoor: true, extra: hxTerExtra, top: hxFox({ dummy: true }) });
+for (const e of ['hx_terrier', 'hx_piege', 'hx_leurre']) {
+  HX.stats[e] = (t, o) => { o.range = 2.4 + 0.2 * (t.lvl - 1); o.rate = 1.0; o.splash = 0.01; o.dmg *= 0.8; };
+  HX.shots[e] = (x, b, p, px, py) => { const bx = Math.round(px), by = Math.round(py - ((p.h || 0) * CS + 6)); P.spr(['.aa.', 'aAad', 'aaad', '.dd.'], { a: K.ua, A: K.au2, d: K.au0 }, bx - 2, by - 2); return true; };
+  HX.booms[e] = (b, p, cr) => { cr.chfGold = G.t + 4; };
+}
+
+// CERF · the Cristal is the game's Givre (its crystal, its Blizzard, its Gel total): nothing to draw
+
+/* ---------- the masterpieces: one cell, all in gold, a head that moves ---------- */
+// CERF · Le Cœur de l'hiver
+hxDef('hx_coeur', { H: l => 16, w: 18, inner: 'ice', gold: true, noDoor: true, bob: true, dy: -1,
+  extra: (L) => { addGlow(L.cx, L.base - 8, 44, '#cfe8ff', .3, .72); for (const sx of [L.cx - 11, L.cx + 9]) { P.rect(sx, L.top - 13, 2, 5, K.ua); P.px(sx, L.top - 14, '#ffffff'); } },
+  top: (dir, kk) => bakeAt(40, 44, 20, 36, (cx, by) => {
+    const pal = { c: '#ffffff', C: K.c3, a: K.c2, b: K.c1, d: K.c0 };
+    const rows = ['..cC...Ca..', '.cCCa.CCab.', 'cCCCCaCCaab', 'cCCCCCCaaab', 'cCCCCCaaaab', '.cCCCCaaab.', '..cCCaaab..', '...cCaab...', '....cab....', '.....d.....'];
+    P.spr(rows, pal, cx - 5, by - 12);
+    if (kk) for (const [dx, dy] of [[-8, -8], [8, -9], [-7, -1], [7, 0], [0, -15], [-3, -14], [4, -13]]) P.px(cx + dx, by + dy, '#ffffff');
+    P.px(cx - 3, by - 10, '#ffffff'); P.px(cx - 2, by - 9, '#ffffff');
+  }) });
+HX.stats.hx_coeur = (t, o) => { o.range = 2.6; o.rate = 0.8; o.slowF = 0.4; o.slowDur = 2; o.dmg *= 2; };
+// OURS · Le Grand Marteau
+hxDef('hx_gmarteau', { H: l => 22, w: 20, inner: 'dark', gold: true, kickT: 0.25, top: hxHammer({ L: 10, lift: 9, hw: 11, hh: 7, gold: true }),
+  extra: (L) => { addGlow(L.cx, L.top - 4, 24, '#fff3cf', .22, .8); } });
+HX.stats.hx_gmarteau = (t, o) => { o.range = 1.9; o.rate = 2.6; o.splash = 1.9; o.dmg *= 4; };
+HX.shots.hx_gmarteau = () => true;
+HX.booms.hx_gmarteau = (b, p, cr) => { HX.push(b, cr, 2.4); };
+// CORBEAU · Le Nid
+hxDef('hx_nid', { H: l => 34, w: 16, inner: 'planks', gold: true,
+  extra: (L) => { hxVolExtra(L); addGlow(L.cx, L.top - 6, 24, '#fff3cf', .22, .8); },
+  top: (dir, kk) => bakeAt(48, 44, 24, 34, (cx, cy) => {
+    const left = Math.cos(dir / 16 * Math.PI * 2) < -0.15, pal = hxCrowPal(true);
+    // the nest: woven twigs, gilded
+    for (let j = 0; j < 4; j++) { const w = 13 - (j === 3 ? 4 : j === 0 ? 2 : 0); P.hl(cx - (w >> 1), cy - 6 + j, w, j % 2 ? K.au0 : K.ua); } P.px(cx - 6, cy - 7, K.ua); P.px(cx + 6, cy - 7, K.ua); P.px(cx - 3, cy - 5, K.w0); P.px(cx + 2, cy - 4, K.w0); P.px(cx, cy - 6, K.w2);
+    const rows = kk ? ['kk.......kk', '.kkk.kkekn.', '..kkkKKKk..', '...kkKKk...', '....kkk....'] : ['......kkk..', '.....kkekn.', '...kkkKKk..', '..kkkKKKk..', '.kkkkKKKk..', 'kkkkkKKk...', '.kkkkkk....'];
+    P.spr(rows, pal, cx - 5, cy - 6 - rows.length - (kk ? 3 : 0), left);
+  }) });
+HX.stats.hx_nid = (t, o) => { o.range = 99; o.rate = 1.1; o.splash = 1.0; o.dmg *= 3; };
+HX.shots.hx_nid = hxCrowShot(3);
+HX.booms.hx_nid = (b, p, cr) => { const d = cr.poison && G.t < cr.poison.until ? cr.poison.dps : 0; cr.poison = { dps: d + p.dmg * 0.6, until: G.t + 4, src: p.src }; };
+// RENARD · La Tanière
+hxDef('hx_taniere', { H: l => 19, w: 20, inner: 'dark', gold: true, noDoor: true, top: hxFox({ crown: true }),
+  extra: (L) => { hxTerExtra(L); addGlow(L.cx, L.top - 4, 24, '#fff3cf', .24, .8); P.rect(L.cx + 6, L.base - 5, 3, 2, K.ua); P.px(L.cx + 7, L.base - 6, K.au2); P.rect(L.cx - 9, L.base - 6, 2, 2, K.ua); } });
+HX.stats.hx_taniere = (t, o) => { o.range = 2.8; o.rate = 0.9; o.splash = 0.01; o.dmg *= 2.5; };
+HX.shots.hx_taniere = HX.shots.hx_terrier;
+HX.booms.hx_taniere = (b, p, cr) => { cr.chfGold = G.t + 5; };
+
+/* a tower with its wall, as the game draws it, on a canvas of its own (for the planche's strips) */
+HX.portrait = (type, lvl, evo, k, ang, kk, wall = true) => {
+  const W = 56, Hh = 80, [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x);
+  const ax = 16, ay = 54, own = pcol(k);
+  if (wall) blit(x, wallSprite(false, false, false, 0, own), ax, ay);
+  blit(x, towerSprite(type, lvl, evo, own), ax, ay);
+  const [tx, ty] = towerTopAt(type, lvl, evo);
+  if (HX.D[evo] && HX.D[evo].top) blit(x, HX.topSprite(evo, hxD16(ang), kk, lvl, own), ax + tx, ay + ty);
+  else blit(x, topSprite(type, lvl, evo, own, ang, kk), ax + tx, ay + ty);
+  P = prev; return c;
+};
+
+/* ---------- the planche's little director: pulses of the masterpieces, traps, links between neighbours ---------- */
+HX.traps = []; HX.links = []; HX.auras = [];
+HX.step = (b, dt, real) => {
+  if (b.k !== G.me) return;
+  for (const t of b.grid) {
+    if (!t) continue;
+    if (t.evo === 'hx_coeur') { if (!(t.hxT > G.t)) { t.hxT = G.t + 5; t.kick = G.t; b.rings.push({ x: t.c + .5, y: t.r + .5, r0: 0.4, r1: 9, t: 0.9, ttl: 0.9, color: '#DFF6FF', fill: true }); for (const cr of b.creeps) if (!cr.dead && cr.y >= 0 && !cr.noStun) { cr.stunUntil = Math.max(cr.stunUntil, G.t + 2); cr.iceUntil = G.t + 2; } G.floats.push({ k: b.k, x: t.c + .5, y: t.r - 0.9, txt: 'GEL', color: '#DFF6FF', t: 1, ttl: 1 }); } }
+    if (t.evo === 'hx_taniere' && HX.tanMode !== 'traps') { if (t.hxT === undefined) t.hxT = G.t + 2.5; if (t.hxT <= G.t) { t.hxT = G.t + 4; const cr = b.creeps.filter(c => !c.dead && c.y >= 0 && c.from >= 0 && !c.fly).sort((a, c) => c.prog - a.prog)[0]; if (cr) { t.kick = G.t; t.ang = Math.atan2(cr.y - t.r - .5, cr.x - t.c - .5); b.rings.push({ x: cr.x, y: cr.y, r0: 0.1, r1: 0.9, t: 0.5, ttl: 0.5, color: C.gold, fill: true }); for (let i = 0; i < 12; i++) { const a = Math.random() * 6.28; b.parts.push({ x: cr.x, y: cr.y, vx: Math.cos(a) * 2.4, vy: Math.sin(a) * 2.4 - 1, t: 0.5, ttl: 0.5, color: C.gold, size: 0.06 }); } G.floats.push({ k: b.k, x: cr.x, y: cr.y - 0.5, txt: 'RENVOYÉ', color: C.gold, t: 1.1, ttl: 1.1 }); cr.dead = true; cr.hxGone = true; } } }
+  }
+  HX.traps = HX.traps.filter(tr => !tr.used && !(tr.shut > G.t ? false : (tr.charges === 0 || (tr.t1 && tr.t1 < G.t))));
+  for (const tr of HX.traps) {
+    if (tr.shut > G.t) continue;
+    const cr = b.creeps.find(c => !c.dead && !c.fly && Math.hypot(c.x - tr.c - .5, c.y - tr.r - .5) < 0.33);
+    if (cr && tr.charges !== undefined) { const hold = HX.trapHold ? HX.trapHold(tr) : 1.3; tr.charges--; tr.shut = G.t + hold; b.gold += 2; G.floats.push({ k: b.k, x: cr.x, y: cr.y - 0.5, txt: '+2', color: C.gold, t: 0.9, ttl: 0.9 }); if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + hold); damage(b, cr, HX.trapDmg ? HX.trapDmg(tr, cr) : cr.max * 0.08, tr.src || null); b.rings.push({ x: tr.c + .5, y: tr.r + .5, r0: 0.1, r1: 0.6, t: 0.3, ttl: 0.3, color: C.gold }); continue; }
+    if (cr) { tr.shut = G.t + 2.6; if (tr.once) { tr.used = true; b.gold += 2; G.floats.push({ k: b.k, x: cr.x, y: cr.y - 0.5, txt: '+2', color: C.gold, t: 0.9, ttl: 0.9 }); } if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + 1.6); cr.chfGold = G.t + 4; damage(b, cr, cr.max * (tr.once ? 0.12 : 0.25), tr.src || null); b.rings.push({ x: tr.c + .5, y: tr.r + .5, r0: 0.1, r1: 0.6, t: 0.3, ttl: 0.3, color: C.gold }); }
+  }
+};
+{ const prev = window.__jtDrawHook; window.__jtDrawHook = function (o) {
+  if (prev) prev(o);
+  const { b, items, P, acell } = o; if (HM.PROD || b.k !== G.me) return;
+  for (const tr of HX.traps) { const [cx, cy] = acell(tr.c, tr.r), shut = tr.shut > G.t;
+    items.push({ y: cy + 6, fx: () => { const X = cx + 12, Y = cy + 14;
+      if (shut) { P.hl(X - 3, Y, 7, K.i1); P.spr(['.i.i.i.', 'iIiIiIi'], { i: K.i1, I: K.i2 }, X - 3, Y - 2); }
+      else { if (tr.t1 && tr.t1 - G.t < 1.5 && Math.floor(G.t * 8) % 2) return; P.hl(X - 5, Y, 11, K.i0); P.spr(['i.........i', 'iI.......Ii', '.iI.....Ii.', '..iiiaiii..'], { i: K.i1, I: K.i2, a: K.ua }, X - 5, Y - 3); }
+      if (tr.charges !== undefined) for (let i = 0; i < tr.charges; i++) { P.px(X - 2 + i * 2, Y + 2, K.ua); P.px(X - 2 + i * 2, Y + 3, K.au0); } } }); }
+  for (const L of HX.links) { const [ax, ay] = acell(L.c, L.r);
+    items.push({ y: ay + 24.5, fx: () => { const col = L.col || K.ua, ph = fmod(G.t * 6, 4); for (let i = 0; i < L.n * 24 - 14; i++) if ((i + ph) % 4 < 2) { P.px(ax + 19 + i, ay + 14, col); } for (let j = 0; j < L.n; j++) { P.rect(ax + 23 + j * 24, ay + 12, 3, 5, col); P.px(ax + 24 + j * 24, ay + 13, '#ffffff'); } } }); }
+  for (const A of HX.auras) { const [ax, ay] = acell(A.c, A.r);
+    items.push({ y: ay + 60, fx: x2 => { for (let i = 0; i < 5; i++) { const a = G.t * 1.6 + i * 1.2566 + A.c, rr = 9 + 2 * Math.sin(G.t * 3 + i); P.px(ax + 12 + Math.cos(a) * rr, ay - 4 + Math.sin(a) * rr * .6, A.col || K.c3); } } }); }
+}; }
+
+/* ===== HM: the base towers stay; each House's matter creeps over them, level after level (planche 17/11, 3rd round) ===== */
+const HM = {};
+const HM_F = [0, .22, .48, .8, 1.08], HM_FW = [0, .3, .6, .95];
+const hmCrown = (type, lvl) => { const H = towerH(type, lvl, ''); return type === 'arrow' ? 23 - H - 3 : type === 'cannon' ? 23 - H - 5 : 23 - H - 1; };
+const hmLum = v => v[0] * .3 + v[1] * .59 + v[2] * .11;
+// recolour the stone pixels of what was just drawn, from the foot up to a share f of its height; returns landmarks
+function hmPass(x, y, f, o) {
+  const ctx = P.x, W = ctx.canvas.width, H = ctx.canvas.height, im = ctx.getImageData(0, 0, W, H), d = im.data, rk = new Map();
+  ['s1', 's2', 's3', 's4', 's5'].map(n => hexRgb(K[n])).sort((a, b) => hmLum(a) - hmLum(b)).forEach((v, i) => rk.set((v[0] << 16) | (v[1] << 8) | v[2], i));
+  let y0 = H, y1 = -1; for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) if (d[(py * W + px) * 4 + 3]) { if (py < y0) y0 = py; if (py > y1) y1 = py; }
+  if (y1 < 0) return { top: 0, bot: 0, edges: [], yc: () => 0 };
+  const yTop = o.top !== undefined ? y + o.top : y0;
+  const ramp = o.ramp.map(hexRgb), seed = o.seed || 1, edges = [], key = i => (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
+  const yc = px => y1 + 1 - f * (y1 + 1 - yTop) - Math.floor(vnoise(px / 3, 0, seed) * 4);
+  for (let py = y0; py <= y1; py++) for (let px = 0; px < W; px++) {
+    const i = (py * W + px) * 4; if (!d[i + 3]) continue;
+    const r = rk.get(key(i)); if (r === undefined) continue;
+    const c = yc(px); let on = py >= c || (py >= c - 2 && phash(px, py, seed) < .45);
+    if (on && o.patch !== undefined) on = vnoise(px / 3.2, py / 3.2, seed + 5) > o.patch;
+    if (on && o.minRank !== undefined && r < o.minRank) on = false;
+    if (!on) continue;
+    let k = r; const lx = px - x, ly = py - y;
+    if (o.plates) { if (((ly % 5) + 5) % 5 === 0) k = Math.max(0, r - 1); if (((lx % 6) + 6) % 6 === 2 && ((ly % 5) + 5) % 5 === 2) k = 4; }
+    const col = ramp[Math.min(ramp.length - 1, k)]; d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2];
+    if (r >= 3) { const j = ((py + 1) * W + px) * 4, b = d[j + 3] ? rk.get(key(j)) : -1; if (b === -1 || (b !== undefined && b < 3)) edges.push([px, py]); }
+  }
+  ctx.putImageData(im, 0, 0);
+  return { top: yTop - y, bot: y1 - y, edges, yc: lx => yc(lx + x) - y };
+}
+function hmOver(o, fn) { const sv = {}; for (const k in o) { sv[k] = K[k]; K[k] = o[k]; } try { return fn(); } finally { for (const k in o) K[k] = sv[k]; } }
+const hmCrow = (cx, by, left, up) => P.spr(up ? ['k...k', 'kkkkn', '.kkk.', '..l..'] : ['..kk.', '.kkkn', 'kkkk.', '..l..'], { k: '#22232b', n: '#d0a04f', l: '#d0a04f' }, cx - 2, by - 4, left);
+const hmLantern = (x, y, lit) => { P.vl(x + 1, y - 3, 3, K.i1); P.spr(['.a.', 'aLa', 'aLa', '.a.'], { a: K.ua, L: lit ? '#fff0b8' : '#ffcf7a' }, x, y); };
+
+/* ---------------- the Houses ---------------- */
+const HM_V = {
+  cerf: { n: 'Le Cerf', ramp: ['#5f8ea3', '#7fb0c4', '#a5d0de', '#cbe8f0', '#eef9fc'],
+    pal: { hm: '#e8eef0', w2: '#bfe6f2', fx1: '#ffffff', i0: '#4f7f95', i1: '#8fc3d6', i2: '#e6f7fb', dk2: '#3d6a80' },
+    body: { i0: '#4f7f95', i1: '#8fc3d6', i2: '#e6f7fb' },
+    shot: { a: '#cbe8f0', b: '#ffffff', ball: ['.www.', 'wwwww', 'wwwcw', 'wwccw', '.ccc.'], bp: { w: '#ffffff', c: '#a5d0de' }, trail: '#e6f5f9' },
+    deco(x, y, lvl, type, R) {
+      const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2 + 1;
+      for (const [px, py] of R.edges) if (phash(px, py, 77) < .16 + lvl * .07) { const L = 1 + Math.floor(phash(px, py, 78) * (1 + lvl)); for (let j = 1; j <= L; j++) P.px(px, py + j, j === L ? '#ffffff' : j === 1 ? '#cbe8f0' : '#a5d0de'); }
+      const rx = 7 + lvl * 2.6, ry = 2 + lvl * .6;
+      for (let i = 0; i < 48; i++) { const a = i / 48 * 6.283, px = Math.round(cx + Math.cos(a) * rx * (.7 + .3 * phash(i, lvl, 3))), py = Math.round(base - 1 + Math.sin(a) * ry); if (Math.abs(px - cx) >= w && phash(i, lvl, 4) < .7) P.px(px, py, phash(i, 5, 5) < .3 ? '#ffffff' : '#d6eef4'); }
+      for (let i = 0; i < lvl * 5; i++) { const px = Math.round(cx + (phash(i, 9, lvl) - .5) * rx * 1.8), py = Math.round(base - 1 + (phash(i, 10, lvl) - .5) * ry * 1.6); if (Math.abs(px - cx) >= w) P.px(px, py, '#eef9fc'); }
+      if (lvl >= 3) for (const [dx, h] of [[-w - 3, 4 + lvl], [w + 2, 3 + lvl]]) { P.vl(cx + dx + 1, base - h, h, '#a5d0de'); P.vl(cx + dx, base - h + 2, h - 2, '#6f9fb3'); P.vl(cx + dx + 2, base - h + 1, h - 1, '#eef9fc'); P.px(cx + dx + 1, base - h - 1, '#ffffff'); }
+      if (lvl >= 4) for (const dx of [-6, 0, 6]) { const h = dx ? 3 : 5; P.vl(cx + dx, y + R.top - h, h, '#cbe8f0'); P.vl(cx + dx + 1, y + R.top - h + 1, h - 1, '#8fc3d6'); P.px(cx + dx, y + R.top - h - 1, '#ffffff'); }
+    },
+    wall(x, y, m, L, Rr, U, own, R) {
+      const top = U ? y - 9 : y + 4;
+      for (let i = 0; i < 24; i++) if (phash(x + i, m, 81) < .25 + m * .15) { const L2 = 1 + Math.floor(phash(x + i, m, 82) * (m + 1)); for (let j = 1; j <= L2; j++) P.px(x + i, y + 15 + j, j === L2 ? '#ffffff' : '#a5d0de'); }
+      if (m >= 2) for (let i = 1; i < 23; i++) { P.px(x + i, top - (phash(x + i, 3, 83) < .35 ? 1 : 0), '#f4fbfc'); if (phash(x + i, 4, 84) < .5) P.px(x + i, top, '#ffffff'); }
+      if (m >= 3) for (const dx of [5, 17]) { P.vl(x + dx, y + 19, 4, '#a5d0de'); P.px(x + dx, y + 18, '#ffffff'); P.px(x + dx + 1, y + 21, '#6f9fb3'); }
+    },
+    live(lvl, type, X, Y, topL, id) {
+      if (lvl < 3) return; const n = lvl >= 4 ? 7 : 3, t = G.t;
+      for (let i = 0; i < n; i++) { const fx = X + 12 + (phash(i, id, 1) - .5) * 30 + Math.sin(t * 1.3 + i) * 2, fy = Y + topL - 6 + ((t * 7 + phash(i, id, 2) * 40) % 40); P.px(fx, fy, i % 2 ? '#ffffff' : '#dff1f7'); }
+    } },
+
+  braise: { n: 'L’Ours · fer et braise', ramp: ['#24262c', '#353840', '#4a4e58', '#626774', '#7d8390'], plates: true,
+    pal: { hm: '#3a3d45', w2: '#5a5f6b', fx1: '#ff9a4a', i0: '#1e2025', i1: '#353840', i2: '#d0653a', dk2: '#ff8a3d' },
+    body: { i0: '#1e2025', i1: '#353840', i2: '#d0653a', c0: '#5a1e14', c1: '#a8402a', c2: '#e0743a', c3: '#ffd08a', fr: '#f2884a' },
+    crystal: { c0: '#5a1e14', c1: '#a8402a', c2: '#e0743a', c3: '#ffd08a' },
+    shot: { a: '#ff9a4a', b: '#ffdf9a', tip: '#353840', ball: ['.ddd.', 'dfffd', 'dfFfd', 'dfffd', '.ddd.'], bp: { d: '#24262c', f: '#d0653a', F: '#ffdf9a' }, trail: '#f2884a' },
+    deco(x, y, lvl, type, R) {
+      const cx = x + 12, base = y + 23;
+      for (let i = 0; i < 3; i++) P.line(cx - 8 + i * 2, base - 9, cx - 6 + i * 2, base - 5, '#1a1b20');
+      if (lvl >= 3) { for (const [sx, n] of [[cx - 3, 9 + lvl], [cx + 4, 6 + lvl]]) { let xx = sx; for (let j = 0; j < n; j++) { xx += (phash(sx, j, 91) < .5 ? -1 : 1) * (j % 2); P.px(xx, base - 2 - j, j % 3 ? '#e0743a' : '#ffdf9a'); } } addGlow(cx, base - 6, 20, '#f2884a', .22 + .06 * (lvl - 3), .8); }
+      if (lvl >= 4) { for (const dx of [-7, 0, 7]) { P.vl(cx + dx, y + R.top - 4, 4, '#4a4e58'); P.px(cx + dx, y + R.top - 5, '#9aa0ad'); }
+        for (const dx of [-12, 10]) { P.rect(cx + dx, base - 2, 4, 2, '#24262c'); P.px(cx + dx + 1, base - 3, '#e0743a'); P.px(cx + dx + 2, base - 3, '#ffdf9a'); P.px(cx + dx + 1, base - 2, '#a8402a'); } }
+    },
+    wall(x, y, m, L, Rr, U, own) {
+      const top = U ? y - 9 : y + 4;
+      if (m >= 2) for (let i = 3; i < 22; i += 6) { P.vl(x + i, top - 3, 3, '#4a4e58'); P.px(x + i, top - 4, '#9aa0ad'); }
+      for (let i = 2; i < 22; i += 5) if (phash(x + i, m, 92) < .5) P.px(x + i, y + 18, '#9aa0ad');
+      if (m >= 3) { let xx = x + 8; for (let j = 0; j < 5; j++) { xx += j % 2; P.px(xx, y + 21 - j, j % 2 ? '#e0743a' : '#ffdf9a'); } }
+    },
+    live(lvl, type, X, Y, topL, id) {
+      if (lvl < 3) return; const n = lvl >= 4 ? 7 : 3, t = G.t;
+      for (let i = 0; i < n; i++) { const u = (t * .45 + phash(i, id, 4)) % 1, fx = X + 12 + (phash(i, id, 3) - .5) * 18 + Math.sin(t * 3 + i) * 1.5, fy = Y + 20 - u * 34; if (u < .9) P.px(fx, fy, u < .3 ? '#ffdf9a' : u < .6 ? '#ff9a4a' : '#a8402a'); }
+    } },
+
+  mousse: { n: 'L’Ours · mousse et racines', ramp: ['#34502c', '#4a6e3a', '#62904a', '#82b05e', '#a8cc7c'], patch: .44,
+    pal: { hm: '#5d7a3e', w2: '#6f9a4c', fx1: '#d8f0a0', i0: '#3c3a33', i1: '#5b6b45', i2: '#8cb862', dk2: '#2c3a24' },
+    body: { i0: '#3c3a33', i1: '#5b6b45', i2: '#8cb862', c0: '#2f5a3a', c1: '#4f8a5a', c2: '#86c27f', c3: '#d2f0b8', fr: '#9fd39a' },
+    crystal: { c0: '#2f5a3a', c1: '#4f8a5a', c2: '#86c27f', c3: '#d2f0b8' },
+    shot: { a: '#8cb862', b: '#d2f0b8', tip: '#5b4330', ball: ['.mss.', 'msSss', 'sSssm', 'ssssm', '.smm.'], bp: { s: '#7d7a6e', S: '#a8a495', m: '#62904a' }, trail: '#8a8678' },
+    deco(x, y, lvl, type, R) {
+      const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      for (const [px, py] of R.edges) if (phash(px, py, 61) < .1 + lvl * .07) { P.px(px, py + 1, '#62904a'); if (lvl >= 3 && phash(px, py, 62) < .5) P.px(px, py + 2, '#82b05e'); }
+      for (const dx of [-w - 3, -w + 1, w - 1, w + 3]) { if (phash(dx, lvl, 63) < .3 && lvl < 2) continue; P.px(cx + dx, base - 1, '#4a6e3a'); P.px(cx + dx + 1, base - 2, '#82b05e'); P.px(cx + dx - 1, base - 1, '#62904a'); }
+      if (lvl >= 2) for (const [sx, dir] of [[cx - w, -1], [cx + w - 1, 1]]) { const top = y + R.yc(sx - x); let xx = sx; for (let yy = base - 1; yy > top; yy--) { if (phash(sx, yy, 64) < .3) xx += dir * (phash(sx, yy, 65) < .5 ? -1 : 1); xx = Math.max(sx - 2, Math.min(sx + 2, xx)); P.px(xx, yy, '#5b4330'); if (phash(xx, yy, 66) < .22) P.px(xx + dir, yy, '#8cb862'); } }
+      if (lvl >= 3) for (const [dx, f] of [[-w - 5, 0], [w + 2, 1]]) P.spr(f ? ['.ss.', 'sSss', 'ssss'] : ['.sss', 'sSss', '.ss.'], { s: K.s3, S: K.s5 }, cx + dx, base - 3);
+      if (lvl >= 4) { const ty = y + R.top; P.vl(cx, ty - 4, 5, '#5b4330'); P.spr(['..gGg..', '.gGGGg.', 'gggGggg', '.gg.gg.'], { g: '#4a6e3a', G: '#82b05e' }, cx - 3, ty - 9);
+        for (const dx of [-11, 9]) P.spr(['rRr', '.w.'], { r: '#c4503c', R: '#f2e6d0', w: '#efe6cf' }, cx + dx, base - 2); }
+    },
+    wall(x, y, m, L, Rr, U, own) {
+      const top = U ? y - 9 : y + 4;
+      for (let i = 0; i < 24; i++) if (phash(x + i, m, 67) < .2 + m * .2) { P.px(x + i, top - 1, '#62904a'); if (phash(x + i, m, 68) < .4) P.px(x + i, top - 2, '#82b05e'); }
+      if (m >= 2) { let yy = y + 17; for (let i = 2; i < 22; i++) { if (phash(x + i, 1, 69) < .3) yy += phash(x + i, 2, 70) < .5 ? -1 : 1; yy = Math.max(y + 16, Math.min(y + 21, yy)); P.px(x + i, yy, '#5b4330'); } }
+      if (m >= 3) P.spr(['rRr', '.w.'], { r: '#c4503c', R: '#f2e6d0', w: '#efe6cf' }, x + 15, y + 21);
+    },
+    live(lvl, type, X, Y, topL, id) {
+      if (lvl < 3) return; const n = lvl >= 4 ? 5 : 2, t = G.t;
+      for (let i = 0; i < n; i++) { const b = .5 + .5 * Math.sin(t * 2.4 + i * 2.1); if (b < .35) continue; P.px(X + 12 + Math.sin(t * .7 + i * 1.7) * 13, Y + 8 + Math.cos(t * .9 + i) * 8 - i * 3, b > .8 ? '#f0ffc8' : '#c8e890'); }
+    } },
+
+  trophee: { n: 'L’Ours · fourrures et trophées', ramp: null,
+    pal: { hm: '#7a5636', w2: '#e6dcc6', fx1: '#ffffff', i0: '#8a7a5e', i1: '#cbbf9f', i2: '#efe8d6', dk2: '#3a2e22' },
+    body: { i0: '#8a7a5e', i1: '#cbbf9f', i2: '#efe8d6', c0: '#6b3f1e', c1: '#a8652e', c2: '#d99a4e', c3: '#f6d9a0', fr: '#e8b06a' },
+    crystal: { c0: '#6b3f1e', c1: '#a8652e', c2: '#d99a4e', c3: '#f6d9a0' },
+    shot: { a: '#e6dcc6', b: '#ffffff', tip: '#8a7a5e', ball: ['.bbb.', 'bkbkb', 'bbbbb', '.bkb.', '.....'], bp: { b: '#efe8d6', k: '#3a2e22' }, trail: '#cbbf9f' },
+    deco(x, y, lvl, type, R) {
+      const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      for (let i = 0; i < 3; i++) P.line(cx - 8 + i * 2, base - 9, cx - 6 + i * 2, base - 5, '#2a241f');
+      if (lvl >= 2) P.spr(['ffff.', 'fFFFf', 'fFFFf', 'fFFf.', 'fFf..', 'f.f..'], { f: '#5e4128', F: '#8a6440' }, cx + w - 3, base - 17);
+      if (lvl >= 3) { P.spr(['.bbb.', 'bkbkb', 'bbbbb', '.b.b.'], { b: '#efe8d6', k: '#2a241f' }, cx - 2, base - 13); P.line(cx - w - 5, base - 1, cx - w - 1, base - 4, '#e6dcc6'); P.line(cx - w - 5, base - 4, cx - w - 1, base - 1, '#cbbf9f'); }
+      if (lvl >= 4) { const ty = y + R.top + 2; for (const d of [-1, 1]) { const x0 = cx + d * (w + 1); P.line(x0, ty, x0 + d * 4, ty - 6, '#e6dcc6'); P.line(x0 + d * 2, ty - 3, x0 + d * 5, ty - 2, '#e6dcc6'); P.px(x0 + d * 3, ty - 8, '#efe8d6'); P.line(x0 + d * 3, ty - 5, x0 + d * 6, ty - 7, '#cbbf9f'); }
+        for (const dx of [-w - 4, w + 3]) { P.vl(cx + dx, base - 9, 7, '#5e4128'); P.px(cx + dx, base - 10, '#8a6440'); } }
+    },
+    wall(x, y, m, L, Rr, U, own) {
+      const top = U ? y - 9 : y + 4;
+      if (m >= 1) for (let i = 4; i < 22; i += 8) { P.vl(x + i, top - 3, 3, '#e6dcc6'); P.px(x + i, top - 4, '#efe8d6'); }
+      if (m >= 2) P.spr(['ffff', 'fFFf', 'f.Ff'], { f: '#5e4128', F: '#8a6440' }, x + 9, y + 16);
+      if (m >= 3) P.spr(['.bbb.', 'bkbkb', '.bbb.'], { b: '#efe8d6', k: '#2a241f' }, x + 16, y + 17);
+    },
+    live(lvl, type, X, Y, topL, id) {
+      if (lvl < 4) return; const w = towerW(type, lvl) / 2, t = G.t;
+      for (const [i, dx] of [[0, -w - 4], [1, w + 3]]) { const f = Math.floor(t * 9 + i * 3) % 3; P.spr(f === 0 ? ['.a.', 'aba', '.b.'] : f === 1 ? ['a..', 'aba', '.b.'] : ['..a', 'aba', '.b.'], { a: K.fire1, b: K.fire2 }, X + 12 + dx - 1, Y + 23 - 13); }
+    } },
+
+  corbeau: { n: 'Le Corbeau', ramp: ['#2c2d36', '#3b3d48', '#4e505c', '#646673', '#7b7e8a'], patch: .5,
+    pal: { hm: '#22232b', w2: '#3a3044', fx1: '#8fd07a', i0: '#1c1d24', i1: '#2e3039', i2: '#8fd07a', dk2: '#5f9a55' },
+    body: { i0: '#1c1d24', i1: '#2e3039', i2: '#8fd07a', c0: '#2a1f38', c1: '#4b3a63', c2: '#7fc06c', c3: '#d6f5c0', fr: '#8fd07a' },
+    crystal: { c0: '#2a1f38', c1: '#4b3a63', c2: '#7fc06c', c3: '#d6f5c0' },
+    shot: { a: '#8fd07a', b: '#d6f5c0', tip: '#22232b', ball: ['..t..', '.ddd.', 'tdGdt', '.ddd.', '..t..'], bp: { d: '#22232b', G: '#8fd07a', t: '#4b3a63' }, trail: '#5f9a55' },
+    deco(x, y, lvl, type, R) {
+      const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      if (lvl === 1) P.spr(['..k', '.kK', 'kK.', 'k..'], { k: '#22232b', K: '#4a4d5c' }, cx + w + 1, base - 4);
+      const sides = lvl >= 2 ? [-w, w - 1] : [-w];
+      sides.forEach((sx0, v) => { const sx = cx + sx0, top = Math.max(y + R.top + 4, y + R.yc(sx - x));
+        for (let yy = base - 1, i = 0; yy >= top; yy--, i++) { const xx = sx + (Math.floor(i / 3 + v) % 2 ? (v ? 1 : -1) : 0); P.px(xx, yy, '#1d1a24'); if (i % 4 === 2) P.px(xx + (v ? 1 : -1), yy, '#4b3a63'); if (lvl >= 2 && i % 7 === 5) P.px(xx + (v ? -1 : 1), yy, '#8fd07a'); } });
+      if (lvl >= 4) { const ty = y + R.top + 4; for (let i = -w - 1; i <= w; i++) { P.px(cx + i, ty + (i % 4 === 0 ? 1 : 0), '#1d1a24'); if (i % 5 === 0) P.px(cx + i, ty - 1, '#4b3a63'); } }
+    },
+    wall(x, y, m, L, Rr, U, own) {
+      const span = [0, 8, 16, 24][m], x0 = L ? 0 : 24 - span;
+      for (let i = x0; i < x0 + span; i++) { const yy = y + 21 - (Math.floor((x + i) / 4) % 2); P.px(x + i, yy, '#1d1a24'); if (i % 5 === 2) P.px(x + i, yy - 1, '#4b3a63'); if (m >= 2 && i % 9 === 6) P.px(x + i, yy - 1, '#8fd07a'); }
+    },
+    live(lvl, type, X, Y, topL, id) {
+      const t = G.t;
+      for (let j = 0; j < lvl - 1; j++) { const dx = [-7, 7, -1][j], ph = Math.floor(t * .6 + j * 1.7 + id), left = phash(ph, j, 5) < .5, up = (t * 1.1 + j) % 3 < .25; hmCrow(X + 12 + dx, Y + topL + 3 - (up ? 1 : 0), left, up); }
+      if (lvl >= 3) { const c = P.x, a0 = c.globalAlpha; c.globalAlpha = .35; for (let i = 0; i < (lvl >= 4 ? 10 : 5); i++) { const mx = X + 12 + (phash(i, id, 7) - .5) * 30 + Math.sin(t * .8 + i) * 3, my = Y + 21 + (phash(i, id, 8) - .5) * 5; P.rect(Math.round(mx), Math.round(my), 3, 1, '#9fd3a0'); } c.globalAlpha = a0; }
+    } },
+
+  renard: { n: 'Le Renard', ramp: null,
+    pal: { hm: '#c9783f', w2: '#e8c25a', fx1: '#fff0b8', i0: '#97643a', i1: '#d5a64c', i2: '#f6dc8a', dk2: '#5a3a1e' },
+    body: { i0: '#97643a', i1: '#d5a64c', i2: '#f6dc8a', c0: '#8a5a1e', c1: '#c88a2e', c2: '#e8b85a', c3: '#fff0b8', fr: '#ffcf7a' },
+    crystal: { c0: '#8a5a1e', c1: '#c88a2e', c2: '#e8b85a', c3: '#fff0b8' },
+    shot: { a: '#e8c25a', b: '#fff0b8', tip: '#97643a', ball: ['.aaa.', 'aAaad', 'aaaad', 'aaaad', '.ddd.'], bp: { a: '#d5a64c', A: '#fff0b8', d: '#97643a' }, trail: '#ffcf7a' },
+    deco(x, y, lvl, type, R) {
+      const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      // gilding: the light ledges turn to gold from the foot up
+      const sv = R; void sv;
+      P.hl(cx - w - 3, base - 13, 3, K.i1); hmLantern(cx - w - 4, base - 12, false); addGlow(cx - w - 3, base - 10, 10, '#ffcf7a', .35, 1);
+      if (lvl >= 2) { const x0 = cx - w - 1, x1 = cx + w + 1, y0 = y + R.top + 6, y1 = y0 + 4; for (let i = 0; i <= x1 - x0; i++) { const u = i / (x1 - x0), yy = Math.round(y0 + (y1 - y0) * u + Math.sin(u * Math.PI) * 3); P.px(x0 + i, yy, '#5a3a1e'); if (i % 3 === 1) { const c = [ '#c9783f', '#eadcb4', K.ua ][(i / 3 | 0) % 3]; P.px(x0 + i, yy + 1, c); P.px(x0 + i + 1, yy + 1, c); P.px(x0 + i, yy + 2, c); } } }
+      if (lvl >= 3) for (const dx of [-w - 6, w + 3]) { P.hl(cx + dx, base - 1, 4, K.au0); P.hl(cx + dx + 1, base - 2, 2, K.ua); P.px(cx + dx + 1, base - 3, K.au2); }
+      if (lvl >= 4) { P.rect(cx + w + 1, base - 5, 7, 5, '#966c43'); P.hl(cx + w + 1, base - 5, 7, K.ua); P.hl(cx + w + 2, base - 6, 5, K.au2); P.px(cx + w + 4, base - 7, '#ffffff'); P.hl(cx + w + 1, base - 3, 7, '#69492d'); addGlow(cx + w + 4, base - 5, 14, '#fff3cf', .35, .9); }
+    },
+    wall(x, y, m, L, Rr, U, own) {
+      const top = U ? y - 9 : y + 4;
+      for (let i = 0; i < 24; i++) { const u = i / 24, yy = Math.round(top - 2 + Math.sin(u * Math.PI) * (2 + m)); P.px(x + i, yy, '#5a3a1e'); if (i % 4 === 1) { const c = [own[0], '#eadcb4', K.ua][(i / 4 | 0) % 3]; P.px(x + i, yy + 1, c); P.px(x + i + 1, yy + 1, c); P.px(x + i, yy + 2, c); } }
+      if (m >= 2) hmLantern(x + 11, top + 2 + m, false);
+      if (m >= 3) { P.hl(x + 4, y + 22, 4, K.au0); P.px(x + 5, y + 21, K.ua); }
+    },
+    live(lvl, type, X, Y, topL, id) {
+      const t = G.t, w = towerW(type, lvl) / 2;
+      if (Math.sin(t * 11 + id) > .3) P.px(X + 12 - w - 3, Y + 23 - 10, '#ffffff');
+      if (lvl >= 4) for (let j = 0; j < 3; j++) { const a = t * 1.6 + j * 2.094, fx = Math.round(X + 12 + Math.cos(a) * 14), fy = Math.round(Y + 6 + Math.sin(a) * 5 - 4); P.rect(fx, fy, 2, 2, '#ff9a4a'); P.px(fx, fy, '#fff0b8'); const c = P.x, a0 = c.globalAlpha; c.globalAlpha = .3; P.rect(fx - 1, fy - 1, 4, 4, '#ffcf7a'); c.globalAlpha = a0; }
+    } },
+};
+/* ---- 4th round: fewer colours, the player's colour stays the only bright one ---- */
+const hmClaw = (cx, by, n, len, glow) => { for (let i = 0; i < n; i++) { const x0 = cx + i * 3; for (let j = 0; j < len; j++) { const end = j === 0 || j === len - 1; P.px(x0 + (j >> 1), by - len + j, glow && !end ? (j === len >> 1 ? '#f2b45a' : glow) : '#3a322b'); } } };
+const hmFlame = (x, y, t, big) => { const f = Math.floor(t * 10 + x) % 3; P.spr(big ? (f === 0 ? ['.a.', 'aba', 'bcb', '.c.'] : f === 1 ? ['a..', 'aba', 'bcb', '.c.'] : ['..a', 'aba', 'bcb', '.c.']) : (f === 0 ? ['.a.', 'bcb'] : f === 1 ? ['a..', 'bcb'] : ['..a', 'bcb']), { a: '#f2b45a', b: '#e0743a', c: '#fff0b8' }, x - 1, y - (big ? 4 : 2)); };
+const hmEmbers = (X, Y, n, id, w, y0, h) => { const t = G.t; for (let i = 0; i < n; i++) { const u = (t * .5 + phash(i, id, 4)) % 1, fx = X + 12 + (phash(i, id, 3) - .5) * w + Math.sin(t * 3 + i) * 1.5, fy = Y + y0 - u * h; if (u < .85) P.px(fx, fy, u < .3 ? '#fff0b8' : u < .6 ? '#f2b45a' : '#c4603a'); } };
+const hmBrazier = (x, by) => { P.hl(x - 2, by - 2, 5, '#3b3e46'); P.hl(x - 1, by - 1, 3, '#2a2c33'); P.px(x, by, '#2a2c33'); P.px(x - 1, by - 3, '#a8402a'); P.px(x + 1, by - 3, '#c4603a'); };
+const hmPelt = (x, y, w, hd) => { for (let i = 0; i < w; i++) { const L = 3 + ((i * 7) % 3) + (i === 0 || i === w - 1 ? 1 : 0); P.vl(x + i, y, L, i % 3 === 1 ? '#7a5636' : '#5e4128'); P.px(x + i, y, '#8a6440'); } if (hd) { P.spr(['e...e', 'eFFFe', 'FFFFF', '.FnF.'], { e: '#5e4128', F: '#7a5636', n: '#2a241f' }, x + (w >> 1) - 2, y - 4); } };
+const hmFeather = (x, y, dir) => { P.px(x, y, '#22232b'); P.px(x + dir, y - 1, '#22232b'); P.px(x + dir, y - 2, '#3a3c48'); P.px(x + 2 * dir, y - 3, '#22232b'); };
+const hmRune = (x, y, n, c) => { const R = [['c.c', '.c.', 'c.c'], ['ccc', 'c..', 'cc.'], ['.c.', 'ccc', '.c.'], ['c..', 'cc.', 'c.c']][n % 4]; P.spr(R, { c }, x, y); };
+const hmMist = (X, Y, n, id, rx, y0, a) => { const c = P.x, a0 = c.globalAlpha, t = G.t; c.globalAlpha = a; for (let i = 0; i < n; i++) { const ang = t * .35 + i * 2.39 + phash(i, id, 9) * 6, mx = X + 12 + Math.cos(ang) * rx * (.5 + .5 * phash(i, id, 7)), my = Y + y0 + Math.sin(ang) * 2.5 - (i % 3); P.rect(Math.round(mx) - 2, Math.round(my), 5, 1, '#c9c3dc'); P.rect(Math.round(mx) - 1, Math.round(my) - 1, 3, 1, '#ddd8ea'); } c.globalAlpha = a0; };
+// the frost tower's object, one per House (instead of the same diamond everywhere)
+const HM_GIVRE = {
+  drum: (k) => (lvl, kk) => bakeAt(30, 34, 15, 30, (cx, by) => { const o = PCOL[k] || NEUTRAL[0], o1 = PDARK[k] || NEUTRAL[1], d = kk ? 1 : 0, w = lvl >= 3 ? 11 : 9, x0 = cx - (w >> 1);
+    P.hl(x0, by - 11 + d, w, '#efe6cf'); P.hl(x0 + 1, by - 12 + d, w - 2, '#efe6cf'); P.hl(x0, by - 10 + d, w, '#cbbf9f');
+    for (let j = 0; j < 7 - d; j++) P.hl(x0, by - 9 + d + j, w, j === 2 || j === 3 ? o : j === 4 ? o1 : j % 2 ? '#7a5636' : '#8a6440');
+    P.vl(x0, by - 9 + d, 7 - d, '#5e4128'); P.vl(x0 + w - 1, by - 9 + d, 7 - d, '#5e4128'); if (lvl >= 2) for (let i = 1; i < w - 1; i += 3) P.px(x0 + i, by - 9 + d, '#efe6cf');
+    if (lvl >= 4) { P.px(x0 - 1, by - 13, '#efe6cf'); P.px(x0 - 2, by - 14, '#efe6cf'); P.px(x0 + w, by - 13, '#efe6cf'); P.px(x0 + w + 1, by - 14, '#efe6cf'); } }),
+  feathers: () => (lvl, kk) => bakeAt(30, 34, 15, 30, (cx, by) => { const n = lvl >= 3 ? 3 : 2; for (let i = 0; i < n; i++) { const dx = (i - (n - 1) / 2) * 3; for (let j = 0; j < 9; j++) { P.px(cx + dx + Math.round((j - 4) * dx / 12), by - 3 - j, j > 6 ? '#3a3c48' : '#22232b'); if (j % 2 && j < 8) P.px(cx + dx + Math.round((j - 4) * dx / 12) + 1, by - 3 - j, '#3a3c48'); } } P.hl(cx - 1, by - 2, 3, '#cbbf9f'); if (lvl >= 4) P.px(cx, by - 13, '#d0a04f'); }),
+  mistorb: () => (lvl, kk) => bakeAt(30, 34, 15, 30, (cx, by) => { const r = lvl >= 3 ? 4 : 3; for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) { const d = Math.hypot(i, j); if (d > r + .3) continue; P.px(cx + i, by - 8 + j, d > r - .8 ? '#9a93b2' : (i + j + 9) % 3 === 0 ? '#ddd8ea' : '#c9c3dc'); } P.px(cx - 1, by - 9, '#ffffff'); }),
+  runestone: () => (lvl, kk) => bakeAt(30, 34, 15, 30, (cx, by) => { P.rect(cx - 3, by - 13, 7, 10, K.s3); P.vl(cx - 3, by - 13, 10, K.s2); P.vl(cx + 3, by - 13, 10, K.s1); P.hl(cx - 3, by - 13, 7, K.s5); P.hl(cx - 2, by - 14, 5, K.s4); hmRune(cx - 1, by - 10, lvl, kk || lvl >= 4 ? '#a8e090' : '#6fae5e'); }),
+  lantern: () => (lvl, kk) => bakeAt(30, 34, 15, 30, (cx, by) => { P.vl(cx, by - 14, 2, K.i1); P.spr(['.iii.', 'iLLLi', 'iLlLi', 'iLLLi', '.iii.'], { i: '#3b3e46', L: '#f6dc8a', l: '#fff6d8' }, cx - 2, by - 12); P.hl(cx - 1, by - 7, 3, '#3b3e46'); }),
+  purse: () => (lvl, kk) => bakeAt(30, 34, 15, 30, (cx, by) => { P.spr(['..ss..', '.tSSt.', 'sSSSSs', 'sSSSss', 'sSSsss', '.ssss.'], { s: '#a8916a', S: '#cbb27c', t: '#d5a64c' }, cx - 3, by - 10); if (lvl >= 3) P.px(cx + 2, by - 11, '#f6dc8a'); }),
+  mask: () => (lvl, kk) => bakeAt(30, 34, 15, 30, (cx, by) => { P.spr(['o.....o', 'oo...oo', 'wwwwwww', 'wkwwwkw', '.wwnww.', '..www..'], { o: '#c9783f', w: '#efe6cf', k: '#2a241f', n: '#2a241f' }, cx - 3, by - 11); }),
+};
+Object.assign(HM_V, {
+  oursA: { n: 'A · Trophées et braises', ramp: null, passOpts: null, givre: 'drum',
+    pal: { hm: '#6b4a2e', w2: '#8a6440' }, body: {},
+    shot: { a: '#efe6cf', b: '#f2b45a', tip: '#3a2e22', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#2a2c33', b: '#4a4e58' }, trail: '#f2b45a' },
+    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      hmClaw(cx - 8, base - 4, 3, 5, null);
+      if (lvl >= 2) hmBrazier(cx + w + 3, base);
+      if (lvl >= 3) { P.spr(['bbb', 'kbk', '.b.'], { b: '#efe6cf', k: '#2a241f' }, cx - 1, base - 12); hmBrazier(cx - w - 4, base); }
+      if (lvl >= 4) for (const d of [-1, 1]) { const x0 = cx + d * (w - 1), ty = y + R.top + 3; P.px(x0, ty, '#efe6cf'); P.px(x0 + d, ty - 1, '#efe6cf'); P.px(x0 + d, ty - 2, '#efe6cf'); P.px(x0 + 2 * d, ty - 3, '#efe6cf'); } },
+    wall(x, y, m) { if (m >= 2) hmClaw(x + 9, y + 21, 3, 4, null); if (m >= 3) hmBrazier(x + 18, y + 23); },
+    live(lvl, type, X, Y, topL, id) { const w = towerW(type, lvl) / 2, t = G.t;
+      if (lvl >= 2) hmFlame(X + 12 + w + 3, Y + 20, t, false); if (lvl >= 3) hmFlame(X + 12 - w - 4, Y + 20, t + .3, false);
+      if (lvl >= 2) hmEmbers(X, Y, [0, 0, 2, 4, 7][lvl], id, type === 'cannon' ? 10 : 14, topL + 2, 16); } },
+  oursB: { n: 'B · Peau d’ours et feu', ramp: null, passOpts: null, givre: 'drum',
+    pal: { hm: '#6b4a2e', w2: '#8a6440' }, body: {},
+    shot: { a: '#efe6cf', b: '#f2b45a', tip: '#3a2e22', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#2a2c33', b: '#4a4e58' }, trail: '#f2b45a' },
+    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2, ty = y + R.top + 4;
+      hmClaw(cx - 8, base - 4, 3, 5, null);
+      if (lvl === 2) hmPelt(cx - w - 1, ty, 6, false);
+      if (lvl >= 3) { hmPelt(cx - w - 1, ty, w * 2 + 2, lvl >= 4); for (const dx of [-w, w - 1]) P.px(cx + dx, ty + 5, '#efe6cf'); }
+      if (lvl >= 4) for (const dx of [-w - 4, w + 3]) { P.vl(cx + dx, base - 9, 7, '#5e4128'); P.px(cx + dx, base - 10, '#8a6440'); } },
+    wall(x, y, m) { if (m >= 2 && phash(x, y, 31) < .6) hmPelt(x + 8, y + 16, 5, false); if (m >= 3) hmClaw(x + 16, y + 21, 3, 4, null); },
+    live(lvl, type, X, Y, topL, id) { const w = towerW(type, lvl) / 2, t = G.t;
+      if (lvl >= 4) for (const [i, dx] of [[0, -w - 4], [1, w + 3]]) hmFlame(X + 12 + dx, Y + 13, t + i * .4, true);
+      if (lvl >= 3) hmEmbers(X, Y, lvl >= 4 ? 6 : 3, id, type === 'cannon' ? 10 : 14, topL + 2, 16); } },
+  oursC: { n: 'C · Griffes de braise', ramp: null, passOpts: null, givre: 'drum',
+    pal: { hm: '#6b4a2e', w2: '#8a6440' }, body: {},
+    shot: { a: '#efe6cf', b: '#f2b45a', tip: '#3a2e22', ball: ['.ddd.', 'dbbbd', 'dbfbd', 'dbbbd', '.ddd.'], bp: { d: '#2a2c33', b: '#4a4e58', f: '#f2b45a' }, trail: '#f2b45a' },
+    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      hmClaw(cx - 8, base - 3, 3, 3 + lvl, lvl >= 2 ? '#e0743a' : null);
+      if (lvl >= 3) { hmClaw(cx + w - 7, base - 10, 3, 4 + lvl, '#f2b45a'); addGlow(cx, base - 8, 18, '#f2884a', .14 + .05 * (lvl - 3), .8); } },
+    wall(x, y, m) { hmClaw(x + 8 + (phash(x, y, 33) * 6 | 0), y + 22, 3, 2 + m, m >= 2 ? '#e0743a' : null); },
+    live(lvl, type, X, Y, topL, id) { const w = towerW(type, lvl) / 2, t = G.t;
+      if (lvl >= 4) { hmFlame(X + 12 - 6, Y + 23 - 8, t, false); hmFlame(X + 12 + w - 4, Y + 23 - 15, t + .5, false); }
+      if (lvl >= 2) hmEmbers(X, Y, [0, 0, 2, 4, 7][lvl], id, type === 'cannon' ? 10 : 14, topL + 2, 16); } },
+
+  corbA: { n: 'A · Plumes et corbeaux', ramp: null, passOpts: null, givre: 'feathers',
+    pal: { hm: '#3a3c48' }, body: {},
+    shot: { a: '#efe6cf', b: '#ffffff', tip: '#22232b', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#22232b', b: '#3a3c48' }, trail: '#8a8d9a' },
+    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      hmFeather(cx + w - 2, base - 6, 1);
+      if (lvl >= 2) hmFeather(cx - w + 1, base - 13, -1);
+      if (lvl >= 3) for (const dx of [-w + 2, 0, w - 2]) hmFeather(cx + dx, y + R.top + 5, dx < 0 ? -1 : 1);
+      if (lvl >= 4) P.spr(['.bb..', 'bkbbB', '.bb..'], { b: '#efe6cf', k: '#2a241f', B: '#d0a04f' }, cx - 2, base - 12); },
+    wall(x, y, m) { if (m >= 2) hmFeather(x + 8, y + 21, 1); if (m >= 3) hmFeather(x + 17, y + 20, -1); },
+    live(lvl, type, X, Y, topL, id) { const t = G.t; for (let j = 0; j < lvl - 1; j++) { const dx = [-7, 7, -1][j], ph = Math.floor(t * .6 + j * 1.7 + id), up = (t * 1.1 + j) % 3 < .25; hmCrow(X + 12 + dx, Y + topL + 3 - (up ? 1 : 0), phash(ph, j, 5) < .5, up); } } },
+  corbB: { n: 'B · La brume', ramp: null, passOpts: null, givre: 'mistorb',
+    pal: { hm: '#3a3c48' }, body: {},
+    shot: { a: '#efe6cf', b: '#ddd8ea', tip: '#3a3c48', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#5e5874', b: '#c9c3dc' }, trail: '#c9c3dc' },
+    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      if (lvl >= 3) { P.vl(cx - w - 3, base - 15, 2, K.i1); P.spr(['.i.', 'iLi', '.i.'], { i: '#3b3e46', L: '#ddd8ea' }, cx - w - 4, base - 13); addGlow(cx - w - 3, base - 12, 8, '#ddd8ea', .25, 1); } },
+    wall(x, y, m) {},
+    live(lvl, type, X, Y, topL, id) { const t = G.t;
+      hmMist(X, Y, [0, 3, 6, 10, 16][lvl], id, [0, 10, 16, 26, 34][lvl], 21, [0, .45, .5, .55, .6][lvl]);
+      if (lvl >= 4) { hmMist(X, Y, 5, id + 9, 9, topL + 6, .45); hmCrow(X + 12 + 7, Y + topL + 3, Math.floor(t * .5) % 2 === 0, false); } } },
+  corbC: { n: 'C · Les runes', ramp: null, passOpts: null, givre: 'runestone',
+    pal: { hm: '#3a3c48' }, body: {},
+    shot: { a: '#efe6cf', b: '#a8e090', tip: '#22232b', ball: ['.ddd.', 'dbbbd', 'dbgbd', 'dbbbd', '.ddd.'], bp: { d: '#22232b', b: '#3a3c48', g: '#a8e090' }, trail: '#6fae5e' },
+    runes(type, lvl) { const w = towerW(type, lvl) / 2, out = [[-w + 2, 7]]; if (lvl >= 2) out.push([w - 5, 10]); if (lvl >= 3) out.push([-w + 2, 14], [w - 5, 17]); return out; },
+    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23; this.runes(type, lvl).forEach(([dx, h], i) => hmRune(cx + dx, base - h, i, '#4f7f45')); if (lvl >= 3) addGlow(cx, base - 10, 14, '#7fc06c', .12, .8); },
+    wall(x, y, m) { if (m >= 2) hmRune(x + 10, y + 17, x, '#4f7f45'); if (m >= 3) hmRune(x + 3, y + 17, x + 1, '#4f7f45'); },
+    live(lvl, type, X, Y, topL, id) { const t = G.t, on = .5 + .5 * Math.sin(t * 2 + id); if (on < .6) return; HM_V.corbC.runes(type, lvl).forEach(([dx, h], i) => hmRune(X + 12 + dx, Y + 23 - h, i, on > .85 ? '#d6f5c0' : '#a8e090'));
+      if (lvl >= 4) hmCrow(X + 12 - 7, Y + topL + 3, false, false); } },
+
+  renA: { n: 'A · Lanternes et fanions', ramp: null, passOpts: null, givre: 'lantern',
+    pal: {}, body: {},
+    shot: { a: '#efe6cf', b: '#f6dc8a', tip: '#3a2e22', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#2a2c33', b: '#4a4e58' }, trail: '#cbbf9f' },
+    deco(x, y, lvl, type, R, own) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      P.hl(cx - w - 3, base - 13, 3, K.i1); hmLantern(cx - w - 4, base - 12, false);
+      if (lvl >= 2) { const x0 = cx - w - 1, x1 = cx + w + 1, y0 = y + R.top + 6; for (let i = 0; i <= x1 - x0; i++) { const u = i / (x1 - x0), yy = Math.round(y0 + 3 * u + Math.sin(u * Math.PI) * 3); P.px(x0 + i, yy, '#5a4a3a'); if (i % 3 === 1) { const c = (i / 3 | 0) % 3 === 2 ? '#efe6cf' : own[0]; P.rect(x0 + i, yy + 1, 2, 2, c); P.px(x0 + i, yy + 3, c); } } }
+      if (lvl >= 3) { P.hl(cx + w + 1, base - 13, 3, K.i1); hmLantern(cx + w + 2, base - 12, false); }
+      if (lvl >= 4) { P.vl(cx, y + R.top - 6, 7, '#5a4a3a'); hmLantern(cx - 1, y + R.top - 9, false); } },
+    wall(x, y, m, L, Rr, U, own) { const top = U ? y - 9 : y + 4; for (let i = 0; i < 24; i++) { const yy = Math.round(top - 1 + Math.sin(i / 24 * Math.PI) * 3); P.px(x + i, yy, '#5a4a3a'); if (i % 4 === 1) { const c = (i / 4 | 0) % 3 === 2 ? '#efe6cf' : own[0]; P.rect(x + i, yy + 1, 2, 2, c); P.px(x + i, yy + 3, c); } } if (m >= 3) hmLantern(x + 11, top + 4, false); },
+    live(lvl, type, X, Y, topL, id) { const w = towerW(type, lvl) / 2; if (Math.sin(G.t * 9 + id) > .5) P.px(X + 12 - w - 3, Y + 23 - 10, '#fff6d8'); } },
+  renB: { n: 'B · Le butin', ramp: null, passOpts: null, givre: 'purse',
+    pal: {}, body: {},
+    shot: { a: '#efe6cf', b: '#f6dc8a', tip: '#3a2e22', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#2a2c33', b: '#4a4e58' }, trail: '#cbbf9f' },
+    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2, sack = (sx, sy) => P.spr(['.t.', 'sSs', 'sSs', 'sss'], { t: '#7a6a4e', s: '#a8916a', S: '#cbb27c' }, sx, sy - 4);
+      sack(cx + w + 1, base);
+      if (lvl >= 2) { P.rect(cx - w - 6, base - 4, 5, 4, '#7a5b3c'); P.hl(cx - w - 6, base - 4, 5, '#9a7a52'); P.vl(cx - w - 4, base - 4, 4, '#5e4128'); }
+      if (lvl >= 3) { P.hl(cx + w + 4, base - 1, 3, '#b8893a'); P.px(cx + w + 5, base - 2, '#e8c25a'); }
+      if (lvl >= 4) { P.rect(cx - w - 7, base - 9, 6, 4, '#7a5b3c'); P.hl(cx - w - 7, base - 9, 6, '#b8893a'); P.px(cx - w - 5, base - 10, '#e8c25a'); P.px(cx - w - 4, base - 10, '#f6dc8a'); } },
+    wall(x, y, m) { if (m >= 2) { P.rect(x + 15, y + 19, 5, 4, '#7a5b3c'); P.hl(x + 15, y + 19, 5, '#9a7a52'); } if (m >= 3) P.spr(['.t.', 'sSs', 'sss'], { t: '#7a6a4e', s: '#a8916a', S: '#cbb27c' }, x + 6, y + 20); },
+    live(lvl, type, X, Y, topL, id) { if (lvl >= 4 && (G.t * .7 + id) % 2.5 < .15) { const w = towerW(type, lvl) / 2; P.px(X + 12 - w - 4, Y + 23 - 11, '#ffffff'); } } },
+  renC: { n: 'C · La ruse', ramp: null, passOpts: null, givre: 'mask',
+    pal: {}, body: {},
+    shot: { a: '#efe6cf', b: '#ffffff', tip: '#3a2e22', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#2a2c33', b: '#4a4e58' }, trail: '#cbbf9f' },
+    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+      P.spr(['.ee.', 'eKKe'], { e: '#6b5a45', K: '#2a241f' }, cx + w + 1, base - 2); for (const [px, py] of [[cx - w - 4, base], [cx - w - 7, base - 2]]) P.spr(['k.k', '.k.'], { k: '#4d3f31' }, px, py - 1);
+      if (lvl >= 3) for (const dx of [-3, 2]) P.spr(['o.', 'oo'], { o: '#c9783f' }, cx + dx, y + R.top - 2);
+      if (lvl >= 4) { P.vl(cx + w, y + R.top - 8, 6, '#3b3e46'); P.spr(['k...k.', 'kkkkK.', '.kkkKk', '.k.k..'], { k: '#2a2c33', K: '#3b3e46' }, cx + w - 2, y + R.top - 12); } },
+    wall(x, y, m) { for (let i = 0; i < m; i++) { const px = x + 5 + i * 7, py = y + 23 + (i % 2); P.px(px, py, '#4d3f31'); P.px(px + 1, py, '#4d3f31'); P.px(px - 1, py - 1, '#4d3f31'); P.px(px + 2, py - 1, '#4d3f31'); } },
+    live(lvl, type, X, Y, topL, id) { if (lvl < 2) return; const w = towerW(type, lvl) / 2, t = G.t, sw = Math.round(Math.sin(t * 2.2 + id)); const x0 = X + 12 + w + 1, y0 = Y + 23 - 6;
+      for (let i = 0; i < 7; i++) { const yy = y0 - Math.round(i * .6) + (i > 3 ? sw : 0), c = i > 5 ? '#efe6cf' : '#c9783f'; P.px(x0 + i, yy, c); if (i > 0 && i < 6) P.px(x0 + i, yy + 1, i > 4 ? '#efe6cf' : '#97572b'); } } },
+});
+// the Cerf sparkles: glints that come and go on the ice, more of them as the level rises
+HM_V.cerf.live0 = HM_V.cerf.live;
+HM_V.cerf.live = function (lvl, type, X, Y, topL, id) {
+  HM_V.cerf.live0(lvl, type, X, Y, topL, id);
+  const t = G.t, w = towerW(type, lvl) / 2, hgt = (23 - topL) * HM_F[lvl];
+  const glint = (gx, gy, u) => { gx = Math.round(gx); gy = Math.round(gy); P.px(gx, gy, '#ffffff'); if (u < .5) { P.px(gx - 1, gy, '#e6f7fb'); P.px(gx + 1, gy, '#e6f7fb'); P.px(gx, gy - 1, '#e6f7fb'); P.px(gx, gy + 1, '#e6f7fb'); } if (u < .2 && lvl >= 3) { P.px(gx - 2, gy, '#cbe8f0'); P.px(gx + 2, gy, '#cbe8f0'); P.px(gx, gy - 2, '#cbe8f0'); P.px(gx, gy + 2, '#cbe8f0'); } };
+  const n = [0, 1, 2, 4, 6][lvl];
+  for (let i = 0; i < n; i++) { const cyc = t * .9 + phash(i, id, 11), k = Math.floor(cyc), u = (cyc - k) / .22; if (u >= 1) continue; glint(X + 12 + (phash(i, k, 12) - .5) * (w * 2 + 1), Y + 23 - 1 - phash(i, k, 13) * Math.max(3, hgt), u); }
+  const nw = [0, 0, 1, 2, 4][lvl];
+  for (let i = 0; i < nw; i++) { const cyc = t * .7 + phash(i, id, 14), k = Math.floor(cyc), u = (cyc - k) / .22; if (u >= 1) continue; const side = phash(i, k, 15) < .5 ? -1 : 1; glint(X + 12 + side * (w + 3 + phash(i, k, 16) * 18), Y + 17 + phash(i, k, 17) * 5, u); }
+};
+for (const h of ['oursA', 'oursB', 'oursC', 'corbA', 'corbB', 'corbC', 'renA', 'renB', 'renC']) HM_V[h].givreSpr = HM_GIVRE[HM_V[h].givre];
+
+/* ---- 5th round: the towers of the Houses (Tambour, Chaudron, Terrier), the masterpieces, the Corbeau's nests, the Renard's loot ---- */
+const hmGoldPile = (x, by, w) => { for (let j = 0; w - 2 * j > 0; j++) { const ww = w - 2 * j; for (let i = 0; i < ww; i++) P.px(x + j + i, by - 1 - j, (i + j) % 3 === 0 ? '#f6dc8a' : (i + j) % 2 ? '#b8893a' : '#d5a64c'); } P.px(x + (w >> 1), by - 1 - (w >> 1), '#fff6d8'); };
+const hmCoin = (x, y) => { P.px(x, y, '#d5a64c'); P.px(x + 1, y, '#b8893a'); };
+const hmNest = (x, y) => P.spr(['t..t..t.', '.tTtTtT.', 'tTtttTtt', '.tttttt.'], { t: '#5a4330', T: '#8a6a4a' }, x, y);
+const hmVial = (x, y) => { P.vl(x + 1, y - 3, 3, '#7a6a4e'); P.spr(['.n.', 'cgc', 'gGg', 'ggg'], { n: '#7a5d42', c: '#b9d8b0', g: '#5f9a55', G: '#a8e090' }, x, y); };
+const hmSmallCrow = (x, y, f, left) => P.spr(f ? ['k...k', '.kkkn', '..k..'] : ['.....', 'kkkkn', '..k..'], { k: '#22232b', n: '#d0a04f' }, Math.round(x) - 2, Math.round(y) - 1, left);
+HM.puddles = []; HM.fly = [];
+
+/* the Cerf, more alive at levels 3 and 4: snow swirling around, a shine sweeping down the ice, drops falling from the icicles */
+HM_V.cerf.live1 = HM_V.cerf.live;
+HM_V.cerf.live = function (lvl, type, X, Y, topL, id) {
+  HM_V.cerf.live1(lvl, type, X, Y, topL, id);
+  const t = G.t, w = towerW(type, lvl) / 2, cx = X + 12;
+  if (lvl >= 2) { const ph = (t * .6 + phash(id, 3, 21)) % 1; if (ph < .35) { const dx = Math.round((phash(Math.floor(t * .6 + phash(id, 3, 21)), id, 22) - .5) * w * 2), u = ph / .35; P.px(cx + dx, Y + topL + 9 + u * 9, '#dff1f7'); } }
+  if (lvl >= 3) { const n = lvl >= 4 ? 10 : 5; for (let i = 0; i < n; i++) { const a = t * 1.1 + i * 6.283 / n, fx = cx + Math.cos(a) * (12 + (i % 3) * 2), fy = Y + topL + 10 + Math.sin(a) * 4 - (i % 3) * 4; P.px(fx, fy, Math.sin(a) > 0 ? '#ffffff' : '#cbe8f0'); } }
+  if (lvl >= 4) { const ph = (t * .42 + phash(id, 5, 23)) % 1; if (ph < .45) { const H = 23 - topL, by = Y + topL + 2 + (ph / .45) * (H + 4), c = P.x, a0 = c.globalAlpha; for (let i = -w - 1; i <= w; i++) { const yy = Math.round(by + i * .5); if (yy > Y + 22 || yy < Y + topL) continue; c.globalAlpha = .8; P.px(cx + i, yy, '#ffffff'); c.globalAlpha = .4; P.px(cx + i, yy + 1, '#ffffff'); } c.globalAlpha = a0; } }
+};
+HM_V.cerf.htop = (ctx, lvl, ang, kick, k, X, Y, tx, ty, id, gold) => { blit(ctx, crystalSprite(gold ? 4 : lvl, ''), X + tx, Y + ty + (Math.sin(G.t * 2.2 + id) > 0.3 ? -1 : 0)); if (gold) { const c = P.x, a0 = c.globalAlpha; c.globalAlpha = .5 + .3 * Math.sin(G.t * 3); P.px(X + tx, Y + ty - 16, '#ffffff'); P.px(X + tx - 1, Y + ty - 15, '#fff3cf'); P.px(X + tx + 1, Y + ty - 15, '#fff3cf'); c.globalAlpha = a0; } };
+HM_V.cerf.chefStep = (b, t) => { if (!(t.hmT > G.t)) { t.hmT = G.t + 5; t.kick = G.t; b.rings.push({ x: t.c + .5, y: t.r + .5, r0: 0.4, r1: 9, t: 0.9, ttl: 0.9, color: '#DFF6FF', fill: true }); for (const cr of b.creeps) if (!cr.dead && cr.y >= 0 && !cr.noStun) { cr.stunUntil = Math.max(cr.stunUntil, G.t + 2); cr.iceUntil = G.t + 2; } G.floats.push({ k: b.k, x: t.c + .5, y: t.r - 0.9, txt: 'GEL', color: '#DFF6FF', t: 1, ttl: 1 }); } };
+
+/* L'OURS · Le Tambour de guerre: a drum on the platform, two mallets; each blow stuns everything around */
+const hmDrum = (lvl, kk, k, gold) => bakeAt(44, 34, 22, 24, (cx, by) => {
+  const o = gold ? K.au2 : PCOL[k] || NEUTRAL[0], o1 = gold ? K.au0 : PDARK[k] || NEUTRAL[1], W1 = gold ? K.ua : '#8a6440', W0 = gold ? K.au0 : '#6b4a2e', sk = gold ? '#fff3cf' : '#efe6cf', sk0 = gold ? K.au2 : '#cbbf9f';
+  const w = lvl >= 3 ? 14 : 12, x0 = cx - (w >> 1), top = by - 9;
+  P.hl(x0 + 1, top - 1, w - 2, sk); P.hl(x0, top, w, sk); P.hl(x0, top + 1, w, sk0);
+  for (let j = 0; j < 6; j++) P.hl(x0, top + 2 + j, w, j === 2 ? o : j === 3 ? o1 : j % 2 ? W0 : W1);
+  P.vl(x0, top + 2, 6, W0); P.vl(x0 + w - 1, top + 2, 6, '#4d3626');
+  if (lvl >= 2) for (let i = 1; i < w - 1; i += 2) { P.px(x0 + i, top + 2 + (i % 4 === 1 ? 0 : 1), sk0); }
+  if (lvl >= 4 || gold) for (const d of [-1, 1]) { const ex = d < 0 ? x0 - 1 : x0 + w; P.px(ex, top + 3, '#efe6cf'); P.px(ex + d, top + 2, '#efe6cf'); P.px(ex + d, top + 1, '#efe6cf'); P.px(ex + 2 * d, top, '#efe6cf'); }
+  for (const d of [-1, 1]) { const hx = cx + d * 4, hy = kk ? top - 1 : top - 7; P.line(cx + d * 9, top + 4, hx, hy, W1); P.rect(hx - 1, hy - 1, 3, 2, sk); }
+  if (kk) for (const [dx, dy] of [[-8, -3], [8, -3], [-6, -5], [6, -5], [0, -6]]) P.px(cx + dx, top + dy, '#fff3cf');
+});
+Object.assign(HM_V.oursA, {
+  htype: 'cannon', chef: true,
+  htop(ctx, lvl, ang, kick, k, X, Y, tx, ty, id, gold) { const kk = kick < 0.18; blit(ctx, sprGet(`hmdrum${lvl}${+kk}${k}${+gold}`, () => hmDrum(gold ? 4 : lvl, kk, k, gold)), X + tx, Y + ty + 3); },
+  hdeco(x, y, lvl, R, own, gold) {},
+  hstep(b, t, chef) { t.cd = 1; const range = 1.5 + .2 * t.lvl + (chef ? .4 : 0); if (!(t.hmT > G.t)) { const list = inRange(b, t.c + .5, t.r + .5, range); if (list.length) { t.hmT = G.t + (chef ? 1.6 : 2.2); t.kick = G.t; b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .3, r1: range, t: .4, ttl: .4, color: '#efe6cf' }); for (const cr of list) { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + .8); damage(b, cr, 4 * t.lvl, t); } } } },
+  chefStep(b, t) { if (!(t.hmT2 > G.t)) { t.hmT2 = G.t + 5; t.kick = G.t; b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .4, r1: 9, t: .8, ttl: .8, color: '#f2b45a', fill: true }); G.shake = Math.max(G.shake || 0, 3); for (const cr of b.creeps) if (!cr.dead && cr.y >= 0) { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + 1.5); if (Math.hypot(cr.x - t.c - .5, cr.y - t.r - .5) < 2.5) HX.push(b, cr, 2); } G.floats.push({ k: b.k, x: t.c + .5, y: t.r - 0.9, txt: 'BOUM', color: '#f2b45a', t: 1, ttl: 1 }); } },
+});
+
+/* LE CORBEAU · Le Chaudron: a pot of green poison on the platform; it throws flasks that leave a puddle */
+const hmPot = (lvl, k, gold) => bakeAt(40, 34, 20, 26, (cx, by) => {
+  const w = lvl >= 3 ? 12 : 10, x0 = cx - (w >> 1), top = by - 8, B0 = gold ? K.au0 : '#22232b', B1 = gold ? K.ua : '#3a3c48', B2 = gold ? K.au2 : '#585c6e';
+  for (let j = 0; j < 6; j++) { const inset = j === 0 ? 0 : j >= 4 ? j - 3 : 0; P.hl(x0 + inset, top + 1 + j, w - 2 * inset, j === 1 ? B1 : B0); P.px(x0 + inset, top + 1 + j, B1); }
+  P.hl(x0 - 1, top, w + 2, B2); P.hl(x0, top + 1, w, '#5f9a55'); P.hl(x0 + 1, top, w - 2, '#7fc06c'); P.px(x0 + 3, top, '#d6f5c0');
+  for (const dx of [2, w - 4]) P.vl(x0 + dx, top + 7, 2, B0);
+  if (lvl >= 2) { P.px(x0 - 2, top + 2, B1); P.px(x0 + w + 1, top + 2, B1); }
+});
+Object.assign(HM_V.corbN = HM_V.corbN || {}, {});
+const hmPotTop = (ctx, lvl, ang, kick, k, X, Y, tx, ty, id, gold) => {
+  blit(ctx, sprGet(`hmpot${lvl}${k}${+gold}`, () => hmPot(gold ? 4 : lvl, k, gold)), X + tx, Y + ty);
+  const t = G.t, top = Y + ty - 8, w = lvl >= 3 ? 12 : 10;
+  for (let i = 0; i < 2 + lvl; i++) { const u = (t * .8 + phash(i, id, 31)) % 1, bx = X + tx - (w >> 1) + 1 + Math.floor(phash(i, Math.floor(t * .8 + phash(i, id, 31)), 32) * (w - 2)); if (u < .25) P.px(bx, top - (u > .15 ? 1 : 0), u > .15 ? '#d6f5c0' : '#a8e090'); else if (u < .7) { const c = P.x, a0 = c.globalAlpha; c.globalAlpha = .45 * (1 - u); P.px(bx + Math.round(Math.sin(t * 3 + i)), top - 2 - (u - .25) * 18, '#a8e090'); c.globalAlpha = a0; } }
+  if (lvl >= 3 || gold) hmCrow(X + tx + (w >> 1) + 1, Y + ty - 8, false, kick < .15);
+};
+const hmPotStep = (b, t, chef) => {};
+const hmCorbBase = {
+  htype: 'cannon', chef: true, htop: hmPotTop, hdeco() {}, flask: true,
+  shot: { a: '#efe6cf', b: '#a8e090', tip: '#22232b', ball: ['.ddd.', 'dbbbd', 'dbgbd', 'dbbbd', '.ddd.'], bp: { d: '#22232b', b: '#3a3c48', g: '#a8e090' }, trail: '#7fc06c' },
+  pal: { hm: '#3a3c48' }, body: {}, ramp: null, passOpts: null,
+  hit(b, p, cr, chef) { HM.puddles.push({ k: b.k, x: cr.x, y: cr.y, t1: G.t + (chef ? 4 : 3), r: chef ? .8 : .6, src: p.src, dps: p.dmg * (chef ? 1.2 : .8) }); if (chef) { const n = b.creeps.find(c => !c.dead && c !== cr && Math.hypot(c.x - cr.x, c.y - cr.y) < 1.4); if (n) n.poison = { dps: p.dmg * .5, until: G.t + 3, src: p.src }; } },
+  live(lvl, type, X, Y, topL, id) { const t = G.t; for (let j = 0; j < lvl - 1; j++) { const dx = [-7, 7, -1][j], ph = Math.floor(t * .6 + j * 1.7 + id), up = (t * 1.1 + j) % 3 < .25; hmCrow(X + 12 + dx, Y + topL + 3 - (up ? 1 : 0), phash(ph, j, 5) < .5, up); } },
+};
+HM_V.corbN = Object.assign({}, hmCorbBase, { n: 'Les nids',
+  deco(x, y, lvl, type, R) { const cx = x + 12, w = towerW(type, lvl) / 2, ty = y + R.top;
+    for (const [dx, dy] of [[-w, 1], [-w + 1, 0], [-w - 1, 2]]) P.line(cx + dx, ty + 4 + dy, cx + dx - 2, ty + 2 + dy, '#5a4330');
+    if (lvl >= 2) hmNest(cx - w - 2, ty + 2);
+    if (lvl >= 3) { hmNest(cx + w - 6, ty + 2); hmNest(cx - w - 3, y + 23 - 12); }
+    if (lvl >= 4) P.spr(['.e.', 'eEe'], { e: '#e8e1cf', E: '#d6cfbc' }, cx - w, ty + 1); },
+  wall(x, y, m, L, Rr, U) { const top = U ? y - 9 : y + 4; if (m >= 2) for (const dx of [6, 15]) P.line(x + dx, top, x + dx + 2, top - 2, '#5a4330'); if (m >= 3) hmNest(x + 8, top - 2); },
+  live(lvl, type, X, Y, topL, id, house) { hmCorbBase.live(lvl, type, X, Y, topL, id); if (lvl >= 4) { const t = G.t; for (let j = 0; j < 2; j++) { const a = t * 1.3 + j * 3.14, fx = X + 12 + Math.cos(a) * 14, fy = Y + topL - 8 + Math.sin(a) * 3; hmSmallCrow(fx, fy, Math.floor(t * 8 + j) % 2, Math.sin(a) > 0); } } } });
+HM_V.corbF = Object.assign({}, hmCorbBase, { n: 'Les fioles',
+  deco(x, y, lvl, type, R) { const cx = x + 12, w = towerW(type, lvl) / 2, base = y + 23, spots = [[-w - 2, 14], [w + 1, 11], [-w - 2, 7], [w + 1, 18]];
+    for (let i = 0; i < lvl; i++) hmVial(cx + spots[i][0] - 1, base - spots[i][1]);
+    if (lvl >= 3) { P.px(cx - w + 1, base - 3, '#5f9a55'); P.px(cx - w + 2, base - 2, '#7fc06c'); } },
+  wall(x, y, m, L, Rr, U) { const top = U ? y - 9 : y + 4; if (m >= 2) hmVial(x + 10, top + 4); },
+  live(lvl, type, X, Y, topL, id) { hmCorbBase.live(lvl, type, X, Y, topL, id); if (lvl >= 4) { const w = towerW(type, lvl) / 2, u = (G.t * .7 + id) % 1; if (u < .5) P.px(X + 12 - w - 2, Y + 23 - 10 + u * 14, '#a8e090'); } } });
+
+/* LE RENARD · Le Terrier aux pièges: a burrow at the foot, the fox on the platform throws traps onto the path */
+const hmRenBase = {
+  htype: 'cannon', chef: true, ramp: null, passOpts: null, pal: {}, body: {},
+  shot: { a: '#efe6cf', b: '#f6dc8a', tip: '#3a2e22', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#2a2c33', b: '#4a4e58' }, trail: '#cbbf9f' },
+  htop(ctx, lvl, ang, kick, k, X, Y, tx, ty, id, gold) { const dir = hxD16(ang), kk = kick < 0.2; blit(ctx, sprGet(`hmfox${dir}${+kk}${+gold}`, () => hxFox(gold ? { crown: true } : {})(dir, kk, lvl)), X + tx, Y + ty + 4); },
+  hdeco(x, y, lvl, R, own, gold) { const cx = x + 12, base = y + 23; P.ell(cx, base - 1, 8, 2, HXC.earth); P.hl(cx - 7, base - 3, 14, '#85705a'); P.spr(['.kkk.', 'kKKKk', 'kKKKk'], { k: '#4d3f31', K: '#1d1914' }, cx - 2, base - 6); if (lvl >= 2) P.spr(['i...i', 'iiaii'], { i: K.i1, a: K.ua }, cx + 5, base - 2); },
+  hstep(b, t, chef) { t.cd = 1; if (t.hmT > G.t) return; const mine = HX.traps.length + HM.fly.length; if (mine >= (chef ? 6 : 4)) return;
+    const list = inRange(b, t.c + .5, t.r + .5, 2.6 + .2 * t.lvl).filter(c => !c.fly && c.tgt >= 0); if (!list.length) return; const cr = list[0], c = cr.tgt % COLS, r = (cr.tgt / COLS) | 0;
+    if (HX.traps.some(q => q.c === c && q.r === r) || HM.fly.some(q => q.c === c && q.r === r)) return;
+    t.hmT = G.t + (chef ? 1.4 : 2.4); t.kick = G.t; t.ang = Math.atan2(r + .5 - t.r - .5, c + .5 - t.c - .5); HM.fly.push({ k: b.k, sx: t.c + .5, sy: t.r + .5, c, r, t0: G.t, dur: .45, src: t }); },
+  chefStep(b, t) { if (!(t.hmT2 > G.t)) { t.hmT2 = G.t + 6; const cr = b.creeps.filter(c => !c.dead && c.y >= 0 && c.from >= 0 && !c.fly && !(S[c.kind] && S[c.kind].boss)).sort((a, c) => c.prog - a.prog)[0]; if (cr) { t.kick = G.t; b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: .9, t: .5, ttl: .5, color: C.gold, fill: true }); for (let i = 0; i < 10; i++) { const a = Math.random() * 6.28; b.parts.push({ x: cr.x, y: cr.y, vx: Math.cos(a) * 2.2, vy: Math.sin(a) * 2.2 - 1, t: .5, ttl: .5, color: C.gold, size: .06 }); } G.floats.push({ k: b.k, x: cr.x, y: cr.y - .5, txt: 'RENVOYÉ', color: C.gold, t: 1.1, ttl: 1.1 }); cr.dead = true; cr.hxGone = true; } } },
+};
+const hmLoot = (x, y, lvl, type, R) => { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
+  hmGoldPile(cx + w + 1, base, lvl >= 3 ? 9 : lvl >= 2 ? 7 : 5); hmCoin(cx + w + 8, base - 1); if (lvl === 1) hmCoin(cx - w - 3, base - 1);
+  if (lvl >= 2) { P.spr(['.tt.', 'sSSs', 'sSSs', 'ssss'], { t: '#7a6a4e', s: '#a8916a', S: '#cbb27c' }, cx - w - 6, base - 4); hmGoldPile(cx - w - 3, base, 3); }
+  if (lvl >= 3) { P.rect(cx - w - 7, base - 10, 6, 2, '#5e4128'); P.rect(cx - w - 7, base - 8, 6, 4, '#7a5b3c'); P.hl(cx - w - 7, base - 8, 6, '#d5a64c'); P.px(cx - w - 6, base - 9, '#f6dc8a'); P.px(cx - w - 4, base - 9, '#d5a64c'); P.vl(cx - w - 4, base - 7, 3, '#b8893a'); }
+  if (lvl >= 4) { P.spr(['a.a.a', 'aaaaa', '.aAa.'], { a: '#d5a64c', A: '#f6dc8a' }, cx + w + 2, base - 7); P.spr(['ccc', '.c.', 'ccc'], { c: '#b8893a' }, cx + w + 6, base - 4); } };
+HM.lootSpots = (type, lvl) => { const w = towerW(type, lvl) / 2, s = [[w + 4, -2], [w + 2, -1]]; if (lvl >= 2) s.push([-w - 2, -1], [w + 6, -1]); if (lvl >= 3) s.push([-w - 5, -9], [w + 3, -3]); if (lvl >= 4) s.push([w + 4, -7], [w + 2, -6]); return s; };
+HM_V.renT = Object.assign({}, hmRenBase, { n: 'Le butin',
+  deco: hmLoot,
+  wall(x, y, m) { if (m >= 2) { hmCoin(x + 6, y + 22); hmCoin(x + 15, y + 22); } if (m >= 3) hmGoldPile(x + 9, y + 23, 5); },
+  live(lvl, type, X, Y, topL, id) { const t = G.t, sp = HM.lootSpots(type, lvl), n = Math.min(lvl, 4);
+    for (let i = 0; i < n; i++) { const cyc = t * .55 + phash(i, id, 41), kq = Math.floor(cyc), u = (cyc - kq) / .25; if (u >= 1) continue; const [dx, dy] = sp[Math.floor(phash(i, kq, 42) * sp.length)], gx = X + 12 + dx, gy = Y + 23 + dy - 1; P.px(gx, gy, '#ffffff'); if (u < .5) { P.px(gx - 1, gy, '#fff6d8'); P.px(gx + 1, gy, '#fff6d8'); P.px(gx, gy - 1, '#fff6d8'); P.px(gx, gy + 1, '#fff6d8'); } } } });
+
+/* registration of the new variants and of the masterpieces happens in the loop below; here: the masterpieces' own pieces */
+HM.chefs = ['cerf', 'oursA', 'corbN', 'corbF', 'renT'];
+HM.step = (b, dt) => {
+  if (b.k !== G.me) return;
+  for (const t of b.grid) {
+    if (!t || !t.evo) continue; const chef = t.evo.startsWith('hmc_'); if (!chef && !t.evo.startsWith('hm_')) continue;
+    const V = HM_V[t.evo.slice(chef ? 4 : 3)]; if (!V || t.type !== 'frost') continue;
+    if (V.hstep) V.hstep(b, t, chef); if (chef && V.chefStep) V.chefStep(b, t);
+  }
+  for (const q of HM.fly) if (q.k === b.k && G.t >= q.t0 + q.dur) { q.done = true; HX.traps.push({ c: q.c, r: q.r, shut: 0, once: true, src: q.src }); }
+  HM.fly = HM.fly.filter(q => !q.done);
+  for (const pd of HM.puddles) if (pd.k === b.k) for (const cr of b.creeps) if (!cr.dead && !cr.fly && Math.hypot(cr.x - pd.x, cr.y - pd.y) < pd.r) cr.poison = { dps: pd.dps, until: G.t + .5, src: pd.src };
+  HM.puddles = HM.puddles.filter(pd => pd.t1 > G.t);
+};
+{ const prev = HX.step; HX.step = (b, dt, real) => { prev(b, dt, real); HM.step(b, dt); }; }
+{ const prev = window.__jtDrawHook; window.__jtDrawHook = function (o) {
+  if (prev) prev(o);
+  const { b, items, P } = o; if (HM.PROD || b.k !== G.me) return;
+  for (const pd of HM.puddles) { const X = AX0 + pd.x * CS, Y = AY0 + pd.y * CS, fade = Math.min(1, (pd.t1 - G.t) / .6), rr = pd.r * CS;
+    items.push({ y: Y - 12, fx: x => { const a0 = x.globalAlpha; x.globalAlpha = .55 * fade; P.ell(Math.round(X), Math.round(Y), Math.round(rr), Math.round(rr * .4), '#5f9a55'); x.globalAlpha = .7 * fade; P.ell(Math.round(X), Math.round(Y), Math.round(rr * .6), Math.round(rr * .25), '#7fc06c'); x.globalAlpha = a0;
+      for (let i = 0; i < 3; i++) { const u = (G.t * 1.2 + i * .37 + pd.x) % 1; if (u < .3) P.px(Math.round(X + (i - 1) * rr * .5), Math.round(Y - (u > .2 ? 1 : 0)), '#d6f5c0'); } } }); }
+  for (const q of HM.fly) { const u = Math.min(1, (G.t - q.t0) / q.dur), X = AX0 + (q.sx + (q.c + .5 - q.sx) * u) * CS, Y = AY0 + (q.sy + (q.r + .5 - q.sy) * u) * CS - Math.sin(u * Math.PI) * 18 - 4;
+    items.push({ y: Y + 40, fx: () => P.spr(['i.i', 'iai'], { i: K.i1, a: K.ua }, Math.round(X) - 1, Math.round(Y) - 1) }); }
+}; }
+// the shots of the Chaudron: a spinning flask (a crow carries it for the masterpiece)
+HM.flaskShot = (x, p, px, py, chef) => {
+  const tx = AX0 + (p.tx ?? p.x) * CS, ty = AY0 + (p.ty ?? p.y) * CS, dist = Math.hypot(tx - px, ty - py), hh = 7 + Math.min(20, dist * 0.45), ex = Math.round(px), ey = Math.round(py - hh), f = Math.floor(G.t * 12) % 2;
+  if (chef) { P.spr(HX_CROWFLY[Math.floor(G.t * 10) % 2], { k: '#22232b', K: '#3a3c48', e: K.au2, n: '#d0a04f' }, ex - 5, ey - 8, tx < px); }
+  P.spr(f ? ['.n.', 'cgc', 'gGg', 'ggg'] : ['n..', '.cg', 'gGg', '.gg'], { n: '#7a5d42', c: '#b9d8b0', g: '#5f9a55', G: '#a8e090' }, ex - 1, ey - 1);
+  return true;
+};
+
+/* ---- 6th round: the Givre's crystal sparkles with a halo; the Tambour and the Chaudron seen from above; the Corbeau's venom drips; the Terrier's traps stay ---- */
+const hmGlint = (gx, gy, u, big, c1 = '#e6f7fb', c2 = '#cbe8f0') => { gx = Math.round(gx); gy = Math.round(gy); P.px(gx, gy, '#ffffff'); if (u < .55) { P.px(gx - 1, gy, c1); P.px(gx + 1, gy, c1); P.px(gx, gy - 1, c1); P.px(gx, gy + 1, c1); } if (big && u < .25) { P.px(gx - 2, gy, c2); P.px(gx + 2, gy, c2); P.px(gx, gy - 2, c2); P.px(gx, gy + 2, c2); } };
+const hmAlpha = (a, fn) => { const c = P.x, a0 = c.globalAlpha; c.globalAlpha = a0 * a; try { fn(); } finally { c.globalAlpha = a0; } };
+
+/* LE CERF: the towers keep their ice, without glints; only the Givre's crystal sparkles, inside a halo that grows with the level */
+HM_V.cerf.live = HM_V.cerf.live0;
+HM.crystalFx = (lvl, cx, cy, id, gold) => {
+  const t = G.t, R = [0, 7, 8, 10, 12][lvl], pulse = .5 + .5 * Math.sin(t * 2.1 + id), hc = gold ? '#fff3cf' : '#dff6ff';
+  return {
+    halo() { for (let i = 0; i < 3; i++) { const r = R - i * 2 + (i === 0 ? Math.round(pulse) : 0); hmAlpha((.07 + .035 * lvl) * (.75 + .25 * pulse), () => P.ell(cx, cy, r, Math.round(r * .9), hc)); } },
+    glints() {
+      const big = lvl >= 3, hw = big ? 4 : 3, hh = big ? 6 : 4, n = [0, 1, 2, 3, 4][lvl];
+      for (let i = 0; i < n; i++) { const cyc = t * (.8 + .15 * i) + phash(i, id, 61), kq = Math.floor(cyc), u = (cyc - kq) / .3; if (u >= 1) continue; let dx = (phash(i, kq, 62) - .5) * 2, dy = (phash(i, kq, 63) - .5) * 2; if (Math.abs(dx) + Math.abs(dy) > 1) { dx *= .5; dy *= .5; } hmGlint(cx + dx * hw, cy + dy * hh, u, lvl >= 3); }
+      const m = [0, 1, 2, 4, 6][lvl];
+      for (let i = 0; i < m; i++) { const a = t * .6 + i * 6.283 / m + id, tw = .5 + .5 * Math.sin(t * 3.3 + i * 2.1); if (tw < .3) continue; const px = Math.round(cx + Math.cos(a) * (R - 1)), py = Math.round(cy + Math.sin(a) * (R - 1) * .9); if (tw > .85) hmGlint(px, py, .4, false); else P.px(px, py, tw > .6 ? '#ffffff' : '#cbe8f0'); }
+      if (lvl >= 4) { const u = (t * .45 + id * .3) % 1; if (u < .12) hmGlint(cx, cy - hh - 1, u / .12, true); }
+    },
+  };
+};
+HM_V.cerf.htop = (ctx, lvl, ang, kick, k, X, Y, tx, ty, id, gold) => {
+  const bob = Math.sin(G.t * 2.2 + id) > 0.3 ? -1 : 0, L = gold ? 4 : lvl, fx = HM.crystalFx(L, X + tx, Y + ty + bob - (L >= 3 ? 7 : 4), id, gold);
+  fx.halo(); blit(ctx, crystalSprite(L, ''), X + tx, Y + ty + bob); fx.glints();
+};
+
+/* L'OURS: the Tambour seen a little from above, as the Canon is; low at level 1, it grows with the level */
+const hmDrumIso = (lvl, kk, k) => bakeAt(44, 36, 22, 28, (cx, by) => {
+  const own = PCOL[k] || NEUTRAL[0], own1 = PDARK[k] || NEUTRAL[1], rx = lvl >= 3 ? 7 : 6, ry = 3, h = [0, 3, 3, 4, 5][lvl], top = by - 1 - h - ry;
+  const band = Math.ceil(h / 2), W1 = '#8a6440', W0 = '#6b4a2e', W2 = '#a67c52', D = '#4d3626';
+  if (lvl >= 4) for (const d of [-1, 1]) { const ex = cx + d * (rx + 1); P.px(ex, top + ry + 2, '#efe6cf'); P.px(ex + d, top + ry + 1, '#efe6cf'); P.px(ex + d, top + ry, '#e6dcc6'); P.px(ex + 2 * d, top + ry - 1, '#efe6cf'); P.px(ex + 2 * d, top + ry - 2, '#ffffff'); }
+  for (let dx = -rx; dx <= rx; dx++) { const e = Math.round(ry * Math.sqrt(Math.max(0, 1 - (dx / (rx + .5)) ** 2)));
+    for (let r = 1; r <= h; r++) { let col = r === band ? own : r === band + 1 && h >= 4 ? own1 : r === h ? W0 : W1; if (r !== band && !(r === band + 1 && h >= 4)) col = dx >= rx - 1 ? (r === h ? D : W0) : dx <= -rx + 1 ? W2 : col; else if (dx >= rx - 1) col = own1; P.px(cx + dx, top + e + r, col); }
+    if (lvl >= 2 && (dx + rx) % 2 === 0 && Math.abs(dx) < rx - 1) { const r = band === 1 ? 2 : 1; if (r !== band) P.px(cx + dx, top + e + r, '#d8c7a0'); }
+    if (lvl >= 3 && (dx + rx) % 3 === 1 && Math.abs(dx) < rx) P.px(cx + dx, top + e + band, K.ua); }
+  P.ell(cx, top, rx, ry, D); P.ell(cx, top, rx - 1, ry - 1, kk ? '#fffaf0' : '#e8dfc6'); P.hl(cx - rx + 2, top - ry + 1, 3, '#fbf6e8'); P.hl(cx - 1, top + ry - 1, rx, kk ? '#efe6cf' : '#cfc3a4');
+  if (kk) { P.px(cx, top, '#ffffff'); for (const [dx, dy] of [[-rx - 2, 0], [rx + 2, 0], [-4, -ry - 1], [4, -ry - 1], [0, -ry - 2]]) P.px(cx + dx, top + dy, '#fff3cf'); }
+  for (const d of [-1, 1]) { const hx = cx + d * 3, hy = kk ? top - 1 : top - 6, sx = cx + d * (rx + 2), sy = top + 2; P.line(sx, sy, hx, hy + 1, W1); P.rect(hx - 1, hy - 1, 3, 2, '#efe6cf'); P.px(hx + (d > 0 ? 1 : -1), hy, '#cbbf9f'); }
+});
+HM_V.oursA.htop = (ctx, lvl, ang, kick, k, X, Y, tx, ty, id, gold) => { const kk = kick < 0.18, L = gold ? 4 : lvl; blit(ctx, sprGet(`hmdrumI${L}${+kk}${k}`, () => hmDrumIso(L, kk, k)), X + tx, Y + ty + 4); };
+
+/* LE CORBEAU: the Chaudron in the walls' stone, seen from above: the green poison shows, it boils */
+const hmPotIso = (lvl, k) => bakeAt(40, 38, 20, 30, (cx, by) => {
+  const own = PCOL[k] || NEUTRAL[0], own1 = PDARK[k] || NEUTRAL[1], rx = lvl >= 3 ? 8 : 7, ry = 3, prof = lvl >= 3 ? [0, 1, 1, 1, 0, -1, -2] : [0, 1, 1, 0, -1, -2], h = prof.length, top = by - 2 - h - ry, band = lvl >= 2 ? 3 : 0;
+  for (const d of [-1, 1]) { P.vl(cx + d * (rx - 3), top + ry + h, 3, K.s0); P.px(cx + d * (rx - 3) + d, top + ry + h + 2, K.s0); }
+  P.vl(cx, top + ry + h + 1, 2, K.s0);
+  for (let r = 1; r <= h; r++) { const rr = rx + prof[r - 1];
+    for (let dx = -rr; dx <= rr; dx++) { const e = Math.round(ry * Math.sqrt(Math.max(0, 1 - (dx / (rr + .5)) ** 2))), f = dx / rr;
+      let col = f < -.45 ? K.s1 : f > .55 ? K.s3 : K.s2; if (r === h) col = K.s0; if (r === 1 && f > -.45) col = K.s4;
+      if (r === band) col = f > .55 ? own1 : own; if (r === band + 1 && band) col = own1;
+      P.px(cx + dx, top + e + r, col); } }
+  P.ell(cx, top, rx + 1, ry, K.s5); P.hl(cx - rx + 1, top + ry, 2 * rx - 1, K.s4); P.ell(cx, top, rx, ry - 1, K.s0);
+  P.ell(cx, top, rx - 1, ry - 1, '#4f8a47'); P.ell(cx, top + 1, rx - 2, ry - 2, '#5f9a55'); P.hl(cx - rx + 2, top - 1, 3, '#7fc06c'); P.px(cx - rx + 3, top - 1, '#a8e090');
+  if (lvl >= 4) { P.vl(cx + rx - 1, top + 2, 3, '#5f9a55'); P.px(cx + rx - 1, top + 5, '#7fc06c'); }
+});
+const hmPotIsoTop = (ctx, lvl, ang, kick, k, X, Y, tx, ty, id, gold) => {
+  const L = gold ? 4 : lvl, rx = L >= 3 ? 8 : 7, h = L >= 3 ? 7 : 6, cx = X + tx, ox = Y + ty + 6, top = ox - 2 - h - 3, t = G.t;
+  blit(ctx, sprGet(`hmpotI${L}${k}`, () => hmPotIso(L, k)), cx, ox);
+  for (let i = 0; i < 2 + L; i++) { const cyc = t * (.9 + .1 * i) + phash(i, id, 71), kq = Math.floor(cyc), u = cyc - kq, bx = cx + Math.round((phash(i, kq, 72) - .5) * (rx - 2) * 2), byy = top + Math.round((phash(i, kq, 73) - .5) * 2);
+    if (u < .3) P.px(bx, byy, '#a8e090'); else if (u < .45) { P.px(bx - 1, byy, '#d6f5c0'); P.px(bx + 1, byy, '#d6f5c0'); P.px(bx, byy - 1, '#d6f5c0'); } else if (u < .9) hmAlpha(.5 * (1 - u), () => P.px(bx + Math.round(Math.sin(t * 3 + i)), byy - 2 - (u - .45) * 16, '#a8e090')); }
+  if (L >= 3) hmCrow(cx + rx + 1, top + 1, false, kick < .15);
+};
+
+/* the Corbeau's matter: a green venom that seeps from under the crown and drips down the stone */
+HM.drips = (type, lvl) => { const w = towerW(type, lvl) / 2, y0 = 23 - towerH(type, lvl, '') + 7 + 4;
+  const all = [[-w + 2, 0, [0, 3, 4, 6, 9][lvl]], [w - 3, 1, [0, 0, 3, 5, 7][lvl]], [-w + 5, 1, [0, 0, 0, 4, 5][lvl]], [w - 1, 0, [0, 0, 0, 0, 12][lvl]]];
+  return all.slice(0, Math.min(4, lvl)).map(([dx, dy, L]) => [Math.round(dx), y0 + dy, L]); };
+const hmDrip = (x, y, L) => { P.px(x, y - 1, '#4f8a47'); for (let j = 0; j < L; j++) P.px(x, y + j, j === 0 ? '#7fc06c' : '#5f9a55'); P.px(x, y + L, '#7fc06c'); P.px(x + 1, y + L, '#4f8a47'); P.px(x, y + L + 1, '#4f8a47'); };
+HM_V.corbV = Object.assign({}, hmCorbBase, { n: 'Le venin', htop: hmPotIsoTop, pal: {},
+  deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, d = HM.drips(type, lvl);
+    for (const [dx, y0, L] of d) { hmDrip(cx + dx, y + y0, L); P.px(cx + dx - 1, y + y0 - 1, '#5f9a55'); }
+    if (lvl >= 3) { const [dx] = d[0]; P.ell(cx + dx, base, 2, 1, '#4f8a47'); P.hl(cx + dx - 1, base - 1, 2, '#7fc06c'); }
+    if (lvl >= 4) { const [dx] = d[3]; P.ell(cx + dx + 1, base, 3, 1, '#4f8a47'); P.hl(cx + dx, base - 1, 3, '#5f9a55'); P.px(cx + dx + 1, base - 1, '#a8e090'); } },
+  wall(x, y, m) { if (m >= 2) hmDrip(x + 7, y + 16, 2); if (m >= 3) { hmDrip(x + 17, y + 16, 4); P.hl(x + 6, y + 15, 3, '#5f9a55'); P.hl(x + 16, y + 15, 2, '#5f9a55'); } },
+  live(lvl, type, X, Y, topL, id, house) { if (!house) hmCorbBase.live(lvl, type, X, Y, topL, id);
+    if (lvl < 2) return; const t = G.t, cx = X + 12, base = Y + 23;
+    HM.drips(type, lvl).forEach(([dx, y0, L], i) => { const per = 1.5 + phash(i, id, 75), u = ((t + phash(i, id, 76) * 3) % per) / per, gx = cx + dx, gy = Y + y0 + L;
+      if (u < .45) { if (u > .25) P.px(gx, gy + 2, '#7fc06c'); return; }
+      const v = (u - .45) / .55, fy = gy + 2 + v * v * (base - gy - 2); if (fy < base - 1) { P.px(gx, Math.round(fy), '#7fc06c'); P.px(gx, Math.round(fy) - 1, '#5f9a55'); } else if (v < 1) { P.px(gx - 1, base - 1, '#a8e090'); P.px(gx + 1, base - 1, '#a8e090'); } }); } });
+
+/* LE RENARD: a thrown trap stays on the path; it catches up to 3 creatures one after the other (each held, each drops 2 gold), then closes for good; it is gone after 10 s */
+HM_V.renT.hstep = function (b, t, chef) { t.cd = 1; if (t.hmT > G.t) return; if (HX.traps.length + HM.fly.length >= 3) return;
+  const list = inRange(b, t.c + .5, t.r + .5, 2.6 + .2 * t.lvl).filter(c => !c.fly && c.tgt >= 0); if (!list.length) return; const cr = list[0], c = cr.tgt % COLS, r = (cr.tgt / COLS) | 0;
+  if (HX.traps.some(q => q.c === c && q.r === r) || HM.fly.some(q => q.c === c && q.r === r)) return;
+  t.hmT = G.t + 3.2; t.kick = G.t; t.ang = Math.atan2(r + .5 - t.r - .5, c + .5 - t.c - .5); HM.fly.push({ k: b.k, sx: t.c + .5, sy: t.r + .5, c, r, t0: G.t, dur: .45, src: t }); };
+HM.step = (b, dt) => {
+  if (b.k !== G.me) return;
+  for (const t of b.grid) {
+    if (!t || !t.evo) continue; let V, chef = false;
+    if (t.evo.startsWith('hmx_')) { const D = HM.X && HM.X[t.evo.slice(4)]; if (!D) continue; V = HM_V[D.v]; chef = true; if (V && V.hstep) V.hstep(b, t, true); if (V && V.chefStep && D.demo) V.chefStep(b, t); continue; }
+    chef = t.evo.startsWith('hmc_'); if (!chef && !t.evo.startsWith('hm_')) continue;
+    V = HM_V[t.evo.slice(chef ? 4 : 3)]; if (!V || t.type !== 'frost') continue;
+    if (V.hstep) V.hstep(b, t, chef); if (chef && V.chefStep) V.chefStep(b, t);
+  }
+  for (const q of HM.fly) if (q.k === b.k && G.t >= q.t0 + q.dur) { q.done = true; HX.traps.push({ c: q.c, r: q.r, shut: 0, charges: 3, t1: G.t + 10, src: q.src }); }
+  HM.fly = HM.fly.filter(q => !q.done);
+  for (const pd of HM.puddles) if (pd.k === b.k) for (const cr of b.creeps) if (!cr.dead && !cr.fly && Math.hypot(cr.x - pd.x, cr.y - pd.y) < pd.r) cr.poison = { dps: pd.dps, until: G.t + .5, src: pd.src };
+  HM.puddles = HM.puddles.filter(pd => pd.t1 > G.t);
+};
+HM.chefs = ['cerf', 'oursA', 'corbV', 'renT'];
+
+// the passes that are not a simple ramp
+HM_V.renard.passOpts = { ramp: ['#97643a', '#97643a', '#97643a', '#d5a64c', '#f6dc8a'], minRank: 3, seed: 13 };
+HM_V.trophee.passOpts = null;
+
+/* ---------------- plugging in: bodies, walls, tops, shots ---------------- */
+HM.house = b => { for (const t of b.grid) if (t && t.evo && t.evo.startsWith('hm_')) return t.evo.slice(3); return null; };
+for (const h in HM_V) {
+  const V = HM_V[h], po = V.passOpts !== undefined ? V.passOpts : { ramp: V.ramp, patch: V.patch, plates: V.plates, seed: h.length * 7 + 1 };
+  HX.bodies['hm_' + h] = (x, y, lvl, e, own, type) => {
+    const house = type === 'frost' && V.htype, bt = house ? V.htype : type;
+    const g0 = GLW.length; hmOver(V.givreSpr && type === 'frost' ? Object.assign({ c0: K.s3, c1: K.s4, c2: K.s5, fr: '#000000' }, V.body) : V.body || {}, () => (TOWER_BODY[bt] || frostBody)(x, y, lvl, HM.form || '', own));
+    if (V.givreSpr && type === 'frost') GLW.length = g0;
+    if (h !== 'cerf') for (let i = g0; i < GLW.length; i++) { GLW[i].a *= .35; GLW[i].r *= .6; }
+    const top = hmCrown(bt, lvl), R = po ? hmPass(x, y, po.patch !== undefined ? HM_F[lvl] * 1.15 : HM_F[lvl], Object.assign({ top }, po, po.patch !== undefined ? { patch: po.patch - .05 * lvl } : {})) : hmPass(x, y, 0, { top, ramp: ['#000', '#000', '#000', '#000', '#000'], minRank: 9 });
+    V.deco(x, y, lvl, bt, R, own);
+    if (house && V.hdeco) V.hdeco(x, y, lvl, R, own, false);
+  };
+  HX.at['hm_' + h] = (type, lvl) => towerTopAt(type === 'frost' && V.htype ? V.htype : type, lvl, '');
+  HX.tops['hm_' + h] = (x, b, t, s, tx, ty, kick) => HM.top(x, h, t.type, t.lvl, t.ang ?? 1.57, kick, pcol(b.k), s.x, s.y, s.tw ? s.tw.oy : -20, t.id, tx, ty);
+  HX.shots['hm_' + h] = (x, b, p, px, py) => HM.shot(x, h, p, px, py);
+}
+HM.wallSprite = (h, m, L, R, U, v, k) => {
+  if (!h || m <= 0) return wallSprite(L, R, U, v, k);
+  const V = HM_V[h], own = [PCOL[k] || NEUTRAL[0], PDARK[k] || NEUTRAL[1]], po = V.passOpts !== undefined ? V.passOpts : { ramp: V.ramp, patch: V.patch, plates: V.plates, seed: h.length * 7 + 1 };
+  return sprGet(`hmw${h}${m}${+L}${+R}${+U}${v}${k}`, () => bakeStruct((x, y) => { drawWall(x, y, L, R, U, v, own); const Rw = po ? hmPass(x, y, HM_FW[m], po) : null; V.wall(x, y, m, L, R, U, own, Rw); }));
+};
+HM.wallAt = (b, c, r, L, R, U, v, k) => {
+  const h = HM.house(b); if (!h) return wallSprite(L, R, U, v, k);
+  let m = 0;
+  for (let i = 0; i < b.grid.length; i++) { const t = b.grid[i]; if (!t || t.type === 'wall' || (t.evo !== 'hm_' + h && t.evo !== 'hmc_' + h)) continue; const d = Math.abs(i % COLS - c) + Math.abs(((i / COLS) | 0) - r); const L = t.evo === 'hmc_' + h ? 4 : t.lvl; m = Math.max(m, d === 0 ? L : L - d); }
+  return HM.wallSprite(h, Math.min(3, m), L, R, U, v, k);
+};
+HM.top = (ctx, h, type, lvl, ang, kick, k, X, Y, topL, id, tx, ty, chef) => {
+  const V = HM_V[h], s0 = SPR_T; SPR_T = s0 + '|hm' + h;
+  try { hmOver(Object.assign({}, V.pal, V.crystal || {}), () => {
+    if (type === 'frost' && V.htop) V.htop(ctx, lvl, ang, kick, k, X, Y, tx, ty, id, !!chef);
+    else if (type === 'arrow') blit(ctx, archerSprite(k, Math.cos(ang) < -0.15, kick < 0.16, HM.form === 'double', HM.form === 'sniper'), X + tx, Y + ty);
+    else if (type === 'cannon') { blit(ctx, barrelSprite(hxD16(ang), HM.form || '', kick < 0.12), X + tx, Y + ty); if (kick < 0.09) { const mx = Math.round(X + tx + Math.cos(ang) * 10), my = Math.round(Y + ty + Math.sin(ang) * 8); P.spr(['.a.a.', 'abcba', '.ccc.', 'abcba', '.a.a.'], { a: V.shot.trail, b: V.shot.a, c: '#ffffff' }, mx - 2, my - 2); } }
+    else if (V.givreSpr) blit(ctx, sprGet(`hmg${h}${lvl}${+(kick < 0.14)}${k}`, () => V.givreSpr(k)(lvl, kick < 0.14)), X + tx, Y + ty + (Math.sin(G.t * 2.2 + id) > 0.3 ? -1 : 0));
+    else blit(ctx, crystalSprite(lvl, ''), X + tx, Y + ty + (Math.sin(G.t * 2.2 + id) > 0.3 ? -1 : 0));
+  }); } finally { SPR_T = s0; }
+  const bt = type === 'frost' && V.htype ? V.htype : type;
+  if (V.live) V.live(chef ? 4 : lvl, bt, X, Y, hmCrown(bt, chef ? 4 : lvl), id, type === 'frost');
+  if (type === 'frost' && V.hlive) V.hlive(chef ? 4 : lvl, X, Y, hmCrown(bt, chef ? 4 : lvl), id, !!chef);
+};
+HM.shot = (x, h, p, px, py, chef) => {
+  const S = HM_V[h].shot;
+  if (p.type === 'frost' && HM_V[h].flask) return HM.flaskShot(x, p, px, py, chef);
+  if (p.type === 'cannon') {
+    const lift = hh => hh * CS + 6;
+    for (let k = 1; k <= 3; k++) { const u = Math.max(0, Math.min(1, (p.t - k * .05) / p.dur)); if (u <= 0) break; const sx = AX0 + (p.sx + (p.tx - p.sx) * u) * CS, sy = AY0 + (p.sy + (p.ty - p.sy) * u) * CS - lift(Math.sin(u * Math.PI) * .6); x.globalAlpha = .6 - k * .13; P.rect(Math.round(sx) - 1, Math.round(sy) - 1, 3 - (k > 2 ? 1 : 0), 3 - (k > 2 ? 1 : 0), S.trail); x.globalAlpha = 1; }
+    const bx = Math.round(px), by = Math.round(py - lift(p.h || 0)); P.spr(S.ball, S.bp, bx - 2, by - 2); return true;
+  }
+  if (p.type !== 'arrow' && p.type !== 'frost') return false;
+  const tx = AX0 + (p.tx ?? p.x) * CS, ty = AY0 + (p.ty ?? p.y) * CS, dist = Math.hypot(tx - px, ty - py), hh = 7 + Math.min(20, dist * 0.45);
+  const a = p.ang ?? Math.atan2(ty - py, tx - px), ux = Math.cos(a), uy = Math.sin(a), ex = px, ey = py - hh;
+  if (p.type === 'arrow') { x.globalAlpha = .45; P.line(ex - ux * 15, ey - uy * 15 + 1, ex - ux * 8, ey - uy * 8 + 1, S.trail); x.globalAlpha = 1; P.line(ex - ux * 7, ey - uy * 7 + 1, ex, ey + 1, K.dk2); P.line(ex - ux * 7, ey - uy * 7, ex, ey, S.a); P.px(Math.round(ex), Math.round(ey), S.b); P.px(Math.round(ex - ux), Math.round(ey - uy), S.tip || S.a); return true; }
+  const C2 = HM_V[h].crystal || { c1: K.c1, c3: K.c3 };
+  for (let k = 1; k <= 5; k++) { x.globalAlpha = .75 - k * .13; P.px(Math.round(ex - ux * k * 1.6), Math.round(ey - uy * k * 1.6), k < 3 ? C2.c3 : C2.c1); } x.globalAlpha = 1;
+  P.spr(['..c..', '.cCc.', 'cCWCc', '.cCc.', '..c..'], { c: C2.c1, C: C2.c3, W: '#ffffff' }, Math.round(ex) - 2, Math.round(ey) - 2); return true;
+};
+for (const h of (HM.chefs || [])) {
+  const V = HM_V[h], bt = V.htype || 'frost';
+  HX.bodies['hmc_' + h] = (x, y, lvl, e, own, type) => { const g0 = GLW.length; hxGold(() => hmOver(V.body || {}, () => (TOWER_BODY[bt] || frostBody)(x, y, 4, '', own))); if (h !== 'cerf') for (let i = g0; i < GLW.length; i++) { GLW[i].a *= .35; GLW[i].r *= .6; } addGlow(x + 12, y + 10, 26, '#fff3cf', .25, .8); const R = hmPass(x, y, 0, { top: hmCrown(bt, 4), ramp: ['#000', '#000', '#000', '#000', '#000'], minRank: 9 }); V.deco(x, y, 4, bt, R, own); if (V.hdeco) V.hdeco(x, y, 4, R, own, true); };
+  HX.at['hmc_' + h] = (type, lvl) => towerTopAt(bt, 4, '');
+  HX.tops['hmc_' + h] = (x, b, t, s, tx, ty, kick) => HM.top(x, h, 'frost', 4, t.ang ?? 1.57, kick, pcol(b.k), s.x, s.y, s.tw ? s.tw.oy : -20, t.id, tx, ty, true);
+  HX.shots['hmc_' + h] = (x, b, p, px, py) => HM.shot(x, h, p, px, py, true);
+  if (V.flask) { HX.stats['hmc_' + h] = (t, o) => { o.range = 99; o.rate = 1.1; o.dmg *= 2.5; }; HX.hits['hmc_' + h] = (b, p, cr) => { if (p.type === 'frost') V.hit(b, p, cr, true); }; }
+}
+for (const h in HM_V) if (HM_V[h].flask) { HX.stats['hm_' + h] = (t, o) => { if (t.type === 'frost') { o.range = 2.6 + .2 * t.lvl; o.rate = 1.6; o.slowDur = 0; } }; HX.hits['hm_' + h] = (b, p, cr) => { if (p.type === 'frost') HM_V[h].hit(b, p, cr, false); }; }
+/* a tower between two walls, as in the game, on a canvas of its own (for the planche's strips) */
+HM.portrait = (h, type, lvl, ang, kk, k = 0, chef = false) => {
+  const W = 96, Hh = 84, [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x);
+  const ax = 36, ay = 56, own = pcol(k), L4 = chef ? 4 : lvl, ms = h ? [Math.max(0, L4 - 1), Math.min(3, L4), Math.max(0, L4 - 1)] : [0, 0, 0];
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, ms[i], L, R, false, i, own), wx, ay));
+  const evo = h ? (chef ? 'hmc_' : 'hm_') + h : '', tw = towerSprite(type, lvl, evo, own); blit(x, tw, ax, ay);
+  const [tx, ty] = towerTopAt(type, lvl, evo);
+  if (h) HM.top(x, h, type, lvl, ang, kk ? 0 : 9, own, ax, ay, tw.oy, 7, tx, ty, chef);
+  else blit(x, topSprite(type, lvl, '', own, ang, kk), ax + tx, ay + ty);
+  P = prev; return c;
+};
+
+/* ---- 6th round: the masterpieces, towers that look like no other; three proposals per House ---- */
+HM.X = {};
+const xStone = (x0, y0, w, h) => { const l = Math.round(w * .22), r = Math.round(w * .2); P.rect(x0, y0, l, h, K.s1); P.rect(x0 + l, y0, w - l - r, h, K.s2); P.rect(x0 + w - r, y0, r, h, K.s3); P.hl(x0, y0, w, K.s5); P.hl(x0, y0 + h - 1, w, K.s0); };
+// a low round plinth seen from above, with a band in the player's colour
+const xPlinth = (cx, base, rx, h, own) => { const ry = 3, top = base - h - ry;
+  for (let dx = -rx; dx <= rx; dx++) { const e = Math.round(ry * Math.sqrt(Math.max(0, 1 - (dx / (rx + .5)) ** 2))), f = dx / rx; for (let r = 1; r <= h; r++) { let col = f < -.5 ? K.s1 : f > .55 ? K.s3 : K.s2; if (r === h) col = K.s0; if (own && r === 2) col = f > .55 ? own[1] : own[0]; if (own && r === 3) col = own[1]; P.px(cx + dx, top + e + r, col); } }
+  P.ell(cx, top, rx, ry, K.s5); P.ell(cx, top, rx - 1, ry - 1, K.s4); return top; };
+const xFlag = (x, y, own, t, id, len = 9) => { P.vl(x, y, len, K.i1); P.px(x, y - 1, K.ua); const f = Math.floor(t * 5 + id) % 3; P.spr(f === 0 ? ['aaab', 'aaab', 'ab..'] : f === 1 ? ['aaa.', 'aaab', 'aab.'] : ['aaab', 'aab.', 'ab..'], { a: own[0], b: own[1] }, x + 1, y); };
+const xFire = (cx, by, w, h, t, pal = ['#a8402a', '#e0743a', '#f2b45a', '#fff0b8']) => { for (let dx = -w; dx <= w; dx++) { const q = 1 - Math.abs(dx) / (w + 1), hh = Math.round(h * Math.pow(q, .8) * (.65 + .35 * Math.sin(t * 9 + dx * 1.9 + cx))); for (let j = 0; j < hh; j++) { const u = j / Math.max(1, hh), core = q - u * .6; P.px(cx + dx, by - j, core > .7 ? pal[3] : core > .45 ? pal[2] : core > .2 ? pal[1] : pal[0]); } } };
+const xSpark = (X, Y, n, id, w, y0, h, cols = ['#fff0b8', '#f2b45a', '#c4603a'], sp = .5) => { const t = G.t; for (let i = 0; i < n; i++) { const u = (t * sp + phash(i, id, 4)) % 1, fx = X + (phash(i, id, 3) - .5) * w + Math.sin(t * 3 + i) * 1.5, fy = Y + y0 - u * h; if (u < .85) P.px(fx, fy, u < .3 ? cols[0] : u < .6 ? cols[1] : cols[2]); } };
+const ICE = ['#5f8ea3', '#7fb0c4', '#a5d0de', '#cbe8f0', '#eef9fc'];
+// an ice shard: point at the top, the light face on the left
+const xShard = (cx, by, h, w, lean = 0) => { for (let j = 0; j <= h; j++) { const u = j / h, hw = Math.round((w / 2) * Math.min(1, u / .3) * (u > .85 ? 1 - (u - .85) * 1.5 : 1)), x0 = Math.round(cx + lean * (1 - u)), y = by - h + j; for (let i = -hw; i <= hw; i++) P.px(x0 + i, y, i === -hw ? ICE[4] : i < 0 ? ICE[3] : i === 0 ? ICE[2] : i === hw ? ICE[0] : ICE[1]); } };
+const FOX = { o: '#c9783f', d: '#97572b', w: '#eadfcb', k: '#2a221c', n: '#1d1914' };
+const xFoxSit = (x, y, tail, blink, left) => P.spr([
+  '.d...d..', '.od.do..', '.ooooo..', '.okoko..'.replace(/k/g, blink ? 'o' : 'k'), '..wnw...', '..owo...', '.ooowo..', '.oowwo' + (tail ? 'oo' : '..'), '.ooowo' + (tail ? '.o' : 'oo'), '.o.o.o' + (tail ? '.o' : 'ow'), '.d.d..' + (tail ? 'ow' : '..')], FOX, x, y, left);
+
+/* ===================== LE CERF ===================== */
+HM.X.cerfFleche = { v: 'cerf', h: 'Le Cerf', n: 'La Flèche de cristal', p: 'Une flèche de glace pure, sans pierre ; un cœur de lumière bat dedans.', at: [12, -12], H: 34,
+  body(x, y, own) { const cx = x + 12, base = y + 23; const top = xPlinth(cx, base, 9, 5, own);
+    xShard(cx - 6, top + 2, 12, 5, 2); xShard(cx + 6, top + 2, 14, 5, -2); xShard(cx, top + 3, 30, 9);
+    for (const [dx, h] of [[-9, 4], [9, 3], [-3, 3], [4, 4]]) { P.vl(cx + dx, top + 3 - h, h, ICE[3]); P.px(cx + dx, top + 2 - h, ICE[4]); }
+    for (let i = -8; i <= 8; i++) if (phash(i, 3, 7) < .55) P.px(cx + i, top - 2 + Math.round(Math.abs(i) * .25), '#ffffff'); },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, top = Y + 23 - 5 - 3, cy = top - 12, pulse = .5 + .5 * Math.sin(t * 2.6 + id), fx = HM.crystalFx(4, cx, cy - 2, id, false);
+    fx.halo(); hmAlpha(.55 + .4 * pulse, () => { P.rect(cx - 1, cy - 2, 3, 4, '#ffffff'); P.px(cx, cy - 3, '#ffffff'); P.px(cx, cy + 2, '#ffffff'); });
+    const u = (t * .5 + id * .2) % 1; if (u < .6) { const yy = Math.round(top + 3 - u / .6 * 31); hmAlpha(.8, () => { for (let i = -4; i <= 4; i++) P.px(cx + i, yy + Math.round(i * .5), '#ffffff'); }); }
+    fx.glints(); if (kick < .5) { const r = Math.round(4 + kick * 30); hmAlpha(1 - kick * 2, () => P.ring(cx, cy, r, 1, '#ffffff')); } } };
+
+HM.X.cerfStatue = { v: 'cerf', h: 'Le Cerf', n: 'Le Cerf de givre', p: 'La statue du cerf blanc sur son socle ; ses bois de cristal scintillent, il souffle du givre.', at: [12, -6], H: 30,
+  body(x, y, own) { const cx = x + 12, base = y + 23; xStone(cx - 10, base - 8, 20, 8); P.hl(cx - 10, base - 9, 20, K.s5);
+    for (let i = -10; i < 10; i++) if (phash(i, 1, 9) < .6) P.px(cx + i, base - 9, '#ffffff');
+    P.rect(cx - 3, base - 7, 6, 4, own[0]); P.hl(cx - 3, base - 7, 6, own[1]); P.spr(['a....a', '.a..a.'], { a: own[0] }, cx - 3, base - 3); P.hl(cx - 4, base - 8, 8, K.ua);
+    const I = ICE, y0 = base - 9 - 22;
+    P.spr(['..a.a...a.a.........', '..aa.a.a.aa.........', 'a..a.aa.a..a........', '.a.a..aa..a.........', '..aa..aa.a..........', '....aa.aa...........', '....hhhhh...........', '...hhhhhhh..........', '.whhhehhhh..........', 'whhhhhhhh...........', '.mmhhhhhh...........', '......hhhm..........', '......hhhhm.........', '......hhhhhm........', '......whhhhhhhhhhhw.', '.....whhhhhhhhhhhhhw', '.....hhhhhhhhhhhhhhm', '......mhhhhhhhhhhhmm', '.......mhm.mhm..mhm.', '.......hm..hm...hm..', '.......hm..hm...hm..', '.......dd..dd...dd..'],
+      { a: '#ffffff', h: I[3], w: I[4], m: I[2], d: I[1], e: '#3d6a80' }, cx - 10, y0);
+    for (const [c, r] of [[3, 0], [9, 1], [0, 2], [11, 2]]) P.px(cx - 10 + c, y0 + r, I[3]); },
+
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, b = Y + 23 - 9, I = ICE, y0 = b - 22;
+    const sp = [[-8, -22], [-10, -20], [-7, -19], [-2, -22], [0, -20], [-1, -18], [-5, -17]];
+    for (let i = 0; i < 4; i++) { const cyc = t * .9 + phash(i, id, 5), kq = Math.floor(cyc), u = (cyc - kq) / .3; if (u >= 1) continue; const [dx, dy] = sp[Math.floor(phash(i, kq, 6) * sp.length)]; hmGlint(cx + dx, b + dy, u, i < 2); }
+    const u = (t * .35 + id * .1) % 1; if (u < .4) { const v = u / .4; hmAlpha(.7 * (1 - v), () => { for (let i = 0; i < 4; i++) P.px(cx - 11 - v * 7 - i, b - 12 + Math.round(Math.sin(i + t * 2)), i % 2 ? I[3] : '#ffffff'); }); }
+    if (kick < .5) { const r = Math.round(3 + kick * 26); hmAlpha(1 - kick * 2, () => P.ring(cx - 4, b - 19, r, 1, '#ffffff')); } } };
+
+HM.X.cerfArche = { v: 'cerf', h: 'Le Cerf', n: 'L’Arche du solstice', p: 'Deux piliers gelés et une arche ; au milieu, un grand flocon tourne lentement.', at: [12, -10], H: 32,
+  body(x, y, own) { const cx = x + 12, base = y + 23, I = ICE;
+    P.ell(cx, base - 2, 8, 2, '#eef9fc'); P.ell(cx, base - 2, 6, 1, '#ffffff');
+    for (const px of [cx - 12, cx + 7]) { xStone(px, base - 22, 6, 22); P.hl(px, base - 16, 6, own[0]); P.hl(px, base - 15, 6, own[1]); P.hl(px - 1, base - 23, 8, K.s5); P.hl(px - 1, base - 24, 8, '#ffffff'); P.hl(px, base - 25, 6, I[3]); }
+    for (let dx = -10; dx <= 10; dx++) { const e = Math.round(7 * Math.sqrt(Math.max(0, 1 - (dx / 10.5) ** 2))), yy = base - 23 - e; P.px(cx + dx, yy - 1, '#ffffff'); P.px(cx + dx, yy, K.s5); P.px(cx + dx, yy + 1, K.s3); P.px(cx + dx, yy + 2, K.s1);
+      if (Math.abs(dx) < 8 && phash(dx, 2, 3) < .45) { const L = 1 + Math.floor(phash(dx, 3, 4) * 3); for (let j = 1; j <= L; j++) P.px(cx + dx, yy + 2 + j, j === L ? '#ffffff' : I[2]); } }
+    P.spr(['.c.', 'cCc', 'cCc', '.c.'], { c: I[1], C: I[4] }, cx - 1, base - 33); },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, fy = base - 13, a0 = t * .5 + id;
+    xFlag(X + 12 - 10, base - 34, own, t, id); xFlag(X + 12 + 9, base - 34, own, t, id + 1);
+    hmAlpha(.2 + .08 * Math.sin(t * 2), () => P.ell(cx, fy, 7, 6, '#dff6ff'));
+    for (let i = 0; i < 6; i++) { const a = a0 + i * Math.PI / 3, ux = Math.cos(a), uy = Math.sin(a) * .9; P.line(cx, fy, cx + ux * 6, fy + uy * 6, i % 2 ? ICE[3] : '#ffffff'); for (const s of [-1, 1]) { const b2 = a + s * .8; P.px(Math.round(cx + ux * 4 + Math.cos(b2) * 1.6), Math.round(fy + uy * 4 + Math.sin(b2) * 1.4), ICE[3]); } P.px(Math.round(cx + ux * 6), Math.round(fy + uy * 6), '#ffffff'); }
+    P.px(cx, fy, '#ffffff'); for (let i = 0; i < 5; i++) { const u = (t * .4 + phash(i, id, 9)) % 1; P.px(cx + Math.round((phash(i, id, 8) - .5) * 12 + Math.sin(t * 2 + i)), base - 21 + u * 18, i % 2 ? '#ffffff' : ICE[3]); }
+    if (kick < .5) { const r = Math.round(4 + kick * 28); hmAlpha(1 - kick * 2, () => P.ring(cx, fy, r, 1, '#ffffff')); } } };
+
+/* ===================== L'OURS ===================== */
+const WD = ['#4d3626', '#6b4a2e', '#8a6440', '#a67c52'];
+HM.X.oursTambour = { v: 'oursA', h: 'L’Ours', n: 'Le Grand Tambour', p: 'Un tambour de guerre debout dans son portique ; deux maillets pendus le frappent tour à tour.', at: [12, -12], H: 32,
+  body(x, y, own) { const cx = x + 12, base = y + 23, cy = base - 12;
+    for (const px of [cx - 13, cx + 11]) { P.rect(px, base - 27, 3, 27, WD[2]); P.vl(px, base - 27, 27, WD[3]); P.vl(px + 2, base - 27, 27, WD[1]); P.rect(px - 1, base - 2, 5, 2, WD[0]); }
+    P.rect(cx - 15, base - 30, 31, 3, WD[1]); P.hl(cx - 15, base - 30, 31, WD[3]); P.hl(cx - 15, base - 28, 31, WD[0]);
+    for (const d of [-1, 1]) { const ex = cx + d * 15; P.px(ex, base - 31, '#efe6cf'); P.px(ex + d, base - 32, '#efe6cf'); P.px(ex + d, base - 33, '#e6dcc6'); P.px(ex + 2 * d, base - 34, '#efe6cf'); P.px(ex + 2 * d, base - 35, '#ffffff'); }
+    P.rect(cx - 6, base - 3, 12, 3, WD[1]); P.hl(cx - 6, base - 3, 12, WD[3]);
+    for (let j = -10; j <= 10; j++) for (let i = -10; i <= 10; i++) { const d = Math.hypot(i, j * 1.05); if (d > 10.4) continue; let c = d > 9.4 ? WD[0] : d > 8.2 ? (j > 3 ? own[1] : own[0]) : d > 7.4 ? WD[1] : (i + j > 6 ? '#d4c8a8' : i + j < -7 ? '#fbf6e8' : '#ece3cb'); P.px(cx + i, cy + j, c); }
+    for (let a = 0; a < 12; a++) { const an = a / 12 * 6.283; P.px(Math.round(cx + Math.cos(an) * 8.7), Math.round(cy + Math.sin(an) * 8.7), K.ua); }
+    for (let i = 0; i < 3; i++) P.line(cx - 4 + i * 3, cy - 4, cx - 1 + i * 3, cy + 4, '#8a3a2a'); },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, cy = base - 12;
+    for (const [px, i] of [[cx - 12, 0], [cx + 12, 1]]) { xFire(px, base - 31, 1, 4, t + i); }
+    xSpark(cx, base, 5, id, 26, -32, 14);
+    const ph = (t * 1.1 + id * .3) % 2, side = ph < 1 ? 0 : 1, u = ph % 1;
+    for (const d of [0, 1]) { const out = d ? 1 : -1, ax = cx + out * 6, ay = base - 27, sw = d === side ? Math.sin(u * Math.PI) : 0, hx = Math.round(ax + out * (4 - 8 * sw)), hy = Math.round(ay + 11 + sw);
+      P.line(ax, ay, hx, hy - 2, '#cbbf9f'); P.rect(hx - 1, hy - 1, 3, 3, '#efe6cf'); P.px(hx + 1, hy + 1, '#cbbf9f');
+      if (sw > .85 || kick < .15) { P.px(cx - 1, cy - 1, '#ffffff'); for (const [dx, dy] of [[-11, -2], [11, -2], [-8, -9], [8, -9], [0, -11]]) P.px(cx + dx, cy + dy, '#fff3cf'); } }
+    if (kick < .5) { const r = Math.round(10 + kick * 30); hmAlpha(1 - kick * 2, () => P.ring(cx, cy, r, 1, '#f2b45a')); } } };
+
+HM.X.oursTotem = { v: 'oursA', h: 'L’Ours', n: 'Le Totem', p: 'Un mât sculpté de trois têtes d’ours entre deux braseros ; leurs yeux sont des braises, la gueule s’embrase à chaque coup.', at: [12, -12], H: 36,
+  body(x, y, own) { const cx = x + 12, base = y + 23;
+    for (const [dx, r] of [[-7, 3], [6, 3], [-2, 2], [3, 2]]) { P.ell(cx + dx, base - 1, r, 1, K.s2); P.hl(cx + dx - r + 1, base - 2, r * 2 - 1, K.s4); }
+    const seg = (y0, h) => { P.rect(cx - 5, y0, 10, h, WD[2]); P.vl(cx - 5, y0, h, WD[3]); P.rect(cx + 3, y0, 2, h, WD[1]); P.hl(cx - 5, y0 + h - 1, 10, WD[0]); };
+    seg(base - 11, 11); seg(base - 21, 10); seg(base - 31, 10);
+    P.spr(['kk..kk', '......', '.wwww.', 'kwkkwk'], { k: WD[0], w: '#efe6cf' }, cx - 3, base - 9); P.hl(cx - 4, base - 4, 8, own[0]); P.hl(cx - 4, base - 3, 8, own[1]);
+    P.spr(['o.....o', 'oo...oo', '.......', '..sss..', '.skkks.', '..www..'], { o: WD[3], k: WD[0], s: WD[3], w: '#efe6cf' }, cx - 3, base - 21);
+    P.rect(cx - 2, base - 16, 5, 2, '#2a1a12');
+    P.spr(['.o.....o.', 'ooo...ooo', '.........', '...sss...', '..skkks..'], { o: WD[2], k: WD[0], s: WD[3] }, cx - 4, base - 35);
+    for (const d of [-1, 1]) { const wx = d < 0 ? cx - 13 : cx + 5; P.rect(wx, base - 30, 8, 3, WD[2]); P.hl(wx, base - 30, 8, WD[3]); P.rect(d < 0 ? wx : wx + 4, base - 29, 4, 1, own[0]); P.spr(d < 0 ? ['w.w.w'] : ['w.w.w'], { w: '#efe6cf' }, d < 0 ? wx : wx + 3, base - 27); }
+    for (const dx of [-11, 11]) { P.vl(cx + dx, base - 6, 6, K.i1); P.hl(cx + dx - 2, base - 8, 5, '#3b3e46'); P.hl(cx + dx - 1, base - 7, 3, '#2a2c33'); } },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, g = .5 + .5 * Math.sin(t * 3 + id), hot = kick < .4;
+    for (const dx of [-11, 11]) xFire(cx + dx, base - 9, 2, 6, t + dx);
+    const eye = hot || g > .6 ? '#ffdf9a' : '#e0743a'; for (const ey of [base - 18, base - 32]) { P.px(cx - 2, ey, eye); P.px(cx + 2, ey, eye); }
+    if (hot) { P.rect(cx - 2, base - 16, 5, 2, '#f2b45a'); P.px(cx, base - 16, '#fff0b8'); xFire(cx, base - 16, 2, 5, t * 1.5); xSpark(cx, base, 6, id, 10, -18, 14); }
+    else P.px(cx, base - 15, '#a8402a');
+    xSpark(cx, base, 4, id + 3, 30, -10, 16);
+    if (kick < .5) { const r = Math.round(8 + kick * 30); hmAlpha(1 - kick * 2, () => P.ring(cx, base - 16, r, 1, '#f2b45a')); } } };
+
+HM.X.oursCairn = { v: 'oursA', h: 'L’Ours', n: 'Le Cairn aux trophées', p: 'Un tas de grosses pierres, un crâne d’ours cornu au sommet, un feu derrière ; une lance porte les couleurs du joueur.', at: [12, -10], H: 30,
+  body(x, y, own) { const cx = x + 12, base = y + 23;
+    const rock = (rx0, ry0, rx, ry) => { P.ell(rx0, ry0, rx, ry, K.s1); P.ell(rx0 + 1, ry0, rx - 1, ry - 1, K.s2); P.hl(rx0 - rx + 2, ry0 - ry, rx, K.s4); P.px(rx0 - rx + 3, ry0 - ry, K.s5); P.hl(rx0 - rx + 1, ry0 + ry, rx * 2 - 1, K.s0); };
+    rock(cx - 8, base - 3, 5, 3); rock(cx + 8, base - 3, 5, 3); rock(cx, base - 4, 6, 4); rock(cx - 5, base - 9, 4, 3); rock(cx + 5, base - 10, 5, 3); rock(cx, base - 13, 5, 3);
+    P.vl(cx + 9, base - 31, 24, WD[1]); P.vl(cx + 10, base - 31, 24, WD[3]); P.spr(['.i.', 'iIi', 'iIi', '.i.'], { i: K.i1, I: K.i2 }, cx + 8, base - 35);
+    const sx = cx - 5, sy = base - 24;
+    P.spr(['..wwwwwww..', '.wwwwwwwww.', 'wwwwwwwwwww', 'wwkkwwwkkww', 'wwkkwwwkkww', '.wwwwwwwww.', '..wsnnnsw..', '..wwwwwww..', '...tTtTt...'], { w: '#efe6cf', s: '#cbbf9f', k: '#1d1914', n: '#3a2e22', t: '#efe6cf', T: '#cbbf9f' }, sx - 1, sy);
+    P.hl(sx + 1, sy + 1, 4, '#ffffff');
+    for (const d of [-1, 1]) { const hx = d < 0 ? sx - 1 : sx + 9; P.spr(d < 0 ? ['w...', 'w...', '.w..', '.ww.', '..ww'] : ['...w', '...w', '..w.', '.ww.', 'ww..'], { w: '#e6dcc6' }, hx + (d < 0 ? -2 : 0), sy - 4); P.px(d < 0 ? hx - 2 : hx + 3, sy - 5, '#ffffff'); } },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, sy = base - 24, hot = kick < .4;
+    const c = P.x; const wcx = cx;
+    hmAlpha(1, () => xFire(wcx, sy - 1, 4, hot ? 12 : 8, t));
+    const g = hot ? '#fff0b8' : .5 + .5 * Math.sin(t * 2.6 + id) > .5 ? '#f2b45a' : '#e0743a'; for (const ex of [cx - 4, cx + 2]) { P.px(ex, sy + 4, g); P.px(ex + 1, sy + 3, g); }
+    xSpark(cx, base, hot ? 9 : 5, id, 12, -32, 18);
+    const f = Math.floor(t * 4 + id) % 3; for (let i = 0; i < 3; i++) { const yy = base - 30 + i * 2, L = 4 - i + (f === i ? 1 : 0); for (let j = 0; j < L; j++) P.px(cx + 11 + j, yy + (j > 1 && (f + j) % 2 ? 1 : 0), i % 2 ? own[1] : own[0]); }
+    if (kick < .5) { const r = Math.round(8 + kick * 30); hmAlpha(1 - kick * 2, () => P.ring(cx, sy + 4, r, 1, '#f2b45a')); } } };
+
+/* ===================== LE CORBEAU ===================== */
+const VEN = ['#3f6e3a', '#4f8a47', '#5f9a55', '#7fc06c', '#a8e090', '#d6f5c0'];
+HM.X.corbChaudron = { v: 'corbV', h: 'Le Corbeau', n: 'Le Grand Chaudron', p: 'Un chaudron géant sur un feu vert, où les corbeaux viennent boire ; il bout et fume.', at: [12, -8], H: 26,
+  body(x, y, own) { const cx = x + 12, base = y + 23, rx = 11, ry = 4, prof = [0, 1, 1, 1, 1, 0, -1, -2, -4], h = prof.length, top = base - 5 - h - ry;
+    for (const dx of [-7, 0, 7]) { P.vl(cx + dx, base - 6, 5, K.i0); P.px(cx + dx + (dx < 0 ? -1 : dx > 0 ? 1 : 0), base - 1, K.i0); }
+    for (let r = 1; r <= h; r++) { const rr = rx + prof[r - 1]; for (let dx = -rr; dx <= rr; dx++) { const e = Math.round(ry * Math.sqrt(Math.max(0, 1 - (dx / (rr + .5)) ** 2))), f = dx / rr; let col = f < -.5 ? K.i1 : f > .55 ? K.i0 : K.i1; if (f < -.7) col = K.i2; if (r === 3) col = f > .55 ? own[1] : own[0]; if (r === 4) col = own[1]; if (r === h) col = K.dk2; P.px(cx + dx, top + e + r, col); } }
+    P.ell(cx, top, rx + 1, ry, K.i2); P.ell(cx, top, rx, ry - 1, K.dk2); P.ell(cx, top, rx - 1, ry - 1, VEN[1]); P.ell(cx, top + 1, rx - 3, ry - 2, VEN[2]);
+    for (let dx = -rx; dx <= rx; dx += 4) { const e = Math.round(ry * Math.sqrt(Math.max(0, 1 - (dx / (rx + .5)) ** 2))); P.px(cx + dx, top + e + 3, K.ua); }
+    P.line(cx + 4, top - 1, cx + 9, top - 9, WD[2]); P.px(cx + 9, top - 10, WD[3]);
+    P.vl(cx - rx, top + 2, 4, VEN[2]); P.px(cx - rx, top + 6, VEN[3]); },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, top = base - 5 - 9 - 4;
+    xFire(cx, base - 2, 6, 4, t, ['#2f5a3a', '#4f8a47', '#7fc06c', '#d6f5c0']);
+    for (let i = 0; i < 6; i++) { const cyc = t * (.8 + .1 * i) + phash(i, id, 71), kq = Math.floor(cyc), u = cyc - kq, bx = cx + Math.round((phash(i, kq, 72) - .5) * 16), by = top + Math.round((phash(i, kq, 73) - .5) * 4);
+      if (u < .35) { P.px(bx, by, VEN[4]); if (u > .2) P.px(bx + 1, by, VEN[3]); } else if (u < .5) { P.px(bx - 1, by, VEN[5]); P.px(bx + 2, by, VEN[5]); P.px(bx, by - 1, VEN[5]); P.px(bx + 1, by - 1, VEN[5]); } else hmAlpha(.45 * (1 - u), () => { P.px(bx + Math.round(Math.sin(t * 2 + i) * 2), by - 3 - (u - .5) * 26, VEN[4]); P.px(bx + 1 + Math.round(Math.sin(t * 2 + i) * 2), by - 4 - (u - .5) * 26, VEN[3]); }); }
+    const fl = (t + id) % 4 < .3; hmCrow(cx - 11, top + 1, true, fl || kick < .2); hmCrow(cx + 12, top + 1, false, (t * 1.3 + id) % 5 < .3);
+    if (kick < .5) { const r = Math.round(8 + kick * 26); hmAlpha(1 - kick * 2, () => P.ring(cx, top, r, 1, VEN[4])); } } };
+
+const TR = ['#2e2b2c', '#45403d', '#5d5752', '#77706a'];
+HM.X.corbArbre = { v: 'corbV', h: 'Le Corbeau', n: 'L’Arbre aux corbeaux', p: 'Un arbre mort et tordu, couvert de corbeaux ; des lanternes de poison vert pendent aux branches.', at: [12, -16], H: 36,
+  body(x, y, own) { const cx = x + 12, base = y + 23;
+    P.ell(cx, base - 1, 9, 2, '#4d3f31'); P.hl(cx - 7, base - 3, 14, '#6b5a45');
+    for (const [dx, d] of [[-6, -1], [5, 1], [-3, -1], [3, 1]]) P.line(cx + dx, base - 2, cx + dx + d * 3, base, TR[1]);
+    for (let j = 0; j < 18; j++) { const w = j < 3 ? 3 : 2, ox = Math.round(Math.sin(j * .35) * 1.5); P.hl(cx - w + ox, base - 3 - j, w * 2 + 1, TR[1]); P.px(cx - w + ox, base - 3 - j, TR[2]); P.px(cx + w + ox, base - 3 - j, TR[0]); }
+    const br = (sx, sy, pts) => { let px = sx, py = sy; for (const [dx, dy] of pts) { P.line(px, py, px + dx, py + dy, TR[1]); P.line(px, py - 1, px + dx, py + dy - 1, TR[2]); px += dx; py += dy; } return [px, py]; };
+    br(cx, base - 20, [[-5, -4], [-4, -5], [-2, -4]]); br(cx, base - 20, [[5, -3], [4, -6], [3, -2]]); br(cx + 1, base - 20, [[1, -6], [-2, -6]]); br(cx - 5, base - 24, [[-3, 1], [-2, -1]]); br(cx + 5, base - 23, [[4, 2]]);
+    P.vl(cx + 9, base - 22, 4, '#7a6a4e'); P.rect(cx + 9, base - 18, 3, 5, own[0]); P.hl(cx + 9, base - 14, 3, own[1]); P.px(cx + 10, base - 13, own[0]);
+    for (let i = 0; i < 3; i++) P.px(cx - 1 + i, base - 10, TR[0]); P.px(cx, base - 11, '#1d1914'); },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23;
+    for (const [lx, ly, ph] of [[cx - 9, base - 24, 0], [cx + 4, base - 31, 2]]) { const sw = Math.round(Math.sin(t * 1.7 + ph)); P.vl(lx, ly, 3, K.i1); const g = .5 + .5 * Math.sin(t * 3 + ph); hmAlpha(.3 + .2 * g, () => P.ell(lx + sw, ly + 5, 3, 3, VEN[3])); P.spr(['.i.', 'iGi', 'igi', '.i.'], { i: K.i0, G: VEN[5], g: VEN[3] }, lx - 1 + sw, ly + 3); }
+    const perch = [[cx - 11, base - 33], [cx + 12, base - 31], [cx - 1, base - 36], [cx + 9, base - 22], [cx - 8, base - 22]];
+    perch.forEach(([px, py], i) => { const away = i === 2 && (t * .25 + id) % 1 < .45; if (away) { const u = ((t * .25 + id) % 1) / .45, a = u * 6.283; P.spr(HX_CROWFLY[Math.floor(t * 10) % 2], { k: '#22232b', K: '#3a3c48', e: '#22232b', n: '#d0a04f' }, Math.round(cx + Math.cos(a) * 15) - 5, Math.round(base - 34 + Math.sin(a) * 4) - 4, Math.sin(a) > 0); return; }
+      hmCrow(px, py, phash(Math.floor(t * .7 + i), i, 5) < .5, (t * 1.1 + i * 1.7) % 4 < .25 || (kick < .2 && i % 2)); });
+    if (kick < .5) { const r = Math.round(8 + kick * 26); hmAlpha(1 - kick * 2, () => P.ring(cx, base - 26, r, 1, VEN[4])); } } };
+
+HM.X.corbVoliere = { v: 'corbV', h: 'Le Corbeau', n: 'La Volière', p: 'Une grande cage de fer sur un socle ; dedans, un corbeau aux yeux verts, et une brume de poison à ses pieds.', at: [12, -16], H: 34,
+  body(x, y, own) { const cx = x + 12, base = y + 23, top = xPlinth(cx, base, 10, 5, own);
+    hmAlpha(.35, () => P.ell(cx, top - 1, 7, 2, VEN[3]));
+    P.hl(cx - 2, top - 11, 6, WD[2]); P.vl(cx - 2, top - 10, 9, WD[1]);
+    P.spr(['....kkk....', '...kkkkknn.', '..kkkkkkn..', '.kkKKkkk...', 'kkKKKKkkk..', 'kKKKKKkkk..', '.kKKKkkk...', '..kkkkk....', '...kk.k....', '....l.l....'], { k: '#22232b', K: '#4a4d5c', n: '#d0a04f', l: '#d0a04f' }, cx - 5, top - 20) },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, top = base - 5 - 3, blink = (t * .8 + id) % 3 < .12;
+    for (let i = 0; i < 4; i++) { const a = t * .8 + i * 1.57; hmAlpha(.35, () => P.px(cx + Math.round(Math.cos(a) * 6), top - 1 + Math.round(Math.sin(a) * 1.5), VEN[4])); }
+    if (!blink) { hmAlpha(.45, () => P.rect(cx, top - 20, 3, 3, VEN[4])); P.px(cx + 1, top - 19, VEN[5]); }
+    if (kick < .3) { P.spr(['k.........k', 'kk.......kk', '.kk.....kk.'], { k: '#22232b' }, cx - 6, top - 17); }
+    for (let i = -9; i <= 9; i += 3) { const h = Math.round(18 + 6 * Math.sqrt(Math.max(0, 1 - (i / 9) ** 2))); P.vl(cx + i, top - h + 1, h - 1, i < -4 ? K.i2 : K.i1); }
+    for (let i = -8; i <= 8; i++) { const h = Math.round(18 + 6 * Math.sqrt(Math.max(0, 1 - (i / 9) ** 2))); P.px(cx + i, top - h, K.i2); }
+    P.hl(cx - 8, top - 1, 17, K.i1); P.hl(cx - 8, top - 10, 17, K.ua); P.hl(cx - 8, top - 9, 17, K.au0);
+    P.spr(['.a.', 'a.a', '.a.'], { a: K.ua }, cx - 1, top - 28); const f = Math.floor(t * 5 + id) % 2; P.spr(f ? ['ab', '.ab', '..a'] : ['ab', 'ab.', '.a.'], { a: own[0], b: own[1] }, cx + 2, top - 27);
+    if (kick < .5) { const r = Math.round(8 + kick * 26); hmAlpha(1 - kick * 2, () => P.ring(cx, top - 14, r, 1, VEN[4])); } } };
+
+/* ===================== LE RENARD ===================== */
+const GOLD = ['#8a6a2e', '#b8893a', '#d5a64c', '#f6dc8a', '#fff6d8'];
+HM.X.renTresor = { v: 'renT', h: 'Le Renard', n: 'Le Trésor', p: 'Une montagne d’or, un grand coffre ouvert, une couronne ; le renard est assis dessus.', at: [12, -10], H: 26,
+  body(x, y, own) { const cx = x + 12, base = y + 23;
+    for (let dx = -13; dx <= 13; dx++) { const h = Math.round(10 * Math.pow(Math.max(0, 1 - (dx / 13.5) ** 2), .8)); for (let j = 0; j < h; j++) { const q = phash(dx, j, 31); P.px(cx + dx, base - 1 - j, j === h - 1 ? (q < .5 ? GOLD[3] : GOLD[2]) : dx > 6 ? (q < .6 ? GOLD[1] : GOLD[0]) : q < .2 ? GOLD[3] : q < .6 ? GOLD[2] : GOLD[1]); } }
+    for (const [dx, dy, c] of [[-8, -4, '#c4503c'], [6, -3, '#5f9a55'], [-3, -7, own[0]], [9, -5, '#c4503c'], [-11, -2, own[0]]]) { P.px(cx + dx, base + dy, c); P.px(cx + dx + 1, base + dy, shade(c, .7)); }
+    const bx = cx - 6, by = base - 18;
+    P.rect(bx, by - 6, 12, 5, '#5e4128'); P.hl(bx, by - 6, 12, '#7a5b3c'); P.hl(bx, by - 2, 12, GOLD[2]);
+    P.rect(bx, by, 12, 7, '#7a5b3c'); P.vl(bx, by, 7, '#5e4128'); P.vl(bx + 11, by, 7, '#4a3220'); P.vl(bx + 3, by, 7, GOLD[1]); P.vl(bx + 8, by, 7, GOLD[1]); P.rect(bx + 5, by + 2, 2, 2, GOLD[3]);
+    for (let i = 0; i < 12; i++) P.px(bx + i, by - 1 - (i % 3 === 1 ? 1 : 0), i % 2 ? GOLD[3] : GOLD[2]); P.px(bx + 4, by - 3, GOLD[4]);
+    P.spr(['a.a.a', 'aaaaa', '.ArA.'], { a: GOLD[2], A: GOLD[3], r: '#c4503c' }, cx - 12, base - 13);
+    P.spr(['ccc', '.c.', 'ccc'], { c: GOLD[1] }, cx + 9, base - 11) },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, tail = Math.floor(t * 2 + id) % 2, blink = (t + id) % 3.5 < .15;
+    xFoxSit(cx + 3, base - 29, tail, blink, false);
+    xFlag(cx - 9, base - 24, own, t, id, 12);
+    const sp = [[-10, -3], [-6, -6], [-2, -8], [4, -8], [8, -6], [11, -3], [-4, -19], [2, -20], [-11, -12], [10, -10]];
+    for (let i = 0; i < 5; i++) { const cyc = t * .7 + phash(i, id, 41), kq = Math.floor(cyc), u = (cyc - kq) / .25; if (u >= 1) continue; const [dx, dy] = sp[Math.floor(phash(i, kq, 42) * sp.length)]; hmGlint(cx + dx, base + dy, u, i < 2, '#fff6d8', '#f6dc8a'); }
+    if (kick < .5) { const r = Math.round(8 + kick * 26); hmAlpha(1 - kick * 2, () => P.ring(cx, base - 14, r, 1, GOLD[3])); } } };
+
+HM.X.renTaniere = { v: 'renT', h: 'Le Renard', n: 'La Tanière', p: 'Une colline creusée, une porte ronde à la couleur du joueur, une fenêtre allumée ; le renard sort quand le pouvoir part.', at: [12, -8], H: 24,
+  body(x, y, own) { const cx = x + 12, base = y + 23, G0 = ['#4f6e5a', '#5f8068', '#6f9474', '#86aa84'];
+    for (let dx = -13; dx <= 13; dx++) { const h = Math.round(19 * Math.sqrt(Math.max(0, 1 - (dx / 13.5) ** 2))); for (let j = 0; j < h; j++) { const top = j >= h - 3; P.px(cx + dx, base - 1 - j, top ? (j === h - 1 ? G0[3] : G0[2]) : dx > 7 ? '#4d3f31' : phash(dx, j, 5) < .15 ? '#85705a' : '#6b5a45'); } }
+    for (let i = 0; i < 9; i++) { const dx = Math.round((phash(i, 1, 2) - .5) * 22), h = Math.round(19 * Math.sqrt(Math.max(0, 1 - (dx / 13.5) ** 2))); P.px(cx + dx, base - h - 1, G0[3]); P.px(cx + dx + 1, base - h, G0[1]); }
+    for (let j = -6; j <= 6; j++) for (let i = -6; i <= 6; i++) { const d = Math.hypot(i, j); if (d > 6.4 || j > 4) continue; P.px(cx + i, base - 6 + j, d > 5.3 ? K.s2 : d > 4.6 ? K.s0 : (i + 6) % 3 === 0 ? own[1] : own[0]); }
+    P.hl(cx - 5, base - 2, 11, K.s1); P.px(cx + 2, base - 6, GOLD[3]); P.px(cx + 2, base - 5, GOLD[1]);
+    P.rect(cx + 6, base - 14, 4, 3, K.s0); P.rect(cx + 7, base - 13, 2, 1, '#ffcf7a');
+    P.rect(cx - 8, base - 22, 3, 6, K.s1); P.vl(cx - 8, base - 22, 6, K.s3); P.hl(cx - 9, base - 22, 5, K.s4);
+    P.vl(cx + 12, base - 12, 12, WD[1]); P.hl(cx + 10, base - 12, 3, WD[2]);
+    hmGoldPile(cx - 12, base, 5); hmCoin(cx - 6, base - 1) },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, pk = (t * .3 + id) % 1;
+    for (let i = 0; i < 4; i++) { const u = (t * .35 + i * .25) % 1; hmAlpha(.5 * (1 - u), () => P.px(cx - 7 + Math.round(Math.sin(t + i * 2) * 1.5 + u * 3), base - 23 - u * 12, '#c6cbd2')); }
+    const fl = .5 + .5 * Math.sin(t * 9 + id); P.spr(['.i.', 'iLi', 'iLi', '.i.'], { i: K.i1, L: fl > .3 ? '#fff0b8' : '#ffcf7a' }, cx + 10, base - 12); hmAlpha(.25, () => P.ell(cx + 11, base - 10, 3, 3, '#ffcf7a'));
+    if (fl > .7) P.px(cx + 7, base - 13, '#fff0b8');
+    if (kick < .8 || pk < .22) { const out = kick < .8 ? 1 : Math.min(1, pk / .06, (.22 - pk) / .06); for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) if (Math.hypot(i, j) < 4.6 && j < 4) P.px(cx + i, base - 6 + j, '#1d1914');
+      P.spr(['d...d', 'od.do', 'ooooo', 'okoko', '.wnw.'], FOX, cx - 2, base - 9 + Math.round((1 - out) * 4)); }
+    if (kick < .5) { const r = Math.round(8 + kick * 26); hmAlpha(1 - kick * 2, () => P.ring(cx, base - 8, r, 1, GOLD[3])); } } };
+
+HM.X.renChapiteau = { v: 'renT', h: 'Le Renard', n: 'Le Chapiteau du marchand', p: 'Une tente rayée aux couleurs du joueur, ouverte sur des sacs d’or ; le renard tient boutique.', at: [12, -14], H: 34,
+  body(x, y, own) { const cx = x + 12, base = y + 23, wt = base - 13, ap = base - 33, CR = '#efe6cf', CR0 = '#cfc3a4';
+    for (let dx = -11; dx <= 11; dx++) { const st = Math.floor((dx + 11) / 4) % 2, sh = dx > 6; for (let yy = wt; yy < base - 1; yy++) P.px(cx + dx, yy, st ? (sh ? CR0 : CR) : (sh ? own[1] : own[0])); }
+    for (let yy = wt; yy < base - 1; yy++) for (let dx = -4; dx <= 4; dx++) { const op = Math.abs(dx) < 3 + (yy - wt) * .25; if (op) P.px(cx + dx, yy, '#2a221c'); }
+    P.hl(cx - 11, base - 1, 23, K.s0);
+    for (let yy = ap; yy <= wt; yy++) { const u = (yy - ap) / (wt - ap), hw = Math.round(1 + u * 12); for (let dx = -hw; dx <= hw; dx++) { const ang = dx / hw, st = Math.floor((ang + 1) * 3) % 2, sh = ang > .5; P.px(cx + dx, yy, st ? (sh ? CR0 : CR) : (sh ? own[1] : own[0])); } }
+    for (let dx = -13; dx <= 13; dx++) if ((dx + 13) % 3 !== 2) P.px(cx + dx, wt + 1, Math.floor((dx + 13) / 3) % 2 ? CR : own[0]);
+    P.spr(['.tt.', 'sSSs', 'sSSs'], { t: '#7a6a4e', s: '#a8916a', S: '#cbb27c' }, cx - 3, base - 5); hmGoldPile(cx, base - 1, 5);
+    P.vl(cx, ap - 3, 3, K.i1); P.vl(cx + 13, base - 12, 12, WD[1]); P.hl(cx + 11, base - 12, 4, WD[2]) },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, ap = base - 33;
+    xFlag(cx, ap - 9, own, t, id, 7);
+    const sw = Math.round(Math.sin(t * 2.2 + id)); P.vl(cx + 13 + sw, base - 11, 2, K.i1); P.spr(['.aa.', 'aAAa', 'aAAa', '.aa.'], { a: GOLD[1], A: GOLD[3] }, cx + 12 + sw, base - 9); if ((t + id) % 2 < .2) P.px(cx + 13 + sw, base - 8, '#ffffff');
+    const pk = (t * .4 + id) % 1, up = kick < .6 || pk < .5; if (up) P.spr(['d...d', 'od.do', 'ooooo', 'okoko', '.wnw.'], FOX, cx - 2, base - 12);
+    const cyc = t * .9 + id, kq = Math.floor(cyc), u = (cyc - kq) / .25; if (u < 1) hmGlint(cx - 2 + Math.round(phash(kq, 1, 2) * 5), base - 3, u, false, '#fff6d8', '#f6dc8a');
+    if (kick < .5) { const r = Math.round(8 + kick * 26); hmAlpha(1 - kick * 2, () => P.ring(cx, base - 14, r, 1, GOLD[3])); } } };
+
+/* plugging the masterpieces in: their own body, a moving layer, the House tower's shots and the masterpiece's power */
+for (const nm in HM.X) { const D = HM.X[nm], V = HM_V[D.v], ev = 'hmx_' + nm;
+  HX.bodies[ev] = (x, y, lvl, e, own, type) => { castEll(x + 12, y + 18, 11, 5, D.H || 30); D.body(x, y, own); };
+  HX.at[ev] = () => D.at;
+  HX.tops[ev] = (x, b, t, s, tx, ty, kick) => { const k = pcol(b.k); D.live(s.x, s.y, t.id, kick, [PCOL[k] || NEUTRAL[0], PDARK[k] || NEUTRAL[1]]); };
+  HX.shots[ev] = (x, b, p, px, py) => HM.shot(x, D.v, p, px, py, true);
+  if (HX.stats['hmc_' + D.v]) HX.stats[ev] = HX.stats['hmc_' + D.v];
+  if (HX.hits['hmc_' + D.v]) HX.hits[ev] = HX.hits['hmc_' + D.v];
+}
+HM.wallAt = (b, c, r, L, R, U, v, k) => {
+  const h = HM.house(b); if (!h) return wallSprite(L, R, U, v, k);
+  let m = 0;
+  for (let i = 0; i < b.grid.length; i++) { const t = b.grid[i]; if (!t || t.type === 'wall' || !t.evo) continue; const isX = t.evo.startsWith('hmx_') && HM.X[t.evo.slice(4)] && HM.X[t.evo.slice(4)].v === h; if (!isX && t.evo !== 'hm_' + h && t.evo !== 'hmc_' + h) continue; const d = Math.abs(i % COLS - c) + Math.abs(((i / COLS) | 0) - r); const L4 = isX || t.evo === 'hmc_' + h ? 4 : t.lvl; m = Math.max(m, d === 0 ? L4 : L4 - d); }
+  return HM.wallSprite(h, Math.min(3, m), L, R, U, v, k);
+};
+// a masterpiece between two walls, on a canvas of its own (for the planche)
+HM.portraitX = (nm, kk, k = 0) => {
+  const D = HM.X[nm], W = 96, Hh = 96, [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x);
+  const ax = 36, ay = 64, own = pcol(k);
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(D.v, i === 1 ? 3 : 2, L, R, false, i, own), wx, ay));
+  const tw = towerSprite('frost', 4, 'hmx_' + nm, own); blit(x, tw, ax, ay);
+  D.live(ax, ay, 7, kk, [PCOL[own] || NEUTRAL[0], PDARK[own] || NEUTRAL[1]]);
+  P = prev; return c;
+};
+
+/* ---- 7th round: the Ours's horned skull (three takes), the Corbeau's tree out of the wall (dense, light), a darker Volière; the crows' swarm ---- */
+const BN6 = { w: '#efe6cf', s: '#cbbf9f', d: '#a89c7c', k: '#1d1914', n: '#3a2e22', t: '#fffaf0', T: '#d8ccb0', c: '#8a7e60' };
+const SKULL = ['.......wwwwwwww.......', '.....wwwwwwwwwwwws....', '....wwwwwwcwwwwwwss...', '...wwwwwwwwcwwwwwwss..', '..wwwwwwwwwcwwwwwwwss.', '..wwwwwwwwwwwwwwwwwss.', '.wwwkkkkwwwwwwkkkkwwss', 'wwwkkkkkkwwwwkkkkkkwss', 'wwwkkkkkkwwwwkkkkkkwss', '.swwkkkkwwwwwwkkkkwwss', '..swwwwwwwnnwwwwwwwss.', '...swwwwwnnnnwwwwwss..', '...sswwwwwnnwwwwwsss..', '....swwwwwwwwwwwwss...', '....tTwtwtwtwtwtTts...', '.....T.t.t..t.t.T.....'];
+const SK_EYES = [[4, 6, 4], [3, 7, 6], [3, 8, 6], [4, 9, 4], [14, 6, 4], [13, 7, 6], [13, 8, 6], [14, 9, 4]];
+// a thick curved horn through some points (2 px wide, light on top)
+const xHorn = (pts, wide = 2) => { for (let i = 0; i < pts.length - 1; i++) { const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], w = Math.max(1, wide + 1 - i); for (let k = 0; k < w; k++) { P.line(x0 + k, y0, x1 + k, y1, k ? BN6.s : BN6.w); P.line(x0 + k, y0 + 1, x1 + k, y1 + 1, BN6.d); } } P.px(pts[pts.length - 1][0], pts[pts.length - 1][1] - 1, '#ffffff'); };
+const xHorns = (cx, top, big) => { const L = big ? [[-9, 3], [-14, 1], [-18, -3], [-19, -9], [-17, -14], [-14, -16]] : [[-9, 3], [-13, 1], [-15, -3], [-15, -8], [-13, -11]];
+  xHorn(L.map(([dx, dy]) => [cx + dx, top + dy]), big ? 3 : 2); xHorn(L.map(([dx, dy]) => [cx - dx - (big ? 2 : 1), top + dy]), big ? 3 : 2); };
+const xSkull = (cx, top) => P.spr(SKULL, BN6, cx - 11, top);
+// the fire inside: the sockets burn, flames come out of the crack on the crown
+const xSkullFire = (cx, top, t, hot, id) => { const F = ['#a8402a', '#e0743a', '#f2b45a', '#fff0b8'];
+  for (const [dx, dy, w] of SK_EYES) for (let i = 0; i < w; i++) { const q = .5 + .5 * Math.sin(t * 11 + i * 2.1 + dy * 1.7 + id), deep = dy >= 8; P.px(cx - 11 + dx + i, top + dy, hot ? (q > .4 ? F[3] : F[2]) : deep ? (q > .55 ? F[2] : F[1]) : q > .7 ? F[1] : F[0]); }
+  const nq = .5 + .5 * Math.sin(t * 7 + id); P.px(cx - 1, top + 11, nq > .5 ? F[2] : F[1]); P.px(cx, top + 11, F[1]); };
+
+const SOCK = ['kkkkk...', 'kkkkkkk.', 'kkkkkkkk', '.kkkkkkk', '..kkkkk.', '...kkk..'];
+// a bigger skull, drawn from shapes: for the most imposing take
+const xBigSkull = (cx, top) => { const sh = (dx, c) => { P.ell(cx + dx, top + 9, 11, 8, c); P.ell(cx + dx, top + 14, 14, 4, c); P.ell(cx + dx, top + 19, 8, 5, c); };
+  sh(1, BN6.d); sh(0, BN6.s); sh(-1, BN6.w); P.ell(cx - 3, top + 5, 5, 3, '#fbf6e8');
+  P.line(cx + 1, top + 1, cx - 1, top + 5, BN6.c); P.line(cx - 1, top + 5, cx + 1, top + 8, BN6.c);
+  for (const d of [-1, 1]) { P.spr(SOCK, { k: BN6.k }, d < 0 ? cx - 10 : cx + 2, top + 10, d > 0); P.hl(d < 0 ? cx - 11 : cx + 2, top + 9, 9, BN6.s); }
+  P.spr(['.nn.', 'nnnn', '.nn.'], BN6, cx - 2, top + 17);
+  for (let i = -6; i <= 6; i++) P.px(cx + i, top + 23, i % 2 ? BN6.t : BN6.T); for (const d of [-5, 5]) { P.vl(cx + d, top + 23, 4, BN6.t); P.px(cx + d + (d > 0 ? 1 : -1), top + 23, BN6.T); P.px(cx + d, top + 26, BN6.s); } };
+const xBigSkullFire = (cx, top, t, hot, id) => { const F = ['#a8402a', '#e0743a', '#f2b45a', '#fff0b8'];
+  for (const d of [-1, 1]) { const x0 = d < 0 ? cx - 10 : cx + 2, core = [[3, 2], [4, 2], [3, 3], [4, 3], [5, 3], [3, 4], [4, 4]].concat(hot ? [[2, 2], [5, 2], [2, 3], [6, 3], [5, 4], [4, 1], [3, 1]] : []);
+    core.forEach(([i, j], n) => { const q = .5 + .5 * Math.sin(t * 10 + n * 1.9 + id + d); P.px(x0 + (d > 0 ? 7 - i : i), top + 10 + j, hot ? (q > .35 ? F[3] : F[2]) : n < 2 ? (q > .5 ? F[2] : F[1]) : q > .6 ? F[3] : q > .3 ? F[2] : F[0]); }); }
+  const nq = .5 + .5 * Math.sin(t * 7 + id); P.px(cx - 1, top + 18, nq > .5 ? F[2] : F[1]); P.px(cx, top + 18, F[1]); };
+const xEmbersBed = (cx, by, w, t, id) => { const F = ['#5a2a1c', '#a8402a', '#e0743a', '#f2b45a', '#fff0b8']; for (let i = -w; i <= w; i++) { const q = .5 + .5 * Math.sin(t * 3 + i * 1.3 + id), h = phash(i, id, 9) < .4 ? 2 : 1; for (let j = 0; j < h; j++) P.px(cx + i, by - j, q > .85 ? F[4] : q > .6 ? F[3] : q > .35 ? F[2] : F[1]); } };
+const xBone = (x0, y0, x1, y1) => { P.line(x0, y0, x1, y1, BN6.w); P.line(x0, y0 + 1, x1, y1 + 1, BN6.s); for (const [x, y] of [[x0, y0], [x1, y1]]) { P.px(x - 1, y, BN6.w); P.px(x + 1, y, BN6.w); P.px(x, y - 1, BN6.w); P.px(x, y + 1, BN6.s); } };
+const xBrazier = (x, by, h) => { P.vl(x, by - h, h, K.i1); P.vl(x + 1, by - h, h, K.i0); P.line(x - 2, by, x, by - 3, K.i1); P.line(x + 3, by, x + 1, by - 3, K.i0); P.hl(x - 3, by - h - 2, 8, '#3b3e46'); P.hl(x - 2, by - h - 1, 6, '#2a2c33'); P.hl(x - 2, by - h - 3, 6, '#5a2a1c'); };
+const xKick = (cx, cy, kick, col, r0 = 8) => { if (kick < .5) { const r = Math.round(r0 + kick * 30); hmAlpha(1 - kick * 2, () => P.ring(cx, cy, r, 1, col)); } };
+
+HM.X.oursBrasier = { v: 'oursA', h: 'L’Ours', n: 'Le Crâne-brasier', p: 'Le crâne seul, énorme, posé sur la braise ; de grandes cornes, le feu dans les orbites et une colonne de flammes qui sort du crâne fendu.', at: [12, -16], H: 32,
+  body(x, y, own) { const cx = x + 12, base = y + 23, top = base - 27;
+    for (const [a, b, c2, d] of [[-14, -1, -9, -3], [9, -2, 14, 0], [-12, -4, -15, 0], [10, -4, 15, -1]]) xBone(cx + a, base + b, cx + c2, base + d);
+    xHorn([[-9, 6], [-15, 3], [-19, -2], [-21, -8], [-19, -14], [-16, -17]].map(([dx, dy]) => [cx + dx, top + dy]), 3); xHorn([[8, 6], [14, 3], [18, -2], [20, -8], [18, -14], [15, -17]].map(([dx, dy]) => [cx + dx, top + dy]), 3);
+    xBigSkull(cx, top);
+    P.hl(cx - 4, base - 1, 9, own[0]); P.hl(cx - 4, base, 9, own[1]); },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, top = base - 27, hot = kick < .4;
+    xEmbersBed(cx, base - 1, 13, t, id); xFire(cx, top + 5, 4, hot ? 20 : 14, t); xBigSkullFire(cx, top, t, hot, id);
+    xSpark(cx, base, hot ? 12 : 7, id, 22, -30, 22); xKick(cx, top + 12, kick, '#f2b45a', 12); } };
+
+HM.X.oursOssuaire = { v: 'oursA', h: 'L’Ours', n: 'L’Ossuaire', p: 'Le crâne cornu trône sur un tas d’ossements, deux braseros sur des pieux à ses côtés ; le feu brûle dans ses orbites.', at: [12, -18], H: 34,
+  body(x, y, own) { const cx = x + 12, base = y + 23, top = base - 25;
+    for (const [a, b, c2, d] of [[-12, -1, -2, -6], [12, -1, 2, -6], [-10, -5, 9, -3], [-8, -8, 8, -9], [-11, -3, 11, -4]]) xBone(cx + a, base + b, cx + c2, base + d);
+    for (const dx of [-6, -3, 3, 6]) { P.line(cx + dx, base - 2, cx + dx + Math.sign(dx), base - 8, BN6.w); P.px(cx + dx + Math.sign(dx), base - 9, BN6.s); }
+    for (const [dx, f] of [[-12, false], [9, true]]) P.spr(['.www.', 'wkwkw', '.www.', '.t.t.'], BN6, cx + dx, base - 5, f);
+    xBrazier(cx - 15, base, 9); xBrazier(cx + 14, base, 9);
+    P.vl(cx - 15, base - 7, 2, own[0]); P.vl(cx + 14, base - 7, 2, own[0]);
+    xHorns(cx, top, false); xSkull(cx, top) },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, top = base - 25, hot = kick < .4;
+    xFire(cx - 14, base - 12, 2, hot ? 9 : 6, t); xFire(cx + 15, base - 12, 2, hot ? 9 : 6, t + 1); xSkullFire(cx, top, t, hot, id);
+    if (hot) xFire(cx + 1, top + 3, 2, 8, t);
+    xSpark(cx - 14, base, 3, id, 4, -14, 12); xSpark(cx + 15, base, 3, id + 1, 4, -14, 12); xKick(cx, top + 8, kick, '#f2b45a', 10); } };
+
+HM.X.oursGueule = { v: 'oursA', h: 'L’Ours', n: 'La Gueule de braise', p: 'Le crâne cornu gueule ouverte, un foyer allumé dans la mâchoire ; des tas de braise de chaque côté. Quand il frappe, les flammes sortent de la gueule.', at: [12, -14], H: 30,
+  body(x, y, own) { const cx = x + 12, base = y + 23, top = base - 24;
+    P.spr(['..wwwwwwwwwwwwwwwwss..', '.wwsT.t.t..t.t.Tssww.', 'wwwwwwwwwwwwwwwwwwwss', '.sswwwwwwwwwwwwwwsss.', '...ssssssssssssssss..'], BN6, cx - 11, base - 5);
+    for (const dx of [-8, -5, 5, 8]) P.px(cx + dx, base - 5, BN6.t);
+    xHorns(cx, top, true); P.spr(SKULL.slice(0, 15), BN6, cx - 11, top);
+    P.hl(cx - 3, base - 1, 7, own[0]); P.px(cx - 4, base - 1, own[1]); P.px(cx + 4, base - 1, own[1]) },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, top = base - 24, hot = kick < .4;
+    const F = ['#a8402a', '#e0743a', '#f2b45a', '#fff0b8']; for (let i = -7; i <= 7; i++) for (let j = 0; j < 3; j++) { const q = .5 + .5 * Math.sin(t * 9 + i * 1.7 + j); P.px(cx + i, top + 15 + j, j === 1 ? (q > .5 ? F[3] : F[2]) : q > .6 ? F[2] : F[1]); }
+    if (hot) { xFire(cx, top + 16, 6, 9, t * 1.4); for (let i = 0; i < 6; i++) { const u = (t * 2 + i * .17) % 1; P.px(cx + Math.round((i - 2.5) * 3 * u), top + 17 - u * 2, F[2 + (i % 2)]); } }
+    xSkullFire(cx, top, t, hot, id);
+    xEmbersBed(cx - 14, base - 1, 3, t, id); xEmbersBed(cx + 15, base - 1, 3, t, id + 2); xSpark(cx - 14, base, 3, id, 6, -2, 14); xSpark(cx + 15, base, 3, id + 4, 6, -2, 14);
+    xKick(cx, top + 14, kick, '#f2b45a', 10); } };
+
+/* LE CORBEAU · the tree comes out of the wall: the stone cracks in the middle, the roots grip it */
+const xWallCrack = (x, y, own) => { drawWall(x, y, true, true, false, 1, own); const cx = x + 12;
+  const crack = pts => { for (let i = 0; i < pts.length - 1; i++) { P.line(cx + pts[i][0], y + pts[i][1], cx + pts[i + 1][0], y + pts[i + 1][1], K.dk2); P.line(cx + pts[i][0], y + pts[i][1] + 1, cx + pts[i + 1][0], y + pts[i + 1][1] + 1, K.s5); } };
+  crack([[-4, 9], [-6, 8], [-7, 10], [-10, 9]]); crack([[4, 9], [6, 7], [8, 8]]); crack([[-2, 15], [-3, 18], [-2, 20]]); crack([[3, 16], [4, 19], [6, 21]]);
+  for (const [dx, dy] of [[-8, 12], [6, 11], [9, 20]]) { P.rect(cx + dx, y + dy, 2, 2, K.s1); P.px(cx + dx, y + dy, K.s4); }
+  P.ell(cx, y + 10, 5, 2, K.dk2); P.ell(cx, y + 10, 4, 1, '#11151d');
+  const root = pts => xTreeBr(pts.map(([dx, dy]) => [cx + dx, y + dy]), 2, TR);
+  root([[-2, 10], [-6, 11], [-9, 13]]); root([[2, 10], [6, 10], [9, 12]]); root([[-1, 11], [-2, 14], [-3, 17], [-2, 21]]); root([[1, 11], [3, 15], [4, 19]]); };
+const xTreeBr = (pts, w, cols) => { for (let i = 0; i < pts.length - 1; i++) { const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], ww = Math.max(1, Math.round(w * (1 - i / pts.length))); for (let k = 0; k < ww; k++) P.line(x0 + k, y0, x1 + k, y1, k === 0 ? cols[2] : k === ww - 1 ? cols[0] : cols[1]); } };
+const xTree = (x, y, own, dense) => { const cx = x + 12, base = y + 9, C = TR;
+  for (let j = 0; j < 14; j++) { const w = j < 4 ? 3 : j < 9 ? 2 : 2, ox = Math.round(Math.sin(j * .4) * 1.5); P.hl(cx - w + ox, base - j, w * 2 + 1, C[1]); P.px(cx - w + ox, base - j, C[2]); P.px(cx + w + ox, base - j, C[0]); if (j % 4 === 2) P.px(cx + ox, base - j, C[0]); }
+  const t0 = base - 13, B = dense ? [
+    [[-3, -8], [-7, -10], [-10, -15]], [[3, -6], [7, -10], [8, -15]], [[-12, -4], [-14, -8]], [[12, -1], [15, -5]], [[6, -15], [3, -19]], [[-8, -17], [-11, -19]],
+    [[0, 0], [-5, -4], [-9, -9], [-12, -12]], [[0, 0], [5, -3], [10, -8], [13, -10]], [[0, 0], [1, -7], [-1, -13], [1, -18]], [[-5, -4], [-8, -3], [-12, -4]], [[5, -3], [8, -2], [12, -1]],
+    [[-9, -9], [-7, -14], [-8, -17]], [[10, -8], [9, -13], [11, -16]], [[1, -7], [5, -11], [6, -15]], [[1, -7], [-4, -10], [-5, -15]], [[-1, -13], [-4, -17]], [[-12, -12], [-15, -13]], [[13, -10], [16, -12]]]
+    : [[[0, 0], [-5, -4], [-8, -9], [-10, -13]], [[0, 0], [5, -4], [8, -9], [11, -11]], [[0, 0], [1, -8], [0, -15]], [[-5, -4], [-9, -4]], [[8, -9], [7, -13]]];
+  B.forEach((pts, i) => xTreeBr(pts.map(([dx, dy]) => [cx + dx, t0 + dy]), i < 3 ? 3 : 2, C));
+  if (dense) for (let i = 0; i < 40; i++) { const dx = Math.round((phash(i, 4, 1) - .5) * 30), dy = -Math.round(4 + phash(i, 5, 2) * 16); P.px(cx + dx, t0 + dy, C[phash(i, 6, 3) < .5 ? 1 : 2]); }
+  P.vl(cx + 10, t0 - 6, 3, '#7a6a4e'); P.rect(cx + 10, t0 - 3, 3, 5, own[0]); P.hl(cx + 10, t0 + 1, 3, own[1]); P.px(cx + 11, t0 + 2, own[0]); };
+const xCrow6 = (cx, by, left, up) => P.spr(up ? ['k...k', 'kkkkn', '.kkk.', '..l..'] : ['..kk.', '.kkkn', 'kkkk.', '..l..'], { k: '#1c1d24', n: '#5a5450', l: '#4a4440' }, cx - 2, by - 4, left);
+const xTreeCrows = (X, Y, id, kick, dense) => { const t = G.t, cx = X + 12, t0 = Y + 9 - 13;
+  const perch = dense ? [[-15, -13], [16, -12], [1, -18], [-11, -19], [11, -16], [3, -19], [-14, -8], [15, -5], [-10, -15], [8, -15], [-7, -10]] : [[-10, -13], [11, -11], [0, -15], [-9, -4], [7, -13]];
+  perch.forEach(([dx, dy], i) => { if (kick < .6 && i % 3 === 0) return; const away = i === 2 && (t * .25 + id) % 1 < .4; if (away) { const u = ((t * .25 + id) % 1) / .4, a = u * 6.283; P.spr(HX_CROWFLY[Math.floor(t * 10) % 2], { k: '#22232b', K: '#3a3c48', e: '#22232b', n: '#d0a04f' }, Math.round(cx + Math.cos(a) * 16) - 5, Math.round(t0 - 14 + Math.sin(a) * 4) - 4, Math.sin(a) > 0); return; }
+    xCrow6(cx + dx, t0 + dy + 1, phash(Math.floor(t * .6 + i), i, 5) < .5, (t * 1.1 + i * 1.7) % 4 < .25 || (kick < .25 && i % 2 === 1)); });
+  if (kick < .5) { const n = dense ? 8 : 5; for (let i = 0; i < n; i++) { const u = kick / .5, a = i * 2.4 + id, rx = cx + Math.cos(a) * (3 + u * 10), ry = t0 - 10 + Math.sin(a) * (2 + u * 4) - u * 6; P.px(rx, ry, '#22232b'); if (Math.floor(t * 14 + i) % 2) { P.px(rx - 1, ry - 1, '#22232b'); P.px(rx + 1, ry - 1, '#22232b'); } } } };
+// the swarm: a few dark specks that flap and swirl, flying together onto the creature
+HM.swarmShot = (x, p, px, py, n) => { const t = G.t, tx = AX0 + (p.tx ?? p.x) * CS, ty = AY0 + (p.ty ?? p.y) * CS, dist = Math.hypot(tx - px, ty - py), hh = 6 + Math.min(16, dist * .35);
+  for (let i = 0; i < n; i++) { const ox = Math.sin(t * 7 + i * 1.9) * 3 + (phash(i, 1, 3) - .5) * 7, oy = Math.cos(t * 6 + i * 2.3) * 2 + (phash(i, 2, 3) - .5) * 5, ex = Math.round(px + ox - (tx - px) / Math.max(1, dist) * i * 1.2), ey = Math.round(py - hh + oy - (ty - py) / Math.max(1, dist) * i * 1.2);
+    P.px(ex, ey, i % 3 ? '#22232b' : '#3a3c48'); if (Math.floor(t * 16 + i) % 2) { P.px(ex - 1, ey - 1, '#22232b'); P.px(ex + 1, ey - 1, '#22232b'); } else { P.px(ex - 1, ey, '#3a3c48'); P.px(ex + 1, ey, '#3a3c48'); } }
+  return true; };
+HM.X.corbArbreD = { v: 'corbV', h: 'Le Corbeau', n: 'L’Arbre aux corbeaux · dense', p: 'L’arbre sort du mur fendu, épais, plein de branches tordues et de corbeaux ; à chaque attaque, un essaim part fondre sur la créature.', at: [12, -18], H: 36,
+  body(x, y, own) { xWallCrack(x, y, own); xTree(x, y, own, true); },
+  live(X, Y, id, kick, own) { xTreeCrows(X, Y, id, kick, true); const t = G.t, cx = X + 12; for (const [lx, ly, ph] of [[cx - 7, Y - 9, 0]]) { const sw = Math.round(Math.sin(t * 1.7 + ph)); P.vl(lx, ly, 3, K.i1); hmAlpha(.3 + .15 * Math.sin(t * 3), () => P.ell(lx + sw, ly + 5, 3, 3, VEN[3])); P.spr(['.i.', 'iGi', 'igi', '.i.'], { i: K.i0, G: VEN[5], g: VEN[3] }, lx - 1 + sw, ly + 3); } },
+  shot: (x, p, px, py) => HM.swarmShot(x, p, px, py, 9) };
+HM.X.corbArbreL = { v: 'corbV', h: 'Le Corbeau', n: 'L’Arbre aux corbeaux · clairsemé', p: 'Le même arbre sorti du mur, plus sec, quelques grandes branches et cinq corbeaux ; un essaim plus petit part à chaque attaque.', at: [12, -16], H: 32,
+  body(x, y, own) { xWallCrack(x, y, own); xTree(x, y, own, false); },
+  live(X, Y, id, kick, own) { xTreeCrows(X, Y, id, kick, false); },
+  shot: (x, p, px, py) => HM.swarmShot(x, p, px, py, 6) };
+
+/* La Volière, darker: a black cage, a ragged crow with a hooked beak and a green eye; it opens its wings when it strikes */
+HM.X.corbVoliere2 = { v: 'corbV', h: 'Le Corbeau', n: 'La Volière', p: 'Une cage de fer noir, des os au fond, une brume verte ; un grand corbeau hirsute au bec crochu et à l’œil vert, qui déploie ses ailes quand il frappe.', at: [12, -16], H: 34,
+  body(x, y, own) { const cx = x + 12, base = y + 23, top = xPlinth(cx, base, 10, 5, own);
+    hmAlpha(.3, () => { for (let i = -8; i <= 8; i++) { const h = Math.round(18 + 6 * Math.sqrt(Math.max(0, 1 - (i / 9) ** 2))); P.vl(cx + i, top - h + 1, h - 1, '#151a22'); } });
+    hmAlpha(.45, () => P.ell(cx, top - 1, 7, 2, VEN[2]));
+    P.spr(['.www..w', 'wkwk.ww'], BN6, cx - 7, top - 3); P.line(cx + 2, top - 1, cx + 6, top - 2, BN6.w);
+    P.hl(cx - 3, top - 11, 7, '#3a2e22'); P.vl(cx - 3, top - 10, 9, '#2a221c') },
+  live(X, Y, id, kick, own) { const t = G.t, cx = X + 12, base = Y + 23, top = base - 5 - 3, up = kick < .45, blink = (t * .8 + id) % 3 < .1, tw = Math.floor(t * .7 + id) % 4 === 0;
+    const pal = { k: '#1c1d24', K: '#363846', g: '#4e5160', n: '#5a5450', e: blink ? '#1c1d24' : VEN[5] };
+    if (up) P.spr(['k...........k', 'kk.........kk', 'gkk..kkk..kkg', '.gkkkkkkkkkg.', '..kkkKkkKkk..', '...kkKKKkk...', '...kkkkkkk...', '...kk.k.kk...'], pal, cx - 6, top - 22);
+    P.spr(['....kkk.....', '...kkkkknn..', '..kkkekkk.n.', '.kkkkkkk....', 'kkKgKkkkk...', 'kgKKgKkkk...', '.kKgKkkk.k..', '..kkkkkk.k..', '...kk.k.....', '...n..n.....'], pal, cx - 5, top - 20, tw);
+    if (!blink) hmAlpha(.4, () => P.rect(cx - 2 + (tw ? 3 : 0), top - 19, 3, 3, VEN[4]));
+    for (let i = 0; i < 4; i++) { const a = t * .6 + i * 1.57; hmAlpha(.35, () => P.px(cx + Math.round(Math.cos(a) * 6), top - 1 + Math.round(Math.sin(a) * 1.5), VEN[3])); }
+    for (let i = -9; i <= 9; i += 3) { if (up && Math.abs(i) <= 6) continue; const h = Math.round(18 + 6 * Math.sqrt(Math.max(0, 1 - (i / 9) ** 2))); P.vl(cx + i, top - h + 1, h - 1, i < -4 ? K.i2 : K.i1); }
+    if (up) for (const i of [-6, -3, 0, 3, 6]) { const h = Math.round(18 + 6 * Math.sqrt(Math.max(0, 1 - (i / 9) ** 2))); P.vl(cx + i, top - 9, 9, K.i1); P.vl(cx + i, top - h + 1, 3, K.i1); }
+    for (let i = -8; i <= 8; i++) { const h = Math.round(18 + 6 * Math.sqrt(Math.max(0, 1 - (i / 9) ** 2))); P.px(cx + i, top - h, K.i1); }
+    P.hl(cx - 8, top - 1, 17, K.i0); P.hl(cx - 8, top - 10, 17, K.i1); P.hl(cx - 8, top - 9, 17, K.i0);
+    P.spr(['.a.', 'a.a', '.a.'], { a: K.i2 }, cx - 1, top - 28); const f = Math.floor(t * 5 + id) % 2; P.spr(f ? ['ab', '.ab', '..a'] : ['ab', 'ab.', '.a.'], { a: own[0], b: own[1] }, cx + 2, top - 27);
+    xKick(cx, top - 14, kick, VEN[4], 8); },
+  shot(x, p, px, py) { const t = G.t, tx = AX0 + (p.tx ?? p.x) * CS, ty = AY0 + (p.ty ?? p.y) * CS, dist = Math.hypot(tx - px, ty - py), hh = 6 + Math.min(16, dist * .35), ex = Math.round(px), ey = Math.round(py - hh);
+    P.spr(HX_CROWFLY[Math.floor(t * 12) % 2], { k: '#16171d', K: '#2a2c36', e: VEN[4], n: '#3b3633' }, ex - 5, ey - 4, tx < px); hmAlpha(.5, () => { P.px(ex - Math.sign(tx - px) * 6, ey, VEN[3]); P.px(ex - Math.sign(tx - px) * 8, ey + 1, VEN[2]); }); return true; } };
+
+for (const nm of ['oursBrasier', 'oursOssuaire', 'oursGueule', 'corbArbreD', 'corbArbreL', 'corbVoliere2']) { const D = HM.X[nm], ev = 'hmx_' + nm;
+  HX.bodies[ev] = (x, y, lvl, e, own, type) => { castEll(x + 12, y + 18, 11, 5, D.H || 30); D.body(x, y, own); };
+  HX.at[ev] = () => D.at;
+  HX.tops[ev] = (x, b, t, s, tx, ty, kick) => { const k = pcol(b.k); D.live(s.x, s.y, t.id, kick, [PCOL[k] || NEUTRAL[0], PDARK[k] || NEUTRAL[1]]); };
+  HX.shots[ev] = (x, b, p, px, py) => D.shot ? D.shot(x, p, px, py) : HM.shot(x, D.v, p, px, py, true);
+  if (HX.stats['hmc_' + D.v]) HX.stats[ev] = HX.stats['hmc_' + D.v];
+  if (HX.hits['hmc_' + D.v]) HX.hits[ev] = HX.hits['hmc_' + D.v];
+}
+
+/* 21 h 16: l'Ossuaire retenu ; un tas d'os plus lisible sous la mâchoire ; une version avec le grand crâne, un peu réduit */
+const xMidSkull = (cx, top) => { const sh = (dx, c) => { P.ell(cx + dx, top + 8, 9, 7, c); P.ell(cx + dx, top + 12, 12, 3, c); P.ell(cx + dx, top + 16, 7, 4, c); };
+  sh(1, BN6.d); sh(0, BN6.s); sh(-1, BN6.w); P.ell(cx - 3, top + 4, 4, 2, '#fbf6e8');
+  P.line(cx + 1, top + 1, cx - 1, top + 4, BN6.c); P.line(cx - 1, top + 4, cx + 1, top + 7, BN6.c);
+  for (const d of [-1, 1]) { P.spr(MSOCK, { k: BN6.k }, d < 0 ? cx - 9 : cx + 2, top + 9, d > 0); P.hl(d < 0 ? cx - 10 : cx + 2, top + 8, 8, BN6.s); }
+  P.spr(['.nn.', 'nnnn'], BN6, cx - 2, top + 15);
+  for (let i = -5; i <= 5; i++) P.px(cx + i, top + 20, i % 2 ? BN6.t : BN6.T); for (const d of [-4, 4]) { P.vl(cx + d, top + 20, 3, BN6.t); P.px(cx + d, top + 23, BN6.s); } };
+const MSOCK = ['kkkk...', 'kkkkkk.', 'kkkkkkk', '.kkkkk.', '..kkk..'];
+const xMidSkullFire = (cx, top, t, hot, id) => { const F = ['#a8402a', '#e0743a', '#f2b45a', '#fff0b8'];
+  for (const d of [-1, 1]) { const x0 = d < 0 ? cx - 9 : cx + 2, core = [[3, 2], [4, 2], [3, 3], [2, 2], [4, 1]].concat(hot ? [[1, 1], [5, 2], [2, 3], [5, 1]] : []);
+    core.forEach(([i, j], n) => { const q = .5 + .5 * Math.sin(t * 10 + n * 1.9 + id + d); P.px(x0 + (d > 0 ? 6 - i : i), top + 9 + j, hot ? (q > .35 ? F[3] : F[2]) : n < 2 ? (q > .5 ? F[2] : F[1]) : q > .6 ? F[3] : q > .3 ? F[2] : F[0]); }); }
+  P.px(cx - 1, top + 16, F[1]); P.px(cx, top + 16, (.5 + .5 * Math.sin(t * 7 + id)) > .5 ? F[2] : F[1]); };
+// a pile of bones laid flat, in rows, the small skulls on the sides
+const xBonePile = (cx, base) => { const row = (y, segs) => { for (const [a, b] of segs) { P.line(cx + a, y + 1, cx + b, y + 1, BN6.d); xBone(cx + a, y, cx + b, y); } };
+  row(base - 2, [[-12, -3], [2, 11]]); row(base - 5, [[-9, -1], [2, 9]]); row(base - 8, [[-6, 5]]);
+  for (const [dx, f] of [[-15, false], [11, true]]) P.spr(['.www.', 'wkwkw', 'wwwww', '.t.t.'], BN6, cx + dx, base - 4, f); };
+const xOssuaireBody = (big) => (x, y, own) => { const cx = x + 12, base = y + 23, top = big ? base - 33 : base - 25;
+  xBrazier(cx - 17, base, 9); xBrazier(cx + 16, base, 9); P.vl(cx - 17, base - 7, 2, own[0]); P.vl(cx + 16, base - 7, 2, own[0]);
+  xBonePile(cx, base);
+  if (big) { xHorn([[-8, 5], [-13, 3], [-16, -1], [-17, -6], [-15, -11], [-13, -13]].map(([dx, dy]) => [cx + dx, top + dy]), 3); xHorn([[7, 5], [12, 3], [15, -1], [16, -6], [14, -11], [12, -13]].map(([dx, dy]) => [cx + dx, top + dy]), 3); xMidSkull(cx, top); }
+  else { xHorns(cx, top, false); P.spr(SKULL, BN6, cx - 11, top); } };
+const xOssuaireLive = (big) => (X, Y, id, kick, own) => { const t = G.t, cx = X + 12, base = Y + 23, top = big ? base - 33 : base - 25, hot = kick < .4;
+  xFire(cx - 16, base - 12, 2, hot ? 9 : 6, t); xFire(cx + 17, base - 12, 2, hot ? 9 : 6, t + 1);
+  if (big) { xFire(cx, top + 4, 2, hot ? 12 : 7, t); xMidSkullFire(cx, top, t, hot, id); } else { xSkullFire(cx, top, t, hot, id); if (hot) xFire(cx + 1, top + 3, 2, 8, t); }
+  xSpark(cx - 16, base, 3, id, 4, -14, 12); xSpark(cx + 17, base, 3, id + 1, 4, -14, 12); xKick(cx, top + 9, kick, '#f2b45a', 10); };
+HM.X.oursOssuaire2 = { v: 'oursA', h: 'L’Ours', n: 'L’Ossuaire', p: '', at: [12, -18], H: 34, body: xOssuaireBody(false), live: xOssuaireLive(false) };
+HM.X.oursOssuaire3 = { v: 'oursA', h: 'L’Ours', n: 'L’Ossuaire · grand crâne', p: '', at: [12, -22], H: 38, body: xOssuaireBody(true), live: xOssuaireLive(true) };
+for (const nm of ['oursOssuaire2', 'oursOssuaire3']) { const D = HM.X[nm], ev = 'hmx_' + nm;
+  HX.bodies[ev] = (x, y, lvl, e, own, type) => { castEll(x + 12, y + 18, 11, 5, D.H || 30); D.body(x, y, own); };
+  HX.at[ev] = () => D.at;
+  HX.tops[ev] = (x, b, t, s, tx, ty, kick) => { const k = pcol(b.k); D.live(s.x, s.y, t.id, kick, [PCOL[k] || NEUTRAL[0], PDARK[k] || NEUTRAL[1]]); };
+  HX.shots[ev] = (x, b, p, px, py) => HM.shot(x, D.v, p, px, py, true);
+  if (HX.stats['hmc_' + D.v]) HX.stats[ev] = HX.stats['hmc_' + D.v];
+}
+
+/* ---- the settings after the balance tests (17/11, 21 h 40): one place for every number ---- */
+HM.DEMO = false; // true: the masterpieces' powers come back every 5 s, for the planche's scenes
+HM.R = {
+  trap: { base: 8, hold: 1.3, gold: 2, catches: 3, life: 10, max: 3, every: 3.2, chefMax: 4, chefEvery: 2.2 },
+  drum: { dmg: 2.6, every: 2.2, chefEvery: 1.6, stun: .8 },
+  chaud: { rate: 1.35, poison: .5, chefRate: 1.3, chefMul: 1.3 },
+  givre: { burst: .8 },
+  chef: { cerf: 8, cerfFreeze: 3, ours: 12, oursStun: 2, ren: 8 },
+};
+const hmPer = s => HM.DEMO ? 5 : s;
+// the Terrier's traps: flat damage that grows with the Terrier's level
+HX.trapDmg = (tr, cr) => HM.R.trap.base * Math.pow(1.6, ((tr.src && tr.src.lvl) || 1) - 1);
+HM_V.renT.hstep = function (b, t, chef) { const R = HM.R.trap; t.cd = 1; if (t.hmT > G.t) return; if (HX.traps.length + HM.fly.length >= (chef ? R.chefMax : R.max)) return;
+  const list = inRange(b, t.c + .5, t.r + .5, 2.6 + .2 * t.lvl).filter(c => !c.fly && c.tgt >= 0); if (!list.length) return; const cr = list[0], c = cr.tgt % COLS, r = (cr.tgt / COLS) | 0;
+  if (HX.traps.some(q => q.c === c && q.r === r) || HM.fly.some(q => q.c === c && q.r === r)) return;
+  t.hmT = G.t + (chef ? R.chefEvery : R.every); t.kick = G.t; t.ang = Math.atan2(r + .5 - t.r - .5, c + .5 - t.c - .5); HM.fly.push({ k: b.k, sx: t.c + .5, sy: t.r + .5, c, r, t0: G.t, dur: .45, src: t }); };
+// La Tanière: every 8 s, sends back the most advanced creature that has a single life, never a boss nor a flyer
+HM_V.renT.chefStep = (b, t) => { if (t.hmT2 > G.t) return; const cr = b.creeps.filter(c => !c.dead && c.y >= 0 && c.from >= 0 && !c.fly && c.lives <= 1 && !(S[c.kind] && S[c.kind].boss)).sort((a, c) => c.prog - a.prog)[0];
+  if (!cr) { t.hmT2 = G.t + .5; return; } t.hmT2 = G.t + hmPer(HM.R.chef.ren); t.kick = G.t;
+  b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: .9, t: .5, ttl: .5, color: C.gold, fill: true }); G.floats.push({ k: b.k, x: cr.x, y: cr.y - .5, txt: 'RENVOYÉ', color: C.gold, t: 1.1, ttl: 1.1 }); cr.dead = true; cr.hxGone = true; };
+// Le Tambour: a little less damage per blow
+HM_V.oursA.hstep = function (b, t, chef) { const R = HM.R.drum; t.cd = 1; const range = 1.5 + .2 * t.lvl + (chef ? .4 : 0); if (t.hmT > G.t) return; const list = inRange(b, t.c + .5, t.r + .5, range); if (!list.length) return;
+  t.hmT = G.t + (chef ? R.chefEvery : R.every); t.kick = G.t; b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .3, r1: range, t: .4, ttl: .4, color: '#efe6cf' }); for (const cr of list) { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + R.stun); damage(b, cr, R.dmg * (R.byLvl ? R.byLvl[t.lvl - 1] : t.lvl) * (cr.fly ? (R.flyMul || 1) : 1), t); } };
+// Le Grand Tambour: every 12 s, the whole board stunned 2 s; the close ones pushed back
+HM_V.oursA.chefStep = (b, t) => { if (t.hmT2 > G.t) return; t.hmT2 = G.t + hmPer(HM.R.chef.ours); t.kick = G.t; b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .4, r1: 9, t: .8, ttl: .8, color: '#f2b45a', fill: true }); G.shake = Math.max(G.shake || 0, 3);
+  for (const cr of b.creeps) if (!cr.dead && cr.y >= 0) { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + HM.R.chef.oursStun); if (Math.hypot(cr.x - t.c - .5, cr.y - t.r - .5) < 2.5) HX.push(b, cr, 2); } G.floats.push({ k: b.k, x: t.c + .5, y: t.r - .9, txt: 'BOUM', color: '#f2b45a', t: 1, ttl: 1 }); };
+// Le Cœur de l'hiver: every 8 s, the whole board frozen 3 s, and brittle meanwhile (+35 % damage)
+HM_V.cerf.chefStep = (b, t) => { if (t.hmT > G.t) return; const d = HM.R.chef.cerfFreeze; t.hmT = G.t + hmPer(HM.R.chef.cerf); t.kick = G.t; b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .4, r1: 9, t: .9, ttl: .9, color: '#DFF6FF', fill: true });
+  for (const cr of b.creeps) if (!cr.dead && cr.y >= 0) { if (!cr.noStun) { cr.stunUntil = Math.max(cr.stunUntil, G.t + d); cr.iceUntil = G.t + d; } cr.brittleUntil = Math.max(cr.brittleUntil, G.t + d); } G.floats.push({ k: b.k, x: t.c + .5, y: t.r - .9, txt: 'GEL', color: '#DFF6FF', t: 1, ttl: 1 }); };
+// the Cerf's Givre: the frost bursts on impact and slows the neighbours too
+HX.hits['hm_cerf'] = HX.hits['hmx_cerfFleche'] = (b, p, cr) => { if (p.type !== 'frost') return; for (const c of b.creeps) if (!c.dead && c !== cr && Math.hypot(c.x - cr.x, c.y - cr.y) < HM.R.givre.burst) slow(c, p.slowF || .5, (p.slowDur || 1.6) * .7); };
+// the Chaudron: a little faster, and its flask also poisons the creature it hits (so it works on flyers)
+HX.stats['hm_corbV'] = (t, o) => { if (t.type === 'frost') { o.range = 2.6 + .2 * t.lvl; o.rate = HM.R.chaud.rate; o.slowDur = 0; } };
+{ const chefStat = (t, o) => { o.range = 99; o.rate = HM.R.chaud.chefRate; o.dmg *= HM.R.chaud.chefMul; };
+  for (const ev of ['hmc_corbV', 'hmx_corbArbreD', 'hmx_corbArbreL', 'hmx_corbVoliere2', 'hmx_corbChaudron', 'hmx_corbArbre', 'hmx_corbVoliere']) HX.stats[ev] = chefStat;
+  for (const ev of ['hm_corbV', 'hmc_corbV', 'hmx_corbArbreD', 'hmx_corbArbreL', 'hmx_corbVoliere2', 'hmx_corbChaudron', 'hmx_corbArbre', 'hmx_corbVoliere']) { const chef = ev !== 'hm_corbV'; HX.hits[ev] = (b, p, cr) => { if (p.type !== 'frost') return; HM_V.corbV.hit(b, p, cr, chef); cr.poison = { dps: p.dmg * HM.R.chaud.poison, until: G.t + 3, src: p.src }; }; } }
+// the masterpieces kept: their power runs (HM.step looks at D.demo)
+for (const nm of ['cerfFleche', 'oursOssuaire2', 'corbArbreD', 'renTaniere']) HM.X[nm].demo = true;
+
+/* 21 h 50: knobs to even the Houses out, and an answer to the flyers for the Renard */
+Object.assign(HM.R.givre, { dmg: 1.09 }); Object.assign(HM.R.chaud, { dmg: 1.12 }); Object.assign(HM.R.trap, { base: 7.2, grow: 1.57 }); Object.assign(HM.R.drum, { dmg: 2.4, byLvl: [1, 2, 2.8, 4] });
+HM.R.sling = { on: true, mul: 1, every: .8 };
+HM.R.givre.byLvl = [1, 1, 1, 1]; HM.R.chaud.byLvl = [1, 1, 1, 1];
+HX.stats['hm_cerf'] = HX.stats['hmx_cerfFleche'] = (t, o) => { if (t.type === 'frost') o.dmg *= HM.R.givre.dmg * HM.R.givre.byLvl[t.lvl - 1]; };
+HX.stats['hm_corbV'] = (t, o) => { if (t.type === 'frost') { o.range = 2.6 + .2 * t.lvl; o.rate = HM.R.chaud.rate; o.slowDur = 0; o.dmg *= HM.R.chaud.dmg * HM.R.chaud.byLvl[t.lvl - 1]; } };
+HX.trapDmg = (tr, cr) => HM.R.trap.base * HM.R.trap.byLvl[(((tr.src && tr.src.lvl) || 1) - 1)] * (tr.src && tr.src.evo && tr.src.evo.startsWith('hmx_') ? HM.R.trap.chefMul : 1);
+Object.assign(HM.R.trap, { chefMul: 1.7, chefMax: 5, chefEvery: 1.8, byLvl: [.75, 1.57, 2.46, 3.87] }); Object.assign(HM.R.chef, { cerf: 7, ours: 9.5 }); HM.R.chaud.chefMul = 1.22; HM.R.drum.byLvl = [1.4, 2, 2.8, 4];
+// the Renard's fox throws a pebble at flyers, which the traps cannot catch
+{ const h0 = HM_V.renT.hstep; HM_V.renT.hstep = function (b, t, chef) { h0.call(this, b, t, chef);
+    if (!HM.R.sling.on || t.hmS > G.t) return; const fl = inRange(b, t.c + .5, t.r + .5, 2.6 + .2 * t.lvl).filter(c => c.fly); if (!fl.length) return;
+    t.hmS = G.t + HM.R.sling.every; t.kick = G.t; t.ang = Math.atan2(fl[0].y - t.r - .5, fl[0].x - t.c - .5);
+    launch(b, t, { dmg: T.arrow.dmg * Math.pow(1.6, t.lvl - 1) * HM.R.sling.mul, splash: 0, slowDur: 0, slowF: 1 }, fl[0], true, t.c + .5, t.r + .5); }; }
+for (const ev of ['hm_renT', 'hmx_renTaniere', 'hmc_renT']) { const prev = HX.shots[ev]; HX.shots[ev] = (x, b, p, px, py) => { if (p.type !== 'frost') return prev ? prev(x, b, p, px, py) : false; const ty = AY0 + (p.ty ?? p.y) * CS, tx = AX0 + (p.tx ?? p.x) * CS, hh = 6 + Math.min(14, Math.hypot(tx - px, ty - py) * .35); P.rect(Math.round(px) - 1, Math.round(py - hh) - 1, 2, 2, '#8a8f99'); P.px(Math.round(px) - 1, Math.round(py - hh) - 1, '#c6cbd2'); return true; }; }
+
+/* 22 h: per-level settings from the tests */
+HM.R.givre.byLvl = [1.12, .91, 1.16, 1.05]; HM.R.drum.byLvl = [2.3, 2.3, 2.55, 4.15]; HM.R.chaud.byLvl = [1.05, 1.32, .98, .97]; HM.R.trap.byLvl = [.4, 1.25, 2.4, 3.67]; HM.R.trap.holdByLvl = [.9, 1.3, 1.3, 1.3]; HM.R.givre.burstByLvl = [.55, .8, .8, .8];
+HX.hits['hm_cerf'] = HX.hits['hmx_cerfFleche'] = (b, p, cr) => { if (p.type !== 'frost' || !p.src) return; const rr = HM.R.givre.burstByLvl[p.src.lvl - 1]; for (const c of b.creeps) if (!c.dead && c !== cr && Math.hypot(c.x - cr.x, c.y - cr.y) < rr) slow(c, p.slowF || .5, (p.slowDur || 1.6) * .7); };
+HX.trapHold = tr => HM.R.trap.holdByLvl[(((tr.src && tr.src.lvl) || 1) - 1)];
+Object.assign(HM.R.chef, { cerf: 7, ours: 9 }); HM.R.chaud.chefMul = 1.36; HM.R.trap.chefMul = 2.2;
+HM.R.drum.byLvl = [2.3, 2.3, 2.42, 4.15]; HM.R.drum.stunByLvl = [1.05, .8, .8, .8]; HM.R.trap.holdByLvl = [.7, 1.3, 1.3, 1.3];
+{ const h0 = HM_V.oursA.hstep; HM_V.oursA.hstep = function (b, t, chef) { const s0 = HM.R.drum.stun; HM.R.drum.stun = HM.R.drum.stunByLvl[t.lvl - 1]; try { h0.call(this, b, t, chef); } finally { HM.R.drum.stun = s0; } }; }
+/* 22 h 15: per-level settings, second pass (a smoother measure: 4 orders × 2 spacings) */
+HM.R.givre.byLvl = [1.24, 1.15, 1.65, 1.36]; HM.R.drum.byLvl = [1.35, 1.53, 1.53, 2.68]; HM.R.drum.dmg = 2.4; HM.R.drum.stunByLvl = [.92, .73, .73, .77];
+HM.R.chaud.byLvl = [1.3, 1.45, 1.15, 1.02]; HM.R.trap.byLvl = [.52, 1.38, 2.44, 4.34]; HM.R.trap.holdByLvl = [.7, 1.3, 1.3, 1.3];
+Object.assign(HM.R.chef, { cerf: 7, ours: 7 }); HM.R.chaud.chefMul = 1.39; HM.R.trap.chefMul = 2.25;
+HM.R.drum.byLvl = [1.44, 1.76, 1.77, 2.87]; HM.R.drum.stunByLvl = [.98, .84, .85, .82];
+/* 22 h 30: advantages to even the Houses out over every kind of wave, not only the mixed one */
+HM.R.sling.mul = 0.9;                         // the Renard's pebble: as good as an Archer against flyers
+HM.R.chaud.flyMul = 1.8;                      // the Chaudron's flask hurts flyers more (the crows are at home in the air)
+HM.R.givre.slowF = .6;                        // the Cerf's frost slows a little less (it was the best against every kind of wave)
+{ const s0 = HX.stats['hm_cerf']; HX.stats['hm_cerf'] = HX.stats['hmx_cerfFleche'] = (t, o) => { s0(t, o); if (t.type === 'frost') o.slowF = HM.R.givre.slowF; }; }
+for (const ev of ['hm_corbV', 'hmc_corbV', 'hmx_corbArbreD']) { const h0 = HX.hits[ev]; HX.hits[ev] = (b, p, cr) => { if (p.type === 'frost' && cr.fly && !cr.dead) damage(b, cr, p.dmg * (HM.R.chaud.flyMul - 1), p.src); if (h0) h0(b, p, cr); }; }
+HM.R.givre.byLvl = [1.29, 1.32, 1.88, 1.74]; HM.R.trap.byLvl = [.52, 1.38, 2.44, 4.0];
+HM.R.givre.byLvl = [1.33, 1.75, 2.15, 1.8];
+/* 22 h 45: the Corbeau's poison gnaws the big ones (a share of their life), the Tambour's wave hits flyers less (it shakes the ground) */
+HM.R.chaud.gnaw = .02; HM.R.drum.flyMul = .4;
+for (const ev of ['hm_corbV', 'hmc_corbV', 'hmx_corbArbreD']) { const h0 = HX.hits[ev]; HX.hits[ev] = (b, p, cr) => { if (h0) h0(b, p, cr); if (p.type === 'frost' && !cr.dead) damage(b, cr, cr.max * HM.R.chaud.gnaw, p.src, true); }; }
+HM.R.chaud.byLvl = [1.1, 1.2, .95, .85];
+HM.R.chaud.byLvl = [.8, 1.05, .95, .85];
+/* 23 h: last nudge after the reproducible run */
+HM.R.chaud.byLvl = [.85, 1.12, 1.01, .9]; HM.R.drum.byLvl = [1.44, 1.66, 1.77, 2.87]; HM.R.chef.ours = 6.5; HM.R.chaud.chefMul = 1.32;
+
 /* ---------------------------------------------------------------- creatures */
 function creepColors(from) { return from >= 0 ? [PCOL[from] || NEUTRAL[0], PDARK[from] || NEUTRAL[1]] : NEUTRAL; }
 const CREEP_ROWS = {
@@ -6355,8 +7754,8 @@ function rebuildLane(b, A) {
     const t = b.grid[i]; if (!t) continue;
     const c = i % COLS, r = (i / COLS) | 0, [x, y] = acell(c, r);
     const up = r > 0 && b.grid[idx(c, r - 1)];
-    const w = wallSprite(hasS(b, c - 1, r), hasS(b, c + 1, r), !!(up && up.type === 'wall'), (c * 7 + r * 3) % 3, pcol(b.k));
-    const tw = t.type === 'wall' ? null : towerSprite(t.type, t.lvl, t.evo || '', pcol(b.k));
+    const w = HM.wallAt(b, c, r, hasS(b, c - 1, r), hasS(b, c + 1, r), !!(up && up.type === 'wall'), (c * 7 + r * 3) % 3, pcol(b.k));
+    const tw = t.type === 'wall' ? null : towerSprite(t.type, t.lvl, hmEv(b, t), pcol(b.k));
     for (const s of [w, tw]) if (s) {
       for (let j = 0; j < s.stamp.length; j += 2) { const px = x + s.stamp[j], py = y + s.stamp[j + 1]; if (px >= 0 && py >= 0 && px < AW && py < AH) mask[py * AW + px] = 1; }
       for (const g of s.glows) glows.push(Object.assign({}, g, { x: g.x + x, y: g.y + y }));
@@ -6429,8 +7828,9 @@ function drawStruct(x, b, s) {
   }
   blit(x, s.w, s.x, s.y); blit(x, s.tw, s.x, s.y);
   if (t.type === 'wall') return;
-  const [tx, ty] = towerTopAt(t.type, t.lvl, t.evo), kick = G.t - (t.kick ?? -9);
-  if (t.type === 'arrow') blit(x, archerSprite(pcol(b.k), Math.cos(t.ang ?? -1.57) < -0.15, kick < 0.16, t.evo === 'double', t.evo === 'sniper'), s.x + tx, s.y + ty);
+  const hev = hmEv(b, t), [tx, ty] = towerTopAt(t.type, t.lvl, hev), kick = G.t - (t.kick ?? -9);
+  if (HX.tops[hev]) HX.tops[hev](x, b, t, s, tx, ty, kick);
+  else if (t.type === 'arrow') blit(x, archerSprite(pcol(b.k), Math.cos(t.ang ?? -1.57) < -0.15, kick < 0.16, t.evo === 'double', t.evo === 'sniper'), s.x + tx, s.y + ty);
   else if (t.type === 'cannon') {
     blit(x, barrelSprite(((Math.round((t.ang ?? 1.57) / (Math.PI * 2) * 16) % 16) + 16) % 16, t.evo || '', kick < 0.12), s.x + tx, s.y + ty);
     if (kick < 0.09) { const ang = t.ang ?? 1.57, len = t.evo === 'mortar' ? 5 : 10, mx = Math.round(s.x + tx + Math.cos(ang) * len), my = Math.round(s.y + ty + Math.sin(ang) * .8 * len - (t.evo === 'mortar' ? 3 : 0)); P.spr(['.a.a.', 'abcba', '.ccc.', 'abcba', '.a.a.'], { a: K.fire1, b: K.fire2, c: '#ffffff' }, mx - 2, my - 2); }
@@ -6609,6 +8009,7 @@ function drawZap(x, z) {
 // with a dark rim, a highlight and puffs of smoke, a frost shard with an icy trail
 function drawShot(x, b, p) {
   const px = AX0 + p.x * CS, py = AY0 + p.y * CS;
+  { const hs = HX.shots[p.hev || p.evo]; if (hs && hs(x, b, p, px, py)) return; }
   if (p.chef) { jtDrawChefShot(x, b, p, px, py); return; }
   if (p.type === 'ballista') {
     // a heavy bolt flying flat: dark outline, wooden shaft, iron head, pale fletching, a faint trail
@@ -8030,7 +9431,7 @@ function summaryData() {
   for (let i = G.elim.length - 1; i >= 0; i--) if (!order.includes(G.elim[i])) order.push(G.elim[i]);
   for (const b of G.b) if (!order.includes(b.k)) order.push(b.k);
   const me = G.b[G.me], d = me.mvp && me.mvp.code ? tdecode(me.mvp.code) : null;
-  const mvp = d && d.type !== 'wall' ? { name: T[d.type].n + (d.evo ? ' · ' + EVO[d.type][d.evo].n : ' · niv. ' + d.lvl), kills: me.mvp.kills } : null;
+  const mvp = d && d.type !== 'wall' ? { name: T[d.type].n + (d.evo && EVO[d.type] && EVO[d.type][d.evo] ? ' · ' + EVO[d.type][d.evo].n : ' · niv. ' + d.lvl), kills: me.mvp.kills } : null;
   return { order, me, mvp };
 }
 function resultTitle() {
@@ -17247,8 +18648,8 @@ const l2LineTower = me => l2LineCells().some(([c, r]) => { const t = me.grid[idx
     const was = t && t.lvl, r = base.apply(this, arguments);
     if (!r && G && !G.quiet && k === G.me && t && t.lvl === 4 && was === 3 && !isChef(t.type)) {
       let seen = false; try { seen = localStorage.getItem('ddl-tip-chef') === '1'; localStorage.setItem('ddl-tip-chef', '1'); } catch (e) {}
-      if (!seen) { const html = 'Niveau 4 ! Quand deux familles (l’Arc, les Arcanes, la Poudre) ont chacune une tour au sommet, <b>un chef-d’œuvre</b> s’ouvre dans Construire.';
-        if (!fouRare(html, { force: true, dur: 6000 })) toast('Niveau 4 : deux familles au sommet ouvrent un chef-d’œuvre dans Construire', 'gold'); }
+      if (!seen) { const hk = G.b[k] && G.b[k].jt && ({ cerf: 1, ours: 1, griffon: 1, renard: 1 })[G.b[k].jt.maison], html = hk ? (t.type === 'frost' ? 'Niveau 4 ! Ta tour de Maison est au sommet : touche-la et <b>couronne-la</b> pour bâtir ton chef-d’œuvre.' : 'Niveau 4 ! Monte ta tour de Maison au niveau 4 : tu pourras la <b>couronner</b>, c’est ton chef-d’œuvre.') : 'Niveau 4 ! Quand deux familles (l’Arc, les Arcanes, la Poudre) ont chacune une tour au sommet, <b>un chef-d’œuvre</b> s’ouvre dans Construire.';
+        if (!fouRare(html, { force: true, dur: 6000 })) toast(hk ? 'Niveau 4 : la tour de Maison au sommet se couronne' : 'Niveau 4 : deux familles au sommet ouvrent un chef-d’œuvre dans Construire', 'gold'); }
     }
     return r;
 }; }
@@ -27351,6 +28752,232 @@ var HS = (function () {
   try { card(); } catch (e) {}
   return HS;
 })();
+
+/* ================================================================ version 139 · les tours de chaque Maison (Patrick, 17/11, 22 h 37 : « tu peux coder et publier en ligne »)
+   Validé sur la planche du 17/11 (tours 3 à 8) et réglé par les tests d'équilibre (claude/equilibrage-tours.md) :
+   - l'Archer et le Canon gardent leurs règles ; la matière de la Maison du joueur les gagne niveau après niveau (seulement le dessin) ;
+   - le Givre devient la tour de la Maison : le Givre (Cerf), le Tambour de guerre (Ours), le Chaudron (Corbeau), le Terrier (Renard) ;
+     plus de Foudre au niveau 3 : la tour de Maison monte jusqu'au niveau 4 ;
+   - au niveau 4, « Couronner » (250 or, un seul par partie, sur sa case) : la Flèche de cristal, l'Ossuaire, l'Arbre aux corbeaux, la Tanière ;
+     les six anciens chefs-d'œuvre ne s'ouvrent plus pour un joueur qui a une Maison.
+   Le dessin et le jeu se tirent de la Maison du plateau (b.jt.maison) : rien de neuf ne voyage, sauf trois codes de tour (frost:3/4:maison, ch_h…). */
+HM.PROD = true; HM.DEMO = false;
+const HMH = { cerf: 'cerf', ours: 'oursA', griffon: 'corbV', renard: 'renT' };
+const HMX = { cerf: 'cerfFleche', ours: 'oursOssuaire2', griffon: 'corbArbreD', renard: 'renTaniere' };
+const HMCT = { cerf: 'ch_hcerf', ours: 'ch_hours', griffon: 'ch_hcorb', renard: 'ch_hren' };
+const HMCT_M = { ch_hcerf: 'cerf', ch_hours: 'ours', ch_hcorb: 'griffon', ch_hren: 'renard' };
+const HM_NAME = {
+  cerf: { n: 'Givre', d: 'Ralentit les créatures ; le givre éclate et ralentit aussi les voisines.' },
+  ours: { n: 'Tambour', d: 'À chaque coup, une onde étourdit et blesse les créatures autour de lui.' },
+  griffon: { n: 'Chaudron', d: 'Lance des fioles de poison : une flaque verte qui ronge tout ce qui passe.' },
+  renard: { n: 'Terrier', d: 'Jette des pièges sur le chemin : chacun retient trois créatures, et chacune lâche 2 or.' },
+};
+const hmMaison = b => (b && b.jt && HMH[b.jt.maison] ? b.jt.maison : '');
+const hmChef = t => !!(t && HMCT_M[t.type]);
+const hmL = t => (hmChef(t) ? 4 : t.lvl);
+// the name that the drawing and the hooks go by: the House's tower, its matter on the Archer and the Canon, its masterpiece
+function hmEv(b, t) {
+  if (!t) return '';
+  const cm = HMCT_M[t.type]; if (cm) return 'hmx_' + HMX[cm];
+  const mk = hmMaison(b); if (!mk) return t.evo || '';
+  const h = HMH[mk];
+  if (t.type === 'frost') return 'hm_' + h;
+  if (t.type === 'arrow' || t.type === 'cannon') return t.evo ? hmForm(h, t.evo) : 'hm_' + h;
+  return t.evo || '';
+}
+// the matter over a tower that has taken a form at level 3 (Tir double, Mortier…): the same matter, the form's own body and top
+function hmForm(h, f) {
+  const key = 'hm_' + h + '~' + f;
+  if (!HX.bodies[key]) {
+    HX.bodies[key] = (x, y, lvl, e, own, type) => { const f0 = HM.form; HM.form = f; try { HX.bodies['hm_' + h](x, y, lvl, e, own, type); } finally { HM.form = f0; } };
+    HX.at[key] = (type, lvl) => towerTopAt(type, lvl, f);
+    HX.tops[key] = (x, b, t, s, tx, ty, kick) => { const f0 = HM.form; HM.form = f; try { HX.tops['hm_' + h](x, b, t, s, tx, ty, kick); } finally { HM.form = f0; } };
+    HX.shots[key] = HX.shots['hm_' + h];
+  }
+  return key;
+}
+
+/* ---------------------------------------------------------------- the four masterpieces join the towers */
+const HM_CHF = {
+  hcerf: { m: 'cerf', n: 'Flèche de cristal', full: 'La Flèche de cristal', col: '#bfe6f2',
+    d: 'Le Cœur de l’hiver : toutes les 7 s, tout ton terrain gèle 3 s, et les créatures gelées prennent plus de dégâts.',
+    foe: 'Son cœur de l’hiver gèle tout son terrain.' },
+  hours: { m: 'ours', n: 'Ossuaire', full: 'L’Ossuaire', col: '#f2b45a',
+    d: 'Le Grand Tambour : toutes les 6,5 s, tout ton terrain est étourdi 2 s ; celles qui sont près de lui reculent.',
+    foe: 'Son grand tambour étourdit tout son terrain.' },
+  hcorb: { m: 'griffon', n: 'Arbre aux corbeaux', full: 'L’Arbre aux corbeaux', col: '#7fc06c',
+    d: 'Ses essaims de corbeaux portent le poison n’importe où sur ton terrain ; le poison saute sur la voisine.',
+    foe: 'Ses corbeaux portent le poison partout sur son terrain.' },
+  hren: { m: 'renard', n: 'Tanière', full: 'La Tanière', col: '#d5a64c',
+    d: 'Toutes les 8 s, elle renvoie une créature (une seule vie, jamais un boss ni un volant) au rival qui l’a envoyée.',
+    foe: 'Sa tanière te renvoie tes propres créatures.' },
+};
+for (const k in HM_CHF) {
+  const c = HM_CHF[k]; CHF[k] = Object.assign({ fams: ['arcanes'], stats: { range: 2.0, dmg: 3, rate: 0.9, slowDur: 1.6 } }, c);
+  T['ch_' + k] = Object.assign({ n: c.n, cost: CHF_COST, tech: 'chef' }, CHF[k].stats);
+  TOWER_INFO['ch_' + k] = c.d; TYPES.push('ch_' + k); CHF_TYPES.push('ch_' + k);
+}
+TCODES.push('frost:3:maison', 'frost:4:maison', 'ch_hcerf:1', 'ch_hours:1', 'ch_hcorb:1', 'ch_hren:1');
+// the old masterpieces do not open for a House any more: its own comes from its tower
+{ const base = jtChefAvail; jtChefAvail = function (b) { return hmMaison(b) ? [] : base.apply(this, arguments); }; }
+{ const base = jtChefIcon; jtChefIcon = function (type) {
+    const cm = HMCT_M[type]; if (!cm) return base.apply(this, arguments);
+    const k = G ? pcol(G.me) : 0, tw = towerSprite(type, 1, hmEv(null, { type }), k);
+    return pxImg(spriteURL([[tw, 0, 0]], 36, 46, 6, 20), 36, 46, 'ico');
+}; }
+
+/* ---------------------------------------------------------------- the House tower in the panels and the bar */
+{ const base = evoOffer; evoOffer = function (k, i, type) { if (type === 'frost' && G && hmMaison(G.b[k])) return ['maison']; return base.apply(this, arguments); }; }
+function hmCrownTower(k, t) {
+  const b = G.b[k], mk = hmMaison(b);
+  if (!mk || !t || t.type !== 'frost' || t.lvl < 4) return 'x';
+  if (jtChefBuiltType(b)) return 'Un seul chef-d’œuvre par partie';
+  if (b.gold < CHF_COST) return "Pas assez d'or";
+  b.gold -= CHF_COST; t.spent += CHF_COST; t.type = HMCT[mk]; t.lvl = 1; t.evo = ''; t.cd = 0.3; t.hmT = t.hmT2 = t.hmS = 0; if (!G.quiet) t.born = G.t;
+  jtChefBuilt(b, t.type);
+  if (fxOn(k)) sfx('evolve');
+  return '';
+}
+{ const base = upgrade; upgrade = function (k, t, evo) { if (evo === 'crown') return hmCrownTower(k, t); return base.apply(this, arguments); }; }
+{ const base = jtBotChef; jtBotChef = function (k) {
+    const b = G.b[k]; if (!b || !b.bot || !b.jt) return false;
+    if (!hmMaison(b)) return base.apply(this, arguments);
+    if (jtChefBuiltType(b) || b.gold < CHF_COST + 10) return false;
+    const t = b.grid.find(t => t && t.type === 'frost' && t.lvl >= 4);
+    return !!t && hmCrownTower(k, t) === '';
+}; }
+{ const base = openPop; openPop = function (c, r) {
+    const res = base.apply(this, arguments), t = selTower(), me = G && G.b[G.me], mk = hmMaison(me);
+    if (!t || !mk || t.type !== 'frost') return res;
+    const p = $('pop'), st = stat(t, me), Hn = HM_NAME[mk], cost = upCost(t), sellBtn = `<button class="pact sell" type="button" data-act="x">Vendre<em>+${sellValue(t)}</em></button>`;
+    const head = `${Math.round(st.dmg)} dégâts · portée ${st.range.toFixed(1)}`, kills = auth() && t.kills ? ` · ${t.kills} éliminations` : '';
+    const up = t.lvl < 4 ? `<button class="pact" type="button" data-act="u" data-evo="${t.lvl === 2 ? 'maison' : ''}" data-cost="${cost}">${t.lvl === 1 ? 'Améliorer' : 'Niveau ' + (t.lvl + 1)}<em>${cost}</em></button>` : '';
+    const cc = CHF[HMCT[mk].slice(3)], can = t.lvl >= 4 && !jtChefBuiltType(me);
+    const crown = can ? `<button class="pact chef" type="button" data-act="u" data-evo="crown" data-cost="${CHF_COST}">Couronner<em>${CHF_COST}</em></button>` : '';
+    const keep = p.querySelector('.cs-pop');
+    p.innerHTML = `<div class="ttl"><b>${Hn.n} · niv. ${t.lvl}</b><span>${head}${kills}</span></div>` + (t.lvl >= 4 ? `<div class="evo-h">Maître · niveau 4</div>` : '') +
+      `<div class="info">${Hn.d}</div>` + (can ? `<div class="info"><b>${esc(cc.full)}</b> · ${esc(cc.d)}</div>` : '') + `<div class="acts">${up}${crown}${sellBtn}</div>`;
+    if (keep) p.querySelector('.ttl').after(keep);
+    placePop();
+    return res;
+}; }
+{ const base = towerIcon; towerIcon = function (type, k) {
+    const me = G && G.b && G.b[G.me], mk = hmMaison(me);
+    if (type !== 'frost' || !mk) return base.apply(this, arguments);
+    const ev = 'hm_' + HMH[mk], V = HM_V[HMH[mk]], [tx, ty] = towerTopAt(type, 1, ev);
+    const top = bakeAt(44, 44, 22, 30, (cx, by) => { if (V.htop) V.htop(P.x, 1, 1.57, 9, k, cx - tx, by - ty, tx, ty, 0, false); else blit(P.x, crystalSprite(1, ''), cx, by); });
+    return pxImg(spriteURL([[wallSprite(false, false, false, 0), 0, 0], [towerSprite(type, 1, ev, k), 0, 0], [top, tx, ty]], 30, 34, 3, 10), 30, 34, 'ico');
+}; }
+{ const base = newGame; newGame = function () {
+    const r = base.apply(this, arguments);
+    try { const mk = hmMaison(G.b[G.me]); T.frost.n = mk ? HM_NAME[mk].n : 'Givre'; TOWER_INFO.frost = mk ? HM_NAME[mk].d : TOWER_INFO.frost; buildIcons(); } catch (e) {}
+    return r;
+}; }
+
+/* ---------------------------------------------------------------- what the towers do: every board, the host's (or solo) for real, the guests' for the picture only */
+HM.REAL = true;
+const hmR = () => HM.R;
+// stats: the House tower and its masterpiece (a masterpiece is a level-4 House tower with its power)
+const hmL4 = (t, o) => { if (hmChef(t)) { o.range += 0.75; o.dmg *= Math.pow(1.6, 3); o.rate *= 0.85; } };
+HX.stats['hm_cerf'] = HX.stats['hmx_cerfFleche'] = (t, o) => { if (t.type !== 'frost' && !hmChef(t)) return; hmL4(t, o); const R = hmR(); o.dmg *= R.givre.dmg * R.givre.byLvl[hmL(t) - 1]; o.slowF = R.givre.slowF; };
+HX.stats['hm_corbV'] = (t, o) => { if (t.type !== 'frost') return; const R = hmR(), L = hmL(t); o.range = 2.6 + .2 * L; o.rate = R.chaud.rate; o.slowDur = 0; o.dmg *= R.chaud.dmg * R.chaud.byLvl[L - 1]; };
+HX.stats['hmx_corbArbreD'] = (t, o) => { hmL4(t, o); const R = hmR(); o.range = 99; o.rate = R.chaud.chefRate; o.dmg *= R.chaud.chefMul; o.slowDur = 0; };
+HX.stats['hm_oursA'] = HX.stats['hmx_oursOssuaire2'] = (t, o) => { if (t.type !== 'frost' && !hmChef(t)) return; const R = hmR().drum, L = hmL(t); o.range = 1.5 + .2 * L + (hmChef(t) ? .4 : 0); o.dmg = R.dmg * R.byLvl[L - 1]; };
+HX.stats['hm_renT'] = HX.stats['hmx_renTaniere'] = (t, o) => { if (t.type !== 'frost' && !hmChef(t)) return; const R = hmR().trap, L = hmL(t); o.range = 2.6 + .2 * L; o.dmg = R.base * R.byLvl[L - 1] * (hmChef(t) ? R.chefMul : 1); };
+// hits: the Cerf's frost bursts; the Corbeau's flask leaves a puddle, poisons, gnaws the big ones, hurts flyers more
+HX.hits['hm_cerf'] = HX.hits['hmx_cerfFleche'] = (b, p, cr) => { if (p.type !== 'frost' || !p.src) return; const rr = hmR().givre.burstByLvl[hmL(p.src) - 1]; for (const c of b.creeps) if (!c.dead && c !== cr && Math.hypot(c.x - cr.x, c.y - cr.y) < rr) slow(c, p.slowF || .5, (p.slowDur || 1.6) * .7); };
+const hmCorbHit = chef => (b, p, cr) => { if (p.type !== 'frost') return; const R = hmR().chaud;
+  if (cr.fly && !cr.dead) damage(b, cr, p.dmg * (R.flyMul - 1), p.src);
+  HM_V.corbV.hit(b, p, cr, chef); if (!cr.dead) cr.poison = { dps: p.dmg * R.poison, until: G.t + 3, src: p.src };
+  if (!cr.dead) damage(b, cr, cr.max * R.gnaw, p.src, true); };
+HX.hits['hm_corbV'] = hmCorbHit(false); HX.hits['hmx_corbArbreD'] = hmCorbHit(true);
+// le Tambour
+HM_V.oursA.hstep = function (b, t, chef) { const R = hmR().drum, L = hmL(t); t.cd = 1; if (t.hmT > G.t) return;
+  const range = 1.5 + .2 * L + (chef ? .4 : 0), list = inRange(b, t.c + .5, t.r + .5, range); if (!list.length) return;
+  t.hmT = G.t + (chef ? R.chefEvery : R.every); t.kick = G.t; b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .3, r1: range, t: .4, ttl: .4, color: '#efe6cf' });
+  if (!HM.REAL) return; const stun = R.stunByLvl[L - 1];
+  for (const cr of list) { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + stun); damage(b, cr, R.dmg * R.byLvl[L - 1] * (cr.fly ? (R.flyMul || 1) : 1), t); } };
+// le Terrier: throws a trap where the creature is going; the fox throws a pebble at flyers
+HM_V.renT.hstep = function (b, t, chef) { const R = hmR().trap, L = hmL(t); t.cd = 1;
+  if (!(t.hmT > G.t) && HX.traps.filter(q => q.k === b.k).length + HM.fly.filter(q => q.k === b.k).length < (chef ? R.chefMax : R.max)) {
+    const list = inRange(b, t.c + .5, t.r + .5, 2.6 + .2 * L).filter(c => !c.fly && c.tgt >= 0);
+    if (list.length) { const cr = list[0], c = cr.tgt % COLS, r = (cr.tgt / COLS) | 0;
+      if (!HX.traps.some(q => q.k === b.k && q.c === c && q.r === r) && !HM.fly.some(q => q.k === b.k && q.c === c && q.r === r)) {
+        t.hmT = G.t + (chef ? R.chefEvery : R.every); t.kick = G.t; t.ang = Math.atan2(r + .5 - t.r - .5, c + .5 - t.c - .5); HM.fly.push({ k: b.k, sx: t.c + .5, sy: t.r + .5, c, r, t0: G.t, dur: .45, src: t }); } } }
+  const S2 = hmR().sling; if (!S2.on || t.hmS > G.t) return; const fl = inRange(b, t.c + .5, t.r + .5, 2.6 + .2 * L).filter(c => c.fly); if (!fl.length) return;
+  t.hmS = G.t + S2.every; t.kick = G.t; t.ang = Math.atan2(fl[0].y - t.r - .5, fl[0].x - t.c - .5);
+  launch(b, t, { dmg: T.arrow.dmg * Math.pow(1.6, L - 1) * S2.mul, splash: 0, slowDur: 0, slowF: 1 }, fl[0], HM.REAL, t.c + .5, t.r + .5); };
+// the masterpieces' powers
+HM_V.cerf.chefStep = (b, t) => { if (t.hmT > G.t) return; const R = hmR().chef, d = R.cerfFreeze; t.hmT = G.t + (HM.DEMO ? 5 : R.cerf); t.kick = G.t;
+  b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .4, r1: 9, t: .9, ttl: .9, color: '#DFF6FF', fill: true });
+  if (!HM.REAL) return; for (const cr of b.creeps) if (!cr.dead && cr.y >= 0) { if (!cr.noStun) { cr.stunUntil = Math.max(cr.stunUntil, G.t + d); cr.iceUntil = G.t + d; } cr.brittleUntil = Math.max(cr.brittleUntil, G.t + d); }
+  G.floats.push({ k: b.k, x: t.c + .5, y: t.r - .9, txt: 'GEL', color: '#DFF6FF', t: 1, ttl: 1 }); };
+HM_V.oursA.chefStep = (b, t) => { if (t.hmT2 > G.t) return; const R = hmR().chef; t.hmT2 = G.t + (HM.DEMO ? 5 : R.ours); t.kick = G.t;
+  b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .4, r1: 9, t: .8, ttl: .8, color: '#f2b45a', fill: true }); if (b.k === G.me) G.shake = Math.max(G.shake || 0, 3);
+  if (!HM.REAL) return; for (const cr of b.creeps) if (!cr.dead && cr.y >= 0) { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + R.oursStun); if (Math.hypot(cr.x - t.c - .5, cr.y - t.r - .5) < 2.5) HX.push(b, cr, 2); }
+  G.floats.push({ k: b.k, x: t.c + .5, y: t.r - .9, txt: 'BOUM', color: '#f2b45a', t: 1, ttl: 1 }); };
+HM_V.renT.chefStep = (b, t) => { if (!HM.REAL || t.hmT2 > G.t) return;
+  const cr = b.creeps.filter(c => !c.dead && c.y >= 0 && c.from >= 0 && c.from !== b.k && !c.fly && c.lives <= 1 && !(S[c.kind] && S[c.kind].boss)).sort((a, c) => c.prog - a.prog)[0];
+  if (!cr) { t.hmT2 = G.t + .5; return; } t.hmT2 = G.t + (HM.DEMO ? 5 : hmR().chef.ren); t.kick = G.t;
+  b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: .9, t: .5, ttl: .5, color: C.gold, fill: true }); G.floats.push({ k: b.k, x: cr.x, y: cr.y - .5, txt: 'RENVOYÉ', color: C.gold, t: 1.1, ttl: 1.1 });
+  const to = G.b[cr.from]; if (to && to.alive) to.queue.push({ kind: cr.kind, from: b.k });
+  cr.dead = true; cr.hxGone = true; };
+// the step of every board
+HM.step = (b, dt, real) => {
+  const mk = hmMaison(b); HM.REAL = !!real;
+  try {
+    if (mk) { const V = HM_V[HMH[mk]];
+      for (const t of b.grid) { if (!t || t.stoneT > G.t || t.stunT > G.t) continue; const chef = hmChef(t); if (!chef && t.type !== 'frost') continue;
+        if (V.hstep) V.hstep(b, t, chef); if (chef && V.chefStep) V.chefStep(b, t); } }
+    for (const q of HM.fly) if (q.k === b.k && G.t >= q.t0 + q.dur) { q.done = true; HX.traps.push({ k: b.k, c: q.c, r: q.r, shut: 0, charges: HM.R.trap.catches, t1: G.t + HM.R.trap.life, src: q.src }); }
+    HM.fly = HM.fly.filter(q => !q.done);
+    if (real) for (const pd of HM.puddles) if (pd.k === b.k) for (const cr of b.creeps) if (!cr.dead && !cr.fly && Math.hypot(cr.x - pd.x, cr.y - pd.y) < pd.r) cr.poison = { dps: pd.dps, until: G.t + .5, src: pd.src };
+    HM.puddles = HM.puddles.filter(pd => pd.t1 > G.t);
+    // the traps of this board: up to three catches, each held a moment and worth 2 gold, then shut; gone after 10 s
+    const R = HM.R.trap;
+    HX.traps = HX.traps.filter(tr => tr.k !== b.k || (!(tr.shut <= G.t && (tr.charges <= 0 || tr.t1 < G.t)) && b.alive));
+    for (const tr of HX.traps) { if (tr.k !== b.k || tr.shut > G.t || tr.charges <= 0) continue;
+      const cr = b.creeps.find(c => !c.dead && !c.fly && Math.hypot(c.x - tr.c - .5, c.y - tr.r - .5) < 0.33); if (!cr) continue;
+      const L = tr.src ? hmL(tr.src) : 1, hold = R.holdByLvl[L - 1]; tr.charges--; tr.shut = G.t + hold;
+      b.rings.push({ x: tr.c + .5, y: tr.r + .5, r0: .1, r1: .6, t: .3, ttl: .3, color: C.gold });
+      if (!real) continue;
+      b.gold += R.gold; G.floats.push({ k: b.k, x: cr.x, y: cr.y - .5, txt: '+' + R.gold, color: C.gold, t: .9, ttl: .9 });
+      if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + hold);
+      damage(b, cr, R.base * R.byLvl[L - 1] * (tr.src && hmChef(tr.src) ? R.chefMul : 1), tr.src || null); }
+  } finally { HM.REAL = true; }
+};
+HX.step = (b, dt, real) => HM.step(b, dt, real);
+// the matter on the walls: the closest House tower's level, minus the distance (a masterpiece counts as 4)
+HM.wallAt = (b, c, r, L, R, U, v, k) => {
+  const mk = hmMaison(b); if (!mk) return wallSprite(L, R, U, v, k);
+  let m = 0;
+  for (let i = 0; i < b.grid.length; i++) { const t = b.grid[i]; if (!t || t.type === 'wall') continue; const ev = hmEv(b, t); if (!ev.startsWith('hm')) continue;
+    const d = Math.abs(i % COLS - c) + Math.abs(((i / COLS) | 0) - r), L4 = ev.startsWith('hmx_') ? 4 : t.lvl; m = Math.max(m, d === 0 ? L4 : L4 - d); }
+  return HM.wallSprite(HMH[mk], Math.min(3, m), L, R, U, v, k);
+};
+// the picture of traps, flying traps and puddles, on every board that is drawn
+{ const prev = window.__jtDrawHook; window.__jtDrawHook = function (o) {
+  if (prev) prev(o);
+  const { b, items, P, acell } = o;
+  for (const tr of HX.traps) { if (tr.k !== b.k) continue; const [cx, cy] = acell(tr.c, tr.r), shut = tr.shut > G.t;
+    items.push({ y: cy + 6, fx: () => { const X = cx + 12, Y = cy + 14;
+      if (shut) { P.hl(X - 3, Y, 7, K.i1); P.spr(['.i.i.i.', 'iIiIiIi'], { i: K.i1, I: K.i2 }, X - 3, Y - 2); }
+      else { if (tr.t1 - G.t < 1.5 && Math.floor(G.t * 8) % 2) return; P.hl(X - 5, Y, 11, K.i0); P.spr(['i.........i', 'iI.......Ii', '.iI.....Ii.', '..iiiaiii..'], { i: K.i1, I: K.i2, a: K.ua }, X - 5, Y - 3); }
+      for (let i = 0; i < tr.charges; i++) { P.px(X - 2 + i * 2, Y + 2, K.ua); P.px(X - 2 + i * 2, Y + 3, K.au0); } } }); }
+  for (const pd of HM.puddles) { if (pd.k !== b.k) continue; const X = AX0 + pd.x * CS, Y = AY0 + pd.y * CS, fade = Math.min(1, (pd.t1 - G.t) / .6), rr = pd.r * CS;
+    items.push({ y: Y - 12, fx: x => { const a0 = x.globalAlpha; x.globalAlpha = .55 * fade; P.ell(Math.round(X), Math.round(Y), Math.round(rr), Math.round(rr * .4), '#5f9a55'); x.globalAlpha = .7 * fade; P.ell(Math.round(X), Math.round(Y), Math.round(rr * .6), Math.round(rr * .25), '#7fc06c'); x.globalAlpha = a0;
+      for (let i = 0; i < 3; i++) { const u = (G.t * 1.2 + i * .37 + pd.x) % 1; if (u < .3) P.px(Math.round(X + (i - 1) * rr * .5), Math.round(Y - (u > .2 ? 1 : 0)), '#d6f5c0'); } } }); }
+  for (const q of HM.fly) { if (q.k !== b.k) continue; const u = Math.min(1, (G.t - q.t0) / q.dur), X = AX0 + (q.sx + (q.c + .5 - q.sx) * u) * CS, Y = AY0 + (q.sy + (q.r + .5 - q.sy) * u) * CS - Math.sin(u * Math.PI) * 18 - 4;
+    items.push({ y: Y + 40, fx: () => P.spr(['i.i', 'iai'], { i: K.i1, a: K.ua }, Math.round(X) - 1, Math.round(Y) - 1) }); }
+}; }
+/* ================================================================ /version 139 */
+// « Comment jouer », the page of the House and its towers
+{ const pg = TUTO.find(q => q.k === 'embleme');
+  if (pg) {
+    pg.p = "La statue de ta Maison frappe les créatures et renforce les tours voisines : construis autour d’elle. Ta Maison a sa tour : le Givre du Cerf, le Tambour de l’Ours, le Chaudron du Corbeau, le Terrier du Renard. L’Archer et le Canon choisissent leur forme au niveau 3. Au niveau 4, ta tour de Maison se couronne : c’est ton chef-d’œuvre, un seul par partie.";
+    pg.x = () => tsec('Au niveau 3', ['arc', 'poudre'].map(f => { const F = FAMS[f]; return `<div class="tvoie">${ICON[F.form]}<div><b>${esc(T[F.base].n)} → ${esc(T[F.form].n)}</b><span>ou ${esc(EVO[F.base][F.evo].n)} : ${esc(EVO[F.base][F.evo].d.charAt(0).toLowerCase() + EVO[F.base][F.evo].d.slice(1))}</span></div></div>`; }).join(''), 'tut-voies') +
+      tsec('Ta tour de Maison, au niveau 4', Object.keys(HM_CHF).map(k => `<div class="tvoie"><div><b>${esc(HM_NAME[HM_CHF[k].m].n)} → ${esc(HM_CHF[k].full)}</b><span>${esc(HM_CHF[k].d)}</span></div></div>`).join(''), 'tut-voies');
+  } }
 
 useTerrain(TERKEY);
 demo();
