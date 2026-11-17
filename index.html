@@ -6161,13 +6161,12 @@ Object.assign(HM_V, {
     pal: { hm: '#6b4a2e', w2: '#8a6440' }, body: {},
     shot: { a: '#efe6cf', b: '#f2b45a', tip: '#3a2e22', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#2a2c33', b: '#4a4e58' }, trail: '#f2b45a' },
     deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
-      hmClaw(cx - 8, base - 4, 3, 5, null);
-      if (lvl >= 2) hmBrazier(cx + w + 3, base);
+      hmBrazier(cx + w + 3, base);
       if (lvl >= 3) { P.spr(['bbb', 'kbk', '.b.'], { b: '#efe6cf', k: '#2a241f' }, cx - 1, base - 12); hmBrazier(cx - w - 4, base); }
       if (lvl >= 4) for (const d of [-1, 1]) { const x0 = cx + d * (w - 1), ty = y + R.top + 3; P.px(x0, ty, '#efe6cf'); P.px(x0 + d, ty - 1, '#efe6cf'); P.px(x0 + d, ty - 2, '#efe6cf'); P.px(x0 + 2 * d, ty - 3, '#efe6cf'); } },
-    wall(x, y, m) { if (m >= 2) hmClaw(x + 9, y + 21, 3, 4, null); if (m >= 3) hmBrazier(x + 18, y + 23); },
+    wall(x, y, m) { if (m >= 2) hmBrazier(x + 18, y + 23); if (m >= 3) hmBrazier(x + 6, y + 23); },
     live(lvl, type, X, Y, topL, id) { const w = towerW(type, lvl) / 2, t = G.t;
-      if (lvl >= 2) hmFlame(X + 12 + w + 3, Y + 20, t, false); if (lvl >= 3) hmFlame(X + 12 - w - 4, Y + 20, t + .3, false);
+      hmFlame(X + 12 + w + 3, Y + 20, t, false); if (lvl >= 3) hmFlame(X + 12 - w - 4, Y + 20, t + .3, false);
       if (lvl >= 2) hmEmbers(X, Y, [0, 0, 2, 4, 7][lvl], id, type === 'cannon' ? 10 : 14, topL + 2, 16); } },
   oursB: { n: 'B · Peau d’ours et feu', ramp: null, passOpts: null, givre: 'drum',
     pal: { hm: '#6b4a2e', w2: '#8a6440' }, body: {},
@@ -6354,12 +6353,13 @@ const hmRenBase = {
     t.hmT = G.t + (chef ? 1.4 : 2.4); t.kick = G.t; t.ang = Math.atan2(r + .5 - t.r - .5, c + .5 - t.c - .5); HM.fly.push({ k: b.k, sx: t.c + .5, sy: t.r + .5, c, r, t0: G.t, dur: .45, src: t }); },
   chefStep(b, t) { if (!(t.hmT2 > G.t)) { t.hmT2 = G.t + 6; const cr = b.creeps.filter(c => !c.dead && c.y >= 0 && c.from >= 0 && !c.fly && !(S[c.kind] && S[c.kind].boss)).sort((a, c) => c.prog - a.prog)[0]; if (cr) { t.kick = G.t; b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: .9, t: .5, ttl: .5, color: C.gold, fill: true }); for (let i = 0; i < 10; i++) { const a = Math.random() * 6.28; b.parts.push({ x: cr.x, y: cr.y, vx: Math.cos(a) * 2.2, vy: Math.sin(a) * 2.2 - 1, t: .5, ttl: .5, color: C.gold, size: .06 }); } G.floats.push({ k: b.k, x: cr.x, y: cr.y - .5, txt: 'RENVOYÉ', color: C.gold, t: 1.1, ttl: 1.1 }); cr.dead = true; cr.hxGone = true; } } },
 };
+const hmCoinStack = (x, by, n) => { for (let j = 0; j < n; j++) { P.hl(x, by - 1 - j, 3, j % 2 ? '#b8893a' : '#d5a64c'); P.px(x + 1, by - 1 - j, j === n - 1 ? '#fff6d8' : '#f6dc8a'); } };
 const hmLoot = (x, y, lvl, type, R) => { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
-  hmGoldPile(cx + w + 1, base, lvl >= 3 ? 9 : lvl >= 2 ? 7 : 5); hmCoin(cx + w + 8, base - 1); if (lvl === 1) hmCoin(cx - w - 3, base - 1);
-  if (lvl >= 2) { P.spr(['.tt.', 'sSSs', 'sSSs', 'ssss'], { t: '#7a6a4e', s: '#a8916a', S: '#cbb27c' }, cx - w - 6, base - 4); hmGoldPile(cx - w - 3, base, 3); }
-  if (lvl >= 3) { P.rect(cx - w - 7, base - 10, 6, 2, '#5e4128'); P.rect(cx - w - 7, base - 8, 6, 4, '#7a5b3c'); P.hl(cx - w - 7, base - 8, 6, '#d5a64c'); P.px(cx - w - 6, base - 9, '#f6dc8a'); P.px(cx - w - 4, base - 9, '#d5a64c'); P.vl(cx - w - 4, base - 7, 3, '#b8893a'); }
-  if (lvl >= 4) { P.spr(['a.a.a', 'aaaaa', '.aAa.'], { a: '#d5a64c', A: '#f6dc8a' }, cx + w + 2, base - 7); P.spr(['ccc', '.c.', 'ccc'], { c: '#b8893a' }, cx + w + 6, base - 4); } };
-HM.lootSpots = (type, lvl) => { const w = towerW(type, lvl) / 2, s = [[w + 4, -2], [w + 2, -1]]; if (lvl >= 2) s.push([-w - 2, -1], [w + 6, -1]); if (lvl >= 3) s.push([-w - 5, -9], [w + 3, -3]); if (lvl >= 4) s.push([w + 4, -7], [w + 2, -6]); return s; };
+  hmGoldPile(cx + w + 1, base, lvl >= 3 ? 9 : lvl >= 2 ? 7 : 5); hmCoin(cx + w + 9, base - 1);
+  if (lvl >= 2) { hmGoldPile(cx - w - 6, base, lvl >= 4 ? 7 : 5); hmCoin(cx - w - 8, base - 1); }
+  if (lvl >= 3) { hmCoinStack(cx + w + 9, base - 1, 3); hmCoinStack(cx - w - 9, base, 2); }
+  if (lvl >= 4) { hmCoinStack(cx + w + 5, base - 4, 3); hmCoin(cx - w - 2, base - 1); hmCoin(cx + w + 12, base - 1); } };
+HM.lootSpots = (type, lvl) => { const w = towerW(type, lvl) / 2, s = [[w + 4, -2], [w + 2, -1], [w + 6, -3]]; if (lvl >= 2) s.push([-w - 4, -2], [-w - 6, -1]); if (lvl >= 3) s.push([w + 10, -4], [-w - 8, -2]); if (lvl >= 4) s.push([w + 6, -7], [w + 3, -4]); return s; };
 HM_V.renT = Object.assign({}, hmRenBase, { n: 'Le butin',
   deco: hmLoot,
   wall(x, y, m) { if (m >= 2) { hmCoin(x + 6, y + 22); hmCoin(x + 15, y + 22); } if (m >= 3) hmGoldPile(x + 9, y + 23, 5); },
@@ -6534,6 +6534,7 @@ HM.top = (ctx, h, type, lvl, ang, kick, k, X, Y, topL, id, tx, ty, chef) => {
   try { hmOver(Object.assign({}, V.pal, V.crystal || {}), () => {
     if (type === 'frost' && V.htop) V.htop(ctx, lvl, ang, kick, k, X, Y, tx, ty, id, !!chef);
     else if (type === 'arrow') blit(ctx, archerSprite(k, Math.cos(ang) < -0.15, kick < 0.16, HM.form === 'double', HM.form === 'sniper'), X + tx, Y + ty);
+    else if (type === 'ballista') { blit(ctx, crossbowSprite(hxD16(ang), lvl, kick < 0.15), X + tx, Y + ty); if (V.balli) V.balli(lvl, X + tx, Y + ty, id, kick); }
     else if (type === 'cannon') { blit(ctx, barrelSprite(hxD16(ang), HM.form || '', kick < 0.12), X + tx, Y + ty); if (kick < 0.09) { const mx = Math.round(X + tx + Math.cos(ang) * 10), my = Math.round(Y + ty + Math.sin(ang) * 8); P.spr(['.a.a.', 'abcba', '.ccc.', 'abcba', '.a.a.'], { a: V.shot.trail, b: V.shot.a, c: '#ffffff' }, mx - 2, my - 2); } }
     else if (V.givreSpr) blit(ctx, sprGet(`hmg${h}${lvl}${+(kick < 0.14)}${k}`, () => V.givreSpr(k)(lvl, kick < 0.14)), X + tx, Y + ty + (Math.sin(G.t * 2.2 + id) > 0.3 ? -1 : 0));
     else blit(ctx, crystalSprite(lvl, ''), X + tx, Y + ty + (Math.sin(G.t * 2.2 + id) > 0.3 ? -1 : 0));
@@ -6545,6 +6546,8 @@ HM.top = (ctx, h, type, lvl, ang, kick, k, X, Y, topL, id, tx, ty, chef) => {
 HM.shot = (x, h, p, px, py, chef) => {
   const S = HM_V[h].shot;
   if (p.type === 'frost' && HM_V[h].flask) return HM.flaskShot(x, p, px, py, chef);
+  if (p.type === 'ballista') { const ux = p.ux, uy = p.uy, ex = px, ey = py - 9; x.globalAlpha = .45; P.line(ex - ux * 18, ey - uy * 18, ex - ux * 11, ey - uy * 11, S.trail); x.globalAlpha = 1;
+    P.line(ex - ux * 10, ey - uy * 10 + 1, ex + ux, ey + uy + 1, K.dk2); P.line(ex - ux * 10, ey - uy * 10, ex, ey, S.a); P.px(Math.round(ex), Math.round(ey), S.b); P.px(Math.round(ex + ux), Math.round(ey + uy), S.b); P.px(Math.round(ex - ux * 10 - uy), Math.round(ey - uy * 10 + ux), S.b); P.px(Math.round(ex - ux * 10 + uy), Math.round(ey - uy * 10 - ux), S.b); return true; }
   if (p.type === 'cannon') {
     const lift = hh => hh * CS + 6;
     for (let k = 1; k <= 3; k++) { const u = Math.max(0, Math.min(1, (p.t - k * .05) / p.dur)); if (u <= 0) break; const sx = AX0 + (p.sx + (p.tx - p.sx) * u) * CS, sy = AY0 + (p.sy + (p.ty - p.sy) * u) * CS - lift(Math.sin(u * Math.PI) * .6); x.globalAlpha = .6 - k * .13; P.rect(Math.round(sx) - 1, Math.round(sy) - 1, 3 - (k > 2 ? 1 : 0), 3 - (k > 2 ? 1 : 0), S.trail); x.globalAlpha = 1; }
@@ -7072,6 +7075,23 @@ HM.R.chaud.byLvl = [1.1, 1.2, .95, .85];
 HM.R.chaud.byLvl = [.8, 1.05, .95, .85];
 /* 23 h: last nudge after the reproducible run */
 HM.R.chaud.byLvl = [.85, 1.12, 1.01, .9]; HM.R.drum.byLvl = [1.44, 1.66, 1.77, 2.87]; HM.R.chef.ours = 6.5; HM.R.chaud.chefMul = 1.32;
+
+/* ---- 18/11: la Baliste garde sa tête qui pivote ; la Maison y pose ses petits détails, et colore son carreau ---- */
+HM_V.cerf.balli = (lvl, cx, cy, id, kick) => { const n = lvl >= 4 ? 5 : 3;
+  for (let i = 0; i < n; i++) { const dx = -8 + Math.round(i * 16 / (n - 1)), L = 2 + ((i + lvl) % 2) + (lvl >= 4 ? 1 : 0); for (let j = 0; j < L; j++) P.px(cx + dx, cy + 6 + j, j === L - 1 ? '#ffffff' : j ? '#a5d0de' : '#cbe8f0'); }
+  for (const dx of [-7, -3, 3, 7]) P.px(cx + dx, cy - 7, '#ffffff');
+  if (lvl >= 4) { const u = (G.t * .5 + id * .3) % 1; if (u < .15) hmGlint(cx + 6, cy - 7, u / .15, false); } };
+HM_V.oursA.balli = (lvl, cx, cy, id, kick) => {
+  for (const d of [-1, 1]) { const x0 = cx + d * 10; P.px(x0, cy - 2, '#efe6cf'); P.px(x0 + d, cy - 3, '#efe6cf'); P.px(x0 + d, cy - 4, '#e6dcc6'); if (lvl >= 4) { P.px(x0 + 2 * d, cy - 5, '#efe6cf'); P.px(x0 + 2 * d, cy - 6, '#ffffff'); } }
+  if (lvl >= 4) P.spr(['.www.', 'wkwkw', '.www.'], { w: '#efe6cf', k: '#2a241f' }, cx - 2, cy + 4);
+  hmEmbers(cx - 12, cy + 23 - 23, lvl >= 4 ? 5 : 3, id, 16, -6, 14); };
+HM_V.corbV.balli = (lvl, cx, cy, id, kick) => { const t = G.t, up = (t * 1.1 + id) % 4 < .25 || kick < .2;
+  hmCrow(cx + 8, cy - 6, true, up); if (lvl >= 4) hmCrow(cx - 8, cy - 6, false, (t * 1.3 + id) % 5 < .25);
+  for (const [dx, L] of [[-6, 2 + (lvl >= 4 ? 2 : 0)], [5, 3]]) { for (let j = 0; j < L; j++) P.px(cx + dx, cy + 5 + j, j === 0 ? '#7fc06c' : '#5f9a55'); P.px(cx + dx, cy + 5 + L, '#7fc06c'); }
+  const u = (t * .7 + id) % 1; if (u > .5) P.px(cx - 6, cy + 9 + (u - .5) * 16, '#7fc06c'); };
+HM_V.renT.balli = (lvl, cx, cy, id, kick) => { const t = G.t;
+  hmGoldPile(cx + 9, cy + 9, lvl >= 4 ? 5 : 3); hmCoin(cx - 11, cy + 8); if (lvl >= 4) P.spr(['a.a.a', 'aaaaa'], { a: '#d5a64c' }, cx - 2, cy - 9);
+  for (let i = 0; i < 2; i++) { const cyc = t * .6 + i * .5 + id, kq = Math.floor(cyc), u = (cyc - kq) / .25; if (u < 1) hmGlint(cx + (phash(i, kq, 3) < .5 ? -7 : 7), cy - 7, u, false, '#fff6d8', '#f6dc8a'); } };
 
 /* ---------------------------------------------------------------- creatures */
 function creepColors(from) { return from >= 0 ? [PCOL[from] || NEUTRAL[0], PDARK[from] || NEUTRAL[1]] : NEUTRAL; }
@@ -28783,6 +28803,7 @@ function hmEv(b, t) {
   const h = HMH[mk];
   if (t.type === 'frost') return 'hm_' + h;
   if (t.type === 'arrow' || t.type === 'cannon') return t.evo ? hmForm(h, t.evo) : 'hm_' + h;
+  if (t.type === 'ballista') return 'hm_' + h;
   return t.evo || '';
 }
 // the matter over a tower that has taken a form at level 3 (Tir double, Mortier…): the same matter, the form's own body and top
@@ -28976,6 +28997,42 @@ HM.wallAt = (b, c, r, L, R, U, v, k) => {
   if (pg) {
     pg.p = "La statue de ta Maison frappe les créatures et renforce les tours voisines : construis autour d’elle. Ta Maison a sa tour : le Givre du Cerf, le Tambour de l’Ours, le Chaudron du Corbeau, le Terrier du Renard. L’Archer et le Canon choisissent leur forme au niveau 3. Au niveau 4, ta tour de Maison se couronne : c’est ton chef-d’œuvre, un seul par partie.";
     pg.x = () => tsec('Au niveau 3', ['arc', 'poudre'].map(f => { const F = FAMS[f]; return `<div class="tvoie">${ICON[F.form]}<div><b>${esc(T[F.base].n)} → ${esc(T[F.form].n)}</b><span>ou ${esc(EVO[F.base][F.evo].n)} : ${esc(EVO[F.base][F.evo].d.charAt(0).toLowerCase() + EVO[F.base][F.evo].d.slice(1))}</span></div></div>`; }).join(''), 'tut-voies') +
+      tsec('Ta tour de Maison, au niveau 4', Object.keys(HM_CHF).map(k => `<div class="tvoie"><div><b>${esc(HM_NAME[HM_CHF[k].m].n)} → ${esc(HM_CHF[k].full)}</b><span>${esc(HM_CHF[k].d)}</span></div></div>`).join(''), 'tut-voies');
+  } }
+
+/* ================================================================ version 140 · les formes du niveau 3 au même prix (Patrick, 17/11, 23 h 23–23 h 37)
+   « Pour le bombardier, je pense qu'on peut l'enlever, c'était trop identique. Par contre, j'aimais bien l'idée de la baliste. »
+   Line Towers only: the Archer becomes a Baliste or takes the Tir double, at the same price (the Baliste costs what the Archer costs,
+   its damage is set by HM.F.bal); the Canon no longer becomes a Bombarde: Mortier or Gros calibre, at the same price. The other modes
+   keep their Baliste and their Bombarde. */
+// set on the test bench (17/11): at the same price the Baliste holds what the Tir double holds (mixed waves, ±3 %), stronger on the
+// armoured, weaker on the fast and the flying; the Mortier gets 7 % more damage to hold what the Gros calibre holds
+HM.F = { bal: { cost: 12, dmg: 9, rate: 1.7, range: 3.2 }, mortar: 1.07 };
+const HM_BAL0 = { cost: T.ballista.cost, dmg: T.ballista.dmg, rate: T.ballista.rate, range: T.ballista.range };
+const HM_JT_CANNON = JT_FORMS.cannon;
+function hmForms(jt) {
+  Object.assign(T.ballista, jt ? HM.F.bal : HM_BAL0);
+  if (jt) delete JT_FORMS.cannon; else JT_FORMS.cannon = HM_JT_CANNON;
+}
+{ const base = evoOffer; evoOffer = function (k, i, type) { if (type === 'cannon' && G && G.b && G.b[k] && G.b[k].jt) return ['mortar', 'heavy']; return base.apply(this, arguments); }; }
+{ const base = jtStat; jtStat = function (t, b, o) { base.apply(this, arguments); if (t.type === 'cannon' && t.evo === 'mortar') o.dmg *= HM.F.mortar; }; }
+// the Canon's panel at level 2: its two forms, side by side, at the price of the next level
+{ const base = jtEvoPop; jtEvoPop = function (t, name, head, sellBtn) {
+    if (JT_FORMS[t.type] || !EVO[t.type]) return base.apply(this, arguments);
+    const ec = upCost(t), ev = evoOffer(G.me, idx(t.c, t.r), t.type);
+    const btn = key => `<button class="evo jt-form" type="button" data-act="u" data-evo="${key}" data-cost="${ec}">${ICON[t.type]}<b>${EVO[t.type][key].n}</b><span>${EVO[t.type][key].d}</span><em>${ec}</em></button>`;
+    return `<div class="ttl"><b>${name} · niv. 2</b><span>${head}</span></div><div class="evo-h">Niveau 3 : choisis sa forme</div><div class="evos">` + ev.map(btn).join('') + `</div><div class="acts">${sellBtn}</div>`;
+}; }
+const hmJt = () => !!(G && G.b && G.b.some(b => b && b.jt));
+{ const base = newGame; newGame = function () { const r = base.apply(this, arguments); try { hmForms(hmJt()); buildIcons(); } catch (e) {} return r; }; }
+{ const base = jtApplySnap; jtApplySnap = function () { const r = base.apply(this, arguments); try { hmForms(true); } catch (e) {} return r; }; }
+// « Comment jouer »: the Archer's two forms, the Canon's two
+{ const pg = TUTO.find(q => q.k === 'embleme');
+  if (pg) {
+    const low = s => s.charAt(0).toLowerCase() + s.slice(1);
+    pg.x = () => tsec('Au niveau 3, deux formes au même prix',
+      `<div class="tvoie">${ICON.ballista}<div><b>Archer → Baliste</b><span>ou Tir double : ${esc(low(EVO.arrow.double.d))}</span></div></div>` +
+      `<div class="tvoie">${ICON.cannon}<div><b>Canon → Mortier</b><span>ou Gros calibre : ${esc(low(EVO.cannon.heavy.d))}</span></div></div>`, 'tut-voies') +
       tsec('Ta tour de Maison, au niveau 4', Object.keys(HM_CHF).map(k => `<div class="tvoie"><div><b>${esc(HM_NAME[HM_CHF[k].m].n)} → ${esc(HM_CHF[k].full)}</b><span>${esc(HM_CHF[k].d)}</span></div></div>`).join(''), 'tut-voies');
   } }
 
