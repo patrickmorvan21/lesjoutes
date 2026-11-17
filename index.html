@@ -2165,6 +2165,11 @@ html body .st-ban .chev{width:12px!important;height:20px!important;margin-top:-1
 .fi133 .fi-ask{margin:0 0 8px;text-align:center;font:500 14px/1.3 var(--f);color:#aab9bd}
 .fi133 .fi-yn{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 </style>
+<style id="df135">/* v135 (17/11): « Défi du jour » as tall as « Histoire », no crown on the records */
+html body #defiBtn.df-card.df-card.df-card{height:92px!important}
+@media (max-height:700px){html body #defiBtn.df-card.df-card.df-card{height:76px!important}}
+.rk-cr{display:none!important}
+</style>
 <style id="md126">
 /* version 126 (16/11, Patrick 18 h 20, planches 13 to 17): the screen of the modes in banners: each mode on its pixel picture (made with Higgsfield,
    brought to big pixels), its logo centred above the line, one short line, « Solo » over the players, right; « Rejoindre une table » at the
@@ -19283,7 +19288,7 @@ const RK_BACK = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" ari
 (() => {
   const ov = $('startOv'); if (!ov || $('records')) return;
   const d = document.createElement('div'); d.className = 'sp rk'; d.id = 'records'; d.dataset.p = 'records'; d.hidden = true;
-  d.innerHTML = `<div class="sp-col"><div class="tb-head"><button class="back" id="rkBack" type="button" aria-label="Retour">${RK_BACK}</button><h2 class="ds tb-title rk-ttl">${rkCrown(3)}Records</h2><span></span></div>` +
+  d.innerHTML = `<div class="sp-col"><div class="tb-head"><button class="back" id="rkBack" type="button" aria-label="Retour">${RK_BACK}</button><h2 class="ds tb-title rk-ttl">Records</h2><span></span></div>` +
     `<div class="rk-tabs" id="rkTabs" role="tablist" aria-label="Mode">${Object.keys(RK_MODE).map(m => `<button type="button" role="tab" data-m="${m}" aria-selected="false">${RK_MODE[m]}</button>`).join('')}</div>` +
     `<div class="rk-maps" id="rkMaps" role="radiogroup" aria-label="Carte">${GEM_MAPS.map(m => `<button class="sg" type="button" data-map="${m.id}" aria-pressed="false">${esc(m.n)}</button>`).join('')}</div>` +
     `<div class="rk-maps" id="rkFarms" role="radiogroup" aria-label="Ferme">${FARM_MAPS.map(m => `<button class="sg" type="button" data-fmap="${m.id}" aria-pressed="false">${esc(m.n)}</button>`).join('')}</div>` +
@@ -19296,7 +19301,7 @@ const RK_BACK = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" ari
 })();
 const rkLine = (o, rank) => `<div class="rk-r r${rank}${o.me ? ' me' : ''}" role="listitem"><span class="n">${rank}</span><span class="av" style="--pc:${PCOL[o.c] || PCOL[0]}">${rkCv(o, 's')}</span>` +
   `<span class="nm"><b><span class="rk-nm">${esc(o.n)}</span>${o.me ? '<i class="rk-tag">toi</i>' : ''}</b>${o.w ? `<small>vague ${o.w}</small>` : ''}</span><span class="sc">${profNum(o.s)}</span></div>`;
-const rkPlate = o => `<div class="rk-top${o.me ? ' me' : ''}" role="listitem"><span class="hav" style="--pc:${PCOL[o.c] || PCOL[0]}">${rkCv(o, 'b')}<i class="rk-cr">${rkCrown(3)}</i></span>` +
+const rkPlate = o => `<div class="rk-top${o.me ? ' me' : ''}" role="listitem"><span class="hav" style="--pc:${PCOL[o.c] || PCOL[0]}">${rkCv(o, 'b')}</span>` +
   `<span class="nm"><span class="cp">Record${o.me ? '<i class="rk-tag">toi</i>' : ''}</span><b><span class="rk-nm">${esc(o.n)}</span></b>${o.w ? `<small>vague ${o.w}</small>` : ''}</span><span class="sc">${profNum(o.s)}</span></div>`;
 function rkNote() {
   const n = $('rkNote'); if (!n) return;
@@ -20674,7 +20679,7 @@ function dfCard() {
   dfSync(); const D = dfOf(DFS.day), list = dfList(D.day), top = list[0];
   const bg = $('dfCardBg'), pic = dfPic(D);
   if (bg.dataset.k !== D.mode + D.map) { bg.dataset.k = D.mode + D.map; bg.style.backgroundImage = pic ? `url("${pic}")` : ''; }
-  $('dfCardW').innerHTML = top ? `${rkCrown(2)}<span class="n">${esc(top.n)}</span><b>${profNum(top.s)}</b>` : '';   // version 125: no « À toi de jouer », the title is enough
+  $('dfCardW').innerHTML = top ? `<span class="n">${esc(top.n)}</span><b>${profNum(top.s)}</b>` : '';   // version 125: no « À toi de jouer », the title is enough
   b.classList.toggle('done', DFS.used >= DF_TRIES);
   b.setAttribute('aria-label', `Défi du jour, ${DF_MODE_N[D.mode]}, ${dfMapN(D.mode, D.map)}, ${dfCtOf(D).n}${top ? `. En tête : ${top.n}, ${profNum(top.s)}` : ''}`);
 }
