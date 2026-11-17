@@ -3072,9 +3072,10 @@ function stat(t, b) {
   const o = { range, dmg, rate, splash, slowDur, slowF }; if (b && b.jt) jtStat(t, b, o); { const hs = HX.stats[hmEv(b || (G && G.b && G.b[G.me]), t)]; if (hs) hs(t, o); } return o;
 }
 const convertCost = type => T[type].cost - (T[type].tech === 'chef' ? 0 : T.wall.cost);
-const upCost = t => Math.round(T[t.type].cost * 0.8 * t.lvl);
+var UPK = null; // Line Towers: the price of each level (version 141)
+const upCost = t => Math.round(T[t.type].cost * (UPK ? UPK[t.lvl] : 0.8 * t.lvl));
 const sellValue = t => Math.floor(t.spent * 0.6);
-function spentFor(type, lvl) { if (type === 'wall') return 4; let s = T[type].cost; for (let l = 1; l < lvl; l++) s += Math.round(T[type].cost * 0.8 * l); return s; }
+function spentFor(type, lvl) { if (type === 'wall') return 4; let s = T[type].cost; for (let l = 1; l < lvl; l++) s += Math.round(T[type].cost * (UPK ? UPK[l] : 0.8 * l)); return s; }
 function build(k, type, c, r) {
   const b = G.b[k], free = type !== 'wall' && !isChef(type) && b.free > 0, cost = free ? 0 : jtCost(b, type);
   if (!canUse(b, type)) return jtChefNo(b, type);
@@ -29010,7 +29011,10 @@ HM.wallAt = (b, c, r, L, R, U, v, k) => {
 HM.F = { bal: { cost: 12, dmg: 9, rate: 1.7, range: 3.2 }, mortar: 1.07 };
 const HM_BAL0 = { cost: T.ballista.cost, dmg: T.ballista.dmg, rate: T.ballista.rate, range: T.ballista.range };
 const HM_JT_CANNON = JT_FORMS.cannon;
+// version 141 (Patrick, 18/11, 0 h 06): the last levels cost more, so a board cannot max everything (index = level now); quick game, 5 min: 3 to 14 towers at level 4 per bot instead of 24-25
+HM.F.up = [0, 1, 3, 12];
 function hmForms(jt) {
+  UPK = jt ? HM.F.up : null;
   Object.assign(T.ballista, jt ? HM.F.bal : HM_BAL0);
   if (jt) delete JT_FORMS.cannon; else JT_FORMS.cannon = HM_JT_CANNON;
 }
