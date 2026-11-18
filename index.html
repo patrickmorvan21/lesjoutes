@@ -29091,6 +29091,1345 @@ const hmJt = () => !!(G && G.b && G.b.some(b => b && b.jt));
       tsec('Ta tour de Maison, au niveau 4', Object.keys(HM_CHF).map(k => `<div class="tvoie"><div><b>${esc(HM_NAME[HM_CHF[k].m].n)} → ${esc(HM_CHF[k].full)}</b><span>${esc(HM_CHF[k].d)}</span></div></div>`).join(''), 'tut-voies');
   } }
 
+(() => {
+/* ================================================================ version 145 · les dessins du niveau 5 (prototypes de la planche) */
+
+/* ---- hm10.js (planche du 18/11) ---- */
+/* ===== niveau 5 : prototypes (planche 18/11). Tout est dessiné avec le pinceau du jeu, par-dessus la tour de niveau 4 de la forme. ===== */
+const H5 = {};
+window.H5 = H5;
+const H5EL = { cerf: { a: '#bfe6f2', b: '#6fb4d6', c: '#ffffff' }, oursA: { a: '#f3c48a', b: '#d9822b', c: '#fff1c9' }, corbV: { a: '#7fc06c', b: '#3f8a3a', c: '#d9f5b8' }, renT: { a: '#e8c15a', b: '#c9783f', c: '#fff3cf' } };
+const SPR = (rows, map, x, y, flip) => P.spr(rows, map, x, y, flip);
+const ln = (x0, y0, x1, y1, c) => P.line(x0, y0, x1, y1, c);
+const dot = (x, y, c) => P.px(Math.round(x), Math.round(y), c);
+/* ---- corps (décor posé sur la tour de niveau 4) : cx = milieu, base = pied, top = haut du fût ---- */
+H5.deco = {};
+H5.top = {};
+// ARCHER · TIR DOUBLE → PLUIE DE FLÈCHES : un râtelier de flèches en éventail, des flèches plantées dans les créneaux, un carquois géant au pied
+H5.deco.pluie = (cx, base, top, el, own) => {
+  P.rect(cx + 6, base - 9, 5, 8, K.w1); P.vl(cx + 6, base - 9, 8, K.w0); P.hl(cx + 6, base - 9, 5, K.w2); P.hl(cx + 6, base - 3, 5, K.i1);
+  for (let i = 0; i < 4; i++) { P.vl(cx + 6 + i + (i > 1 ? 0 : 0), base - 14 - (i % 2), 5 + (i % 2), K.w2); dot(cx + 6 + i, base - 15 - (i % 2), el.a); }
+  for (let i = 0; i < 6; i++) { const x = cx - 10 + i * 4; P.vl(x, top - 6 - (i % 3), 4 + (i % 3), K.w2); dot(x, top - 7 - (i % 3), el.a); dot(x - 1, top - 3, '#efe6cf'); dot(x + 1, top - 3, '#efe6cf'); }
+  for (let i = 0; i < 5; i++) { const x = cx - 9 + i * 4 + (i % 2); ln(x, top + 8 + i * 3 - 12, x - 2, top + 12 + i * 3 - 12, el.a); }
+  P.rect(cx - 11, base - 8, 3, 6, el.b); P.hl(cx - 11, base - 8, 3, el.a); P.px(cx - 10, base - 5, el.c);
+};
+H5.top.pluie = (px, py, el, own, ang, kk) => {
+  // un grand râtelier incliné : cinq flèches en éventail, deux archers sur les côtés
+  P.rect(px - 7, py - 2, 14, 3, K.w1); P.hl(px - 7, py - 2, 14, K.w2); P.hl(px - 7, py + 1, 14, K.w0);
+  for (let i = -2; i <= 2; i++) { const bx = px + i * 3, tx = px + i * 5, ty = py - 18 + Math.abs(i) * 2; ln(bx, py - 2, tx, ty, K.w2); ln(bx + 1, py - 2, tx + 1, ty, K.w1); dot(tx, ty - 1, el.c); dot(tx - 1, ty, el.a); dot(tx + 1, ty, el.a); dot(tx, ty + 1, el.a); const fx = bx; dot(fx - 1, py - 3, '#efe6cf'); dot(fx + 2, py - 3, '#efe6cf'); }
+  for (const s of [-1, 1]) SPR(['.hh.', 'hssh', 'bBBb', '.BB.'], { h: K.hm, s: K.sk, b: own[0], B: own[1] }, px + s * 10 - 2, py - 4, s < 0);
+  if (kk) for (let i = 0; i < 6; i++) dot(px - 12 + i * 5, py - 22 + (i % 2) * 3, el.c);
+};
+// ARCHER · TIR DOUBLE → TIREUR D'ÉLITE : un seul archer encapuchonné, un arc très long, une lunette ; une cible et une fente éclairée sur le fût
+H5.deco.elite = (cx, base, top, el, own) => {
+  P.rect(cx - 2, base - 16, 4, 7, K.dk); P.vl(cx - 2, base - 16, 7, K.dk2); P.hl(cx - 2, base - 17, 4, K.s5);
+  P.rect(cx - 1, base - 15, 2, 5, el.a); dot(cx - 1, base - 15, el.c);
+  const ty = base - 28; SPR(['..aaa..', '.aabaa.', 'aabcbaa', '.aabaa.', '..aaa..'], { a: K.i1, b: K.i0, c: '#d9322b' }, cx - 3, ty - 3);
+  P.hl(cx - 9, ty, 5, el.b); P.hl(cx + 4, ty, 5, el.b); P.vl(cx, ty - 7, 5, el.b); P.vl(cx, ty + 3, 5, el.b);
+  for (const s of [-1, 1]) { P.vl(cx + s * 9, base - 12, 6, K.w2); dot(cx + s * 9, base - 13, el.a); }
+};
+H5.top.elite = (px, py, el, own, ang, kk) => {
+  const dx = Math.cos(ang) < -0.15 ? -1 : 1;
+  P.rect(px - 6, py - 1, 12, 3, K.w1); P.hl(px - 6, py - 1, 12, K.w2); P.hl(px - 6, py + 1, 12, K.w0);
+  SPR(['..hhhh..', '.hhhhhh.', '.hhssSh.', '..hSssh.', '.bbbBBbb', '.bbBBBBb', '..BBBBB.'], { h: K.dk2, s: K.sk, S: '#1b1612', b: own[0], B: own[1] }, px - 4, py - 10, dx < 0);
+  const bx = px + dx * 7;
+  P.vl(bx, py - 22, 22, K.w2); P.vl(bx + dx, py - 20, 18, K.w1); dot(bx - dx, py - 22, K.w2); dot(bx - dx, py - 1, K.w2);
+  ln(bx - dx * 2, py - 20, bx - dx * 2, py - 3, '#efe6cf');
+  P.hl(dx > 0 ? px - 3 : px - 10, py - 8, 10, K.i1); P.hl(dx > 0 ? px - 3 : px - 10, py - 9, 10, K.i2);
+  const lx = dx > 0 ? px + 4 : px - 9; P.rect(lx, py - 12, 6, 3, K.i0); P.rect(lx + (dx > 0 ? 4 : 0), py - 13, 2, 5, K.i1); dot(lx + (dx > 0 ? 5 : 0), py - 11, '#ff4a3a'); dot(lx + (dx > 0 ? 5 : 0), py - 12, '#ffffff');
+  P.hl(px - 8, py - 8, 3, el.a); 
+  if (kk) { P.hl(px + dx * 8, py - 8, 12, el.c); P.hl(px + dx * 8, py - 7, 12, el.a); dot(px + dx * 21, py - 8, '#ffffff'); }
+};
+// BALISTE → BALISTE LOURDE : une machine de siège, arcs en fer, énorme carreau, roues
+H5.deco.lourde = (cx, base, top, el, own) => {
+  for (const s of [-1, 1]) { const wx = cx + s * 8; P.rect(wx - 3, base - 6, 6, 6, K.w0); P.rect(wx - 2, base - 5, 4, 4, K.w2); dot(wx, base - 3, K.i0); P.vl(wx, base - 6, 6, K.w0); P.hl(wx - 3, base - 3, 6, K.w0); }
+  for (let i = 0; i < 4; i++) { P.hl(cx - 10, top + 4 + i * 6, 20, K.i1); dot(cx - 9, top + 4 + i * 6, K.i0); dot(cx + 8, top + 4 + i * 6, K.i0); }
+  P.rect(cx - 11, top + 2, 2, base - top - 6, K.i1); P.rect(cx + 9, top + 2, 2, base - top - 6, K.i1);
+  P.hl(cx - 4, base - 12, 8, el.b); P.hl(cx - 4, base - 13, 8, el.a);
+};
+H5.top.lourde = (px, py, el, own, ang, kk) => {
+  const a = Math.round(ang / (Math.PI * 2) * 16) / 16 * Math.PI * 2, ux = Math.cos(a), uy = Math.sin(a) * .8, vx = -Math.sin(a), vy = Math.cos(a) * .8;
+  const at = (s, t) => [px + ux * s + vx * t, py + uy * s + vy * t];
+  const [bx, by] = at(-8, 0), [fx, fy] = at(10, 0), [l1x, l1y] = at(4, -13), [r1x, r1y] = at(4, 13), [l0x, l0y] = at(8, -6), [r0x, r0y] = at(8, 6);
+  P.line(bx, by + 3, fx, fy + 3, K.dk2); for (const o of [-1.2, 0, 1.2]) P.line(bx + vx * o, by + vy * o, fx + vx * o, fy + vy * o, o < 0 ? '#c9a86f' : o > 0 ? '#7d5c34' : '#9c7a48');
+  for (const [a1, a2] of [[[l1x, l1y], [l0x, l0y]], [[r1x, r1y], [r0x, r0y]]]) { P.line(a1[0], a1[1] + 1, a2[0], a2[1] + 1, K.dk2); P.line(a1[0], a1[1], a2[0], a2[1], K.i1); P.line(a1[0] + 1, a1[1], a2[0] + 1, a2[1], K.i2); dot(a1[0], a1[1], K.i0); }
+  P.line(l0x, l0y, r0x, r0y, K.i0); const [sx, sy] = at(-4, 0);
+  if (!kk) { P.line(l1x, l1y, sx, sy, '#efe6cf'); P.line(r1x, r1y, sx, sy, '#efe6cf'); const [hx, hy] = at(14, 0); P.line(sx, sy, hx, hy, K.w2); P.line(sx, sy + 1, hx, hy + 1, K.w1); for (let i = 0; i < 3; i++) { const [qx, qy] = at(14 + i, 0); dot(qx + vx * (1 - i * .4), qy + vy * (1 - i * .4), K.i0); } dot(hx + ux * 3, hy + uy * 3, el.c); }
+  else P.line(l1x, l1y, r1x, r1y, '#efe6cf');
+  const [wx, wy] = at(-8, 0); P.rect(Math.round(wx) - 2, Math.round(wy) - 2, 4, 4, K.i1); dot(wx, wy, K.i0);
+};
+// BALISTE → À RÉPÉTITION : un chargeur de carreaux, une manivelle, trois carreaux prêts
+H5.deco.repet = (cx, base, top, el, own) => {
+  const gx = cx - 8, gy = base - 12; SPR(['..a..', '.aba.', 'abcba', '.aba.', '..a..'], { a: '#b88a2e', b: '#e2c25a', c: K.i0 }, gx - 2, gy - 2);
+  for (let i = 0; i < 5; i++) dot(gx + [-3, 3, -2, 2, 0][i], gy + [0, 0, -3, 3, 3][i], '#b88a2e');
+  P.rect(cx + 4, base - 11, 7, 8, '#b88a2e'); P.hl(cx + 4, base - 11, 7, '#e2c25a'); P.vl(cx + 4, base - 11, 8, '#e2c25a'); P.vl(cx + 10, base - 11, 8, '#7d5c18');
+  for (let i = 0; i < 3; i++) { P.hl(cx + 5, base - 9 + i * 2, 5, K.w2); dot(cx + 9, base - 9 + i * 2, el.a); }
+  for (let i = 0; i < 3; i++) P.hl(cx - 10, top + 9 + i * 7, 4, '#b88a2e');
+};
+H5.top.repet = (px, py, el, own, ang, kk) => {
+  const a = Math.round(ang / (Math.PI * 2) * 16) / 16 * Math.PI * 2, ux = Math.cos(a), uy = Math.sin(a) * .8, vx = -Math.sin(a), vy = Math.cos(a) * .8;
+  const at = (s, t) => [px + ux * s + vx * t, py + uy * s + vy * t];
+  const [bx, by] = at(-6, 0), [fx, fy] = at(8, 0), [l1x, l1y] = at(3, -9), [r1x, r1y] = at(3, 9), [l0x, l0y] = at(6, -3), [r0x, r0y] = at(6, 3);
+  P.line(bx, by + 2, fx, fy + 2, K.dk2); for (const o of [-.6, .6]) P.line(bx + vx * o, by + vy * o, fx + vx * o, fy + vy * o, o < 0 ? '#c9a86f' : '#9c7a48');
+  for (const [a1, a2] of [[[l1x, l1y], [l0x, l0y]], [[r1x, r1y], [r0x, r0y]]]) { P.line(a1[0], a1[1], a2[0], a2[1], '#e2d6bb'); dot(a1[0], a1[1], K.i0); }
+  P.line(l0x, l0y, r0x, r0y, '#b9ab8c');
+  const [mx, my] = at(-2, 0); P.rect(Math.round(mx) - 4, Math.round(my) - 8, 8, 6, '#b88a2e'); P.hl(Math.round(mx) - 4, Math.round(my) - 8, 8, '#e2c25a'); P.vl(Math.round(mx) + 3, Math.round(my) - 8, 6, '#7d5c18');
+  for (let i = 0; i < 3; i++) { dot(Math.round(mx) - 3 + i * 3, Math.round(my) - 10, el.a); P.vl(Math.round(mx) - 3 + i * 3, Math.round(my) - 9, 2, K.w2); }
+  const [hx, hy] = at(11, 0); P.line(...at(-2, 0), hx, hy, K.w2); dot(hx, hy, kk ? el.c : K.i0); dot(hx - 1, hy, el.a);
+  const [cx2, cy2] = at(-7, 4); dot(cx2, cy2, '#e2c25a'); dot(cx2 + 1, cy2 + 1, '#e2c25a'); dot(cx2 + 2, cy2, '#b88a2e');
+  if (kk) for (let i = 1; i <= 3; i++) { const [ex, ey] = at(10 + i * 4, 0); dot(ex, ey, el.c); }
+};
+// CANON · MORTIER → PILONNAGE : trois tubes en grappe, des obus à pointes de la couleur de la Maison au pied
+H5.deco.pilon = (cx, base, top, el, own) => {
+  for (let i = 0; i < 4; i++) { const x = cx - 11 + i * 3; P.rect(x, base - 6, 3, 5, K.i1); P.hl(x, base - 6, 3, K.i2); dot(x + 1, base - 7, el.a); P.hl(x, base - 3, 3, K.i0); }
+  for (let i = 0; i < 3; i++) { const x = cx + 4 + i * 3; P.rect(x, base - 5 - (i % 2), 3, 4, K.i1); P.hl(x, base - 5 - (i % 2), 3, K.i2); }
+  for (let i = 0; i < 3; i++) P.hl(cx - 10, top + 5 + i * 6, 20, K.i1);
+  dot(cx - 9, top + 5, K.i0); dot(cx + 8, top + 5, K.i0);
+};
+H5.top.pilon = (px, py, el, own, ang, kk) => {
+  P.rect(px - 9, py - 1, 18, 4, '#6d7480'); P.hl(px - 9, py - 1, 18, '#a3acb8'); P.hl(px - 9, py + 2, 18, K.i0);
+  for (const [dx, h] of [[-6, 8], [0, 11], [6, 8]]) {
+    P.rect(px + dx - 2, py - h, 5, h, '#7d8592'); P.vl(px + dx - 2, py - h, h, '#b8c0cc'); P.vl(px + dx + 2, py - h, h, '#4b5260');
+    P.hl(px + dx - 3, py - h, 7, '#b8c0cc'); P.hl(px + dx - 3, py - h + 1, 7, '#4b5260'); P.hl(px + dx - 2, py - h + 4, 5, K.i0);
+    P.rect(px + dx - 1, py - h - 1, 3, 1, '#14181c');
+    SPR(['.a.', 'aba', 'aba', 'aaa'], { a: el.b, b: el.a }, px + dx - 1, py - h - 5 + (kk ? -4 : 0)); dot(px + dx, py - h - 6 + (kk ? -4 : 0), el.c);
+  }
+  P.hl(px - 9, py - 5, 18, '#4b5260');
+  if (kk) for (const dx of [-6, 0, 6]) { dot(px + dx, py - 20, el.c); dot(px + dx - 1, py - 18, el.a); dot(px + dx + 1, py - 17, el.a); }
+};
+// CANON · MORTIER → OBUS INCENDIAIRE : un mortier au bec en brasier, des fûts d'huile, des fissures rougeoyantes
+H5.deco.feu = (cx, base, top, el, own) => {
+  for (const x of [cx - 10, cx + 6]) { P.rect(x, base - 8, 5, 7, '#5a3a22'); P.hl(x, base - 8, 5, '#7d5a38'); P.hl(x, base - 5, 5, K.i1); P.hl(x, base - 2, 5, K.i1); dot(x + 2, base - 9, '#ff9a2e'); dot(x + 2, base - 10, '#ffd84a'); dot(x + 1, base - 9, '#d9322b'); }
+  for (let i = 0; i < 5; i++) { const x = cx - 8 + i * 4; ln(x, top + 8 + (i % 2) * 6, x + 1, top + 12 + (i % 2) * 6, '#ff6a2e'); }
+  for (let i = 0; i < 4; i++) dot(cx - 9 + i * 5, top + 3, '#2a241f');
+};
+H5.top.feu = (px, py, el, own, ang, kk) => {
+  P.rect(px - 5, py - 3, 10, 5, K.i1); P.hl(px - 5, py - 3, 10, K.i2); P.hl(px - 5, py + 1, 10, K.i0);
+  P.rect(px - 3, py - 11, 7, 9, K.i1); P.vl(px - 3, py - 11, 9, K.i2); P.vl(px + 3, py - 11, 9, K.i0);
+  P.rect(px - 5, py - 13, 11, 3, '#5a5e66'); P.hl(px - 5, py - 13, 11, K.i2);
+  const fl = G.t * 8 + 3;
+  SPR(['..o..', '.oyo.', 'oyYyo', 'oyYyo', '.ooo.'], { o: '#d9322b', y: '#ff9a2e', Y: '#ffd84a' }, px - 2, py - 20 + (Math.sin(fl) > 0 ? 0 : 1));
+  dot(px - 4, py - 17 + (Math.sin(fl * 1.3) > 0 ? 0 : -1), '#ff6a2e'); dot(px + 4, py - 18, '#ffb347'); dot(px + 1, py - 24 + (Math.sin(fl * .7) > 0 ? 0 : 1), '#ffd84a');
+  for (const s of [-1, 1]) { P.rect(px + s * 8 - 2, py - 2, 4, 3, '#5a3a22'); dot(px + s * 8, py - 3, '#ff9a2e'); }
+  if (kk) { P.hl(px - 5, py - 22, 11, '#ffd84a'); dot(px, py - 26, '#ffffff'); }
+};
+// CANON · GROS CALIBRE → CANON ROYAL : fût doré, couronne sur la culasse, bannière royale
+H5.deco.royal = (cx, base, top, el, own) => {
+  for (let i = 0; i < 3; i++) { P.hl(cx - 11, top + 5 + i * 7, 22, '#d5a64c'); P.hl(cx - 11, top + 6 + i * 7, 22, '#8a6a22'); }
+  P.rect(cx - 11, top + 3, 2, base - top - 8, '#d5a64c'); P.rect(cx + 9, top + 3, 2, base - top - 8, '#d5a64c');
+  P.rect(cx - 5, base - 12, 10, 8, '#6b2a6e'); P.hl(cx - 5, base - 12, 10, '#d5a64c'); P.hl(cx - 5, base - 5, 10, '#d5a64c'); P.vl(cx - 5, base - 12, 8, '#d5a64c'); P.vl(cx + 4, base - 12, 8, '#d5a64c');
+  SPR(['a.a.a', 'aaaaa', '.aaa.'], { a: '#ffd84a' }, cx - 2, base - 11); dot(cx, base - 12, '#ffd84a'); dot(cx - 2, base - 11, '#ffd84a'); dot(cx + 2, base - 11, '#ffd84a');
+};
+H5.top.royal = (px, py, el, own, ang, kk) => {
+  const dir = ((Math.round(ang / (Math.PI * 2) * 16) % 16) + 16) % 16, a = dir / 16 * Math.PI * 2, ux = Math.cos(a), uy = Math.sin(a) * .8, back = kk ? 3 : 0;
+  for (let s = -3; s <= 11; s++) { const bx = Math.round(px + ux * (s - back)), by = Math.round(py - 6 + uy * (s - back)), br = s < 3 ? 3 : 2; P.rect(bx - br, by - br, 2 * br + 1, 2 * br + 1, s >= 10 ? '#8a6a22' : (s % 4 === 0 ? '#d5a64c' : K.i1)); P.px(bx - br, by - br, s % 4 === 0 ? '#ffe28a' : K.i2); }
+  P.rect(px - 4, py - 10, 8, 5, '#d5a64c'); P.hl(px - 4, py - 10, 8, '#ffe28a'); P.hl(px - 4, py - 6, 8, '#8a6a22');
+  SPR(['a.a.a', 'aaaaa', 'aWaWa'], { a: '#ffd84a', W: '#fff3cf' }, px - 2, py - 15); dot(px - 2, py - 16, '#ffd84a'); dot(px, py - 17, '#ffd84a'); dot(px + 2, py - 16, '#ffd84a'); dot(px, py - 15, el.a);
+  P.rect(px - 5, py - 4, 10, 4, K.i1); P.hl(px - 5, py - 4, 10, K.i2);
+};
+// CANON · GROS CALIBRE → BOULET FENDEUR : un boulet fendu au bec, des boulets à pointes enchaînés
+H5.deco.fend = (cx, base, top, el, own) => {
+  for (let i = 0; i < 3; i++) { const x = cx - 9 + i * 8, y = base - 8 - (i % 2) * 3; SPR(['.i.', 'iIi', '.i.'], { i: K.i1, I: K.i2 }, x, y); dot(x + 1, y - 1, K.i0); dot(x - 1, y + 1, K.i0); dot(x + 3, y + 1, K.i0); dot(x + 1, y + 3, K.i0); }
+  for (let i = 0; i < 6; i++) { dot(cx - 10, top + 6 + i * 3, K.i1); dot(cx + 10, top + 6 + i * 3, K.i1); }
+  P.vl(cx, top + 5, base - top - 8, K.dk2);
+  ln(cx - 4, base - 14, cx + 4, base - 6, '#d9322b'); ln(cx - 3, base - 14, cx + 5, base - 6, '#ff9a2e');
+};
+H5.top.fend = (px, py, el, own, ang, kk) => {
+  const dir = ((Math.round(ang / (Math.PI * 2) * 16) % 16) + 16) % 16, a = dir / 16 * Math.PI * 2, ux = Math.cos(a), uy = Math.sin(a) * .8, back = kk ? 2 : 0;
+  for (let s = -2; s <= 8; s++) { const bx = Math.round(px + ux * (s - back)), by = Math.round(py - 5 + uy * (s - back)), br = s < 2 ? 3 : 2; P.rect(bx - br, by - br, 2 * br + 1, 2 * br + 1, K.i1); P.px(bx - br, by - br, K.i2); P.px(bx + br, by + br, K.i0); }
+  P.rect(px - 5, py - 3, 10, 4, K.i1); P.hl(px - 5, py - 3, 10, K.i2);
+  const mx = Math.round(px + ux * (9 - back)), my = Math.round(py - 8 + uy * (9 - back));
+  SPR(['.iii.', 'iIIii', 'iIo.i', 'ii.oi', '.iii.'], { i: '#6d7480', I: '#a3acb8', o: '#ff6a2e' }, mx - 2, my - 3);
+  dot(mx - 1, my - 1, '#ffd84a'); dot(mx, my, '#d9322b'); dot(mx + 1, my + 1, '#ffd84a');
+  for (const s of [-1, 1]) { ln(px + s * 5, py - 3, px + s * 10, py - 10, '#6d7480'); SPR(['.i.', 'iIi', '.i.'], { i: '#6d7480', I: '#a3acb8' }, px + s * 10 - 1, py - 13); dot(px + s * 10, py - 14, '#a3acb8'); }
+  if (kk) { dot(mx + 4, my - 2, '#ffd84a'); dot(mx + 5, my + 2, '#ff6a2e'); dot(mx - 4, my - 3, '#ffd84a'); }
+};
+/* ---- portrait : la tour de niveau 4 de la forme (corps du jeu), le décor du niveau 5, sa tête ---- */
+const H5F = { pluie: ['arrow', 'double', 'Pluie de flèches'], elite: ['arrow', 'double', 'Tireur d’élite'], lourde: ['ballista', '', 'Baliste lourde'], repet: ['ballista', '', 'Baliste à répétition'], pilon: ['cannon', 'mortar', 'Pilonnage'], feu: ['cannon', 'mortar', 'Obus incendiaire'], royal: ['cannon', 'heavy', 'Canon royal'], fend: ['cannon', 'heavy', 'Boulet fendeur'] };
+H5.portrait = (h, form, ang, kk, five) => {
+  const W = 96, Hh = 96, [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x);
+  const ax = 36, ay = 64, own = pcol(0), [type, f, nm] = H5F[form];
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, [0, 0, 0][i], L, R, false, i, own, 0), wx, ay));
+  const evo = type === 'ballista' ? 'hm_' + h : hmForm(h, f), tw = towerSprite(type, 4, evo, own); blit(x, tw, ax, ay);
+  const [tx, ty] = towerTopAt(type, 4, evo), el = H5EL[h], pown = [PCOL[0], PDARK[0]];
+  const cx = ax + 12, base = ay + 23, top = ay + 23 - towerH(type, 4, evo) + 7;
+  if (five) { H5.deco[form](cx, base, top, el, pown); H5.top[form](ax + tx, ay + ty, el, pown, ang, kk); }
+  else { HM.top(x, h, type, 4, ang, kk ? 0 : 9, own, ax, ay, tw.oy, 7, tx, ty, false, 0); }
+  P = prev; return c;
+};
+
+/* ===== tours de Maison, niveau 5 ===== */
+H5.mdeco = {}; H5.mtop = {};
+const fl5 = (n) => Math.sin(G.t * n) > 0 ? 0 : 1;
+// CERF · BLIZZARD : un anneau de nuées de neige et un grand flocon ; franges de glaçons, congères
+H5.mdeco.blizzard = (cx, base, top) => {
+  for (let i = 0; i < 7; i++) { const x = cx - 11 + i * 3.7; P.vl(Math.round(x), top + 4, 3 + (i % 3) * 2, '#e8f6fb'); dot(x, top + 7 + (i % 3) * 2, '#ffffff'); }
+  P.rect(cx - 12, base - 3, 6, 3, '#f2fbff'); P.rect(cx + 6, base - 3, 6, 3, '#f2fbff'); P.hl(cx - 11, base - 4, 4, '#ffffff'); P.hl(cx + 7, base - 4, 4, '#ffffff');
+  for (let i = 0; i < 5; i++) ln(cx - 10 + i * 5, top + 14 + (i % 2) * 5, cx - 12 + i * 5, top + 17 + (i % 2) * 5, '#ffffff');
+};
+H5.mtop.blizzard = (px, py, el, own, ang, kk) => {
+  for (const [dx, dy] of [[-8, -7], [8, -7], [0, -2]]) SPR(['..ww..', '.wwww.', 'wwWWww', '.wwww.'], { w: '#dff1f8', W: '#ffffff' }, px + dx - 3, py + dy - 2);
+  const c = '#bfe6f2', W = '#ffffff', y = py - 14;
+  for (const [ux, uy] of [[0, 1], [1, 0], [.7, .7], [.7, -.7]]) { ln(px - ux * 6, y - uy * 6, px + ux * 6, y + uy * 6, c); }
+  dot(px, y, W); dot(px - 6, y, W); dot(px + 6, y, W); dot(px, y - 6, W); dot(px, y + 6, W);
+  for (const [ux, uy] of [[-4, -4], [4, -4], [-4, 4], [4, 4]]) { dot(px + ux, y + uy, c); dot(px + ux * 1.4, y + uy * 1.4, W); }
+  for (let i = 0; i < 6; i++) dot(px - 12 + ((i * 7 + Math.floor(G.t * 6)) % 24), py - 6 + (i * 3) % 8, '#ffffff');
+};
+// CERF · CRISTAL PUR : une seule flèche de glace parfaite, des éclats en lévitation
+H5.mdeco.cristal = (cx, base, top) => {
+  P.hl(cx - 9, top + 4, 18, '#ffffff'); P.hl(cx - 9, top + 5, 18, '#8fd0ea');
+  for (const s of [-1, 1]) { SPR(['.c.', 'cCc', 'cCc', '.c.'], { c: '#8fd0ea', C: '#ffffff' }, cx + s * 10 - 1, base - 10); }
+  P.rect(cx - 4, base - 3, 8, 2, '#ffffff'); dot(cx - 1, base - 6, '#ffffff'); dot(cx + 2, base - 9, '#ffffff');
+};
+H5.mtop.cristal = (px, py, el, own, ang, kk) => {
+  SPR(['...c...', '..cCc..', '..cCc..', '.ccCcc.', '.cCCWc.', '.cCWCc.', '.cCWCc.', 'ccCWCcc', '.cCWCc.', '.cCWCc.', '..cCc..'], { c: '#6fb4d6', C: '#bfe6f2', W: '#ffffff' }, px - 3, py - 22);
+  for (const [dx, dy, s] of [[-9, -12, 1], [8, -15, 1], [-7, -4, 0], [9, -6, 0]]) { const o = fl5(2.4 + dx); SPR(s ? ['.c.', 'cWc', '.c.'] : ['c.', 'cc'], { c: '#8fd0ea', W: '#ffffff' }, px + dx - 1, py + dy + o); }
+  if (kk) for (let i = 0; i < 5; i++) dot(px - 6 + i * 3, py - 26 + (i % 2) * 2, '#ffffff');
+};
+// OURS · RAGE : un crâne cornu aux orbites en feu, griffes, stries de guerre
+H5.mdeco.rage = (cx, base, top) => {
+  for (let i = 0; i < 3; i++) ln(cx - 8 + i * 4, top + 6, cx - 6 + i * 4, top + 16, '#b3261e');
+  for (const s of [-1, 1]) { SPR(['bb', 'bk', 'bb'], { b: '#efe6cf', k: '#2a241f' }, cx + s * 10 - 1, base - 10); P.vl(cx + s * 11, base - 14, 4, '#efe6cf'); }
+  P.hl(cx - 6, base - 3, 12, '#6b1a14'); dot(cx - 5, base - 4, '#ff6a2e'); dot(cx + 4, base - 4, '#ff6a2e');
+};
+H5.mtop.rage = (px, py, el, own, ang, kk) => {
+  const f = fl5(9);
+  SPR(['.bbbbb.', 'bbbbbbb', 'bkkbkkb', 'bkOb.Obk', '.bbbbb.', '..bkb..', '..b.b..'].map(r => r.slice(0, 7)), { b: '#efe6cf', k: '#2a241f', O: '#ff6a2e' }, px - 3, py - 12);
+  dot(px - 2, py - 9, '#ffd84a'); dot(px + 2, py - 9, '#ffd84a');
+  for (const s of [-1, 1]) { ln(px + s * 4, py - 11, px + s * 8, py - 17, '#efe6cf'); ln(px + s * 8, py - 17, px + s * 7, py - 21, '#efe6cf'); dot(px + s * 7, py - 22, '#fff1c9'); }
+  SPR(['..o..', '.oyo.', 'oyYyo', '.oyo.'], { o: '#d9322b', y: '#ff9a2e', Y: '#ffd84a' }, px - 2, py - 18 + f);
+  for (const s of [-1, 1]) { dot(px + s * 5, py - 4 + f, '#ff9a2e'); dot(px + s * 6, py - 6, '#d9322b'); }
+};
+// OURS · TOTEM : trois visages sculptés, des ailes peintes, des runes qui brillent
+H5.mdeco.totem = (cx, base, top) => {
+  for (let i = 0; i < 3; i++) { const x = cx - 8 + i * 8; P.vl(x, top + 6, 8, '#8a5a2e'); P.rect(x - 1, top + 14, 3, 3, '#c9783f'); }
+  for (const [dx, dy] of [[-4, 8], [3, 12], [-1, 16]]) { dot(cx + dx, top + dy, '#ffd84a'); dot(cx + dx + 1, top + dy + 1, '#f2b45a'); }
+  for (const s of [-1, 1]) { SPR(['hh', 'hH', '.H'], { h: '#8a5a2e', H: '#c9783f' }, cx + s * 10 - 1, base - 9); }
+};
+H5.mtop.totem = (px, py, el, own, ang, kk) => {
+  P.vl(px, py - 24, 24, '#8a5a2e'); P.vl(px - 1, py - 24, 24, '#c9783f'); P.vl(px + 1, py - 24, 24, '#5a3a22');
+  const face = (y, c1, c2) => { P.rect(px - 4, y, 9, 6, c1); P.hl(px - 4, y, 9, c2); P.rect(px - 3, y + 2, 2, 2, '#14181c'); P.rect(px + 2, y + 2, 2, 2, '#14181c'); dot(px - 3, y + 2, '#ffd84a'); dot(px + 2, y + 2, '#ffd84a'); P.hl(px - 2, y + 5, 5, '#14181c'); };
+  face(py - 7, '#c9783f', '#e0a05a'); face(py - 14, '#a85a2e', '#c9783f'); face(py - 21, '#8a4a22', '#b8683a');
+  for (const s of [-1, 1]) { for (let i = 0; i < 4; i++) ln(px + s * 5, py - 18 + i, px + s * (11 + i), py - 21 + i * 2, i % 2 ? '#2f7fd0' : '#d9322b'); }
+  dot(px, py - 26, '#ffd84a'); dot(px - 1, py - 25, '#ffd84a'); dot(px + 1, py - 25, '#ffd84a');
+  if (kk) for (const s of [-1, 1]) dot(px + s * 13, py - 12, '#ffd84a');
+};
+// CORBEAU · PESTE : une fiole ventrue à pustules, des coulées de poison
+H5.mdeco.peste = (cx, base, top) => {
+  for (let i = 0; i < 5; i++) { const x = cx - 9 + i * 4.5; P.vl(Math.round(x), top + 5, 6 + (i % 3) * 3, '#7fc06c'); dot(x, top + 12 + (i % 3) * 3, '#d9f5b8'); }
+  for (const [dx, dy] of [[-9, -8], [8, -10], [-6, -4]]) { SPR(['.g.', 'gGg', '.g.'], { g: '#3f8a3a', G: '#9fe07c' }, cx + dx - 1, base + dy); }
+  P.rect(cx - 6, base - 3, 12, 2, '#3f8a3a'); dot(cx - 2, base - 4, '#d9f5b8'); dot(cx + 3, base - 5, '#d9f5b8');
+};
+H5.mtop.peste = (px, py, el, own, ang, kk) => {
+  SPR(['..ccc..', '.cGGGc.', 'cGgGGgc', 'cGGgGGc', 'cgGGGgc', '.cGgGc.', '..ccc..'], { c: '#2d5a2a', G: '#7fc06c', g: '#b8f09c' }, px - 4, py - 14);
+  P.rect(px - 2, py - 18, 5, 4, '#2d5a2a'); P.hl(px - 2, py - 19, 5, '#d9f5b8'); P.hl(px - 3, py - 20, 7, '#7fc06c');
+  const t = G.t * 3; for (let i = 0; i < 4; i++) { const k = (t + i * 1.3) % 4; dot(px - 3 + i * 2 + Math.sin(k) * 2, py - 21 - k * 3, i % 2 ? '#d9f5b8' : '#9fe07c'); }
+  for (const s of [-1, 1]) { SPR(['gg', 'gG', 'g.'], { g: '#3f8a3a', G: '#9fe07c' }, px + s * 7 - 1, py - 6 - (fl5(4 + s) ? 1 : 0)); }
+  P.vl(px - 5, py - 7, 5 + fl5(5), '#7fc06c'); dot(px - 5, py - 1, '#d9f5b8');
+};
+// CORBEAU · NUÉE : un perchoir, quatre corbeaux qui tournent, des plumes
+H5.mdeco.nuee = (cx, base, top) => {
+  for (let i = 0; i < 6; i++) { const x = cx - 10 + i * 4, y = top + 6 + (i * 5) % 12; ln(x, y, x + 2, y + 2, '#2b2d36'); dot(x + 1, y, '#4a4d5c'); }
+  for (const s of [-1, 1]) SPR(['.nn.', 'nnnn', '.nn.'], { n: '#2b2d36' }, cx + s * 10 - 2, base - 8);
+  P.hl(cx - 10, base - 2, 6, '#8a5a2e'); P.hl(cx + 4, base - 2, 6, '#8a5a2e');
+};
+H5.mtop.nuee = (px, py, el, own, ang, kk) => {
+  P.hl(px - 7, py - 2, 15, '#6b4a2a'); P.vl(px, py - 2, 3, '#6b4a2a'); P.hl(px - 5, py - 1, 11, '#4a3320');
+  const crow = (x, y, up) => { SPR(up ? ['n...n', 'nn.nn', '.nnn.', '..b..'] : ['..n..', '.nnn.', 'nn.nn', 'n...n'], { n: '#2b2d36', b: '#d0a04f' }, Math.round(x) - 2, Math.round(y) - 2); dot(x, y - 1, '#7fc06c'); };
+  for (let i = 0; i < 4; i++) { const a = G.t * 1.6 + i * 1.57; crow(px + Math.cos(a) * 11, py - 12 + Math.sin(a) * 5, Math.sin(a * 2) > 0); }
+  crow(px, py - 6, kk); dot(px - 1, py - 7, '#d0a04f');
+  for (let i = 0; i < 3; i++) dot(px - 9 + i * 9 + (Math.floor(G.t * 4) % 3), py - 20 + i * 2, '#4a4d5c');
+};
+// RENARD · PILLAGE : un coffre qui déborde d'or, une queue de renard, des tas de pièces sur les rebords
+H5.mdeco.pillage = (cx, base, top) => {
+  for (const s of [-1, 1]) { for (let i = 0; i < 4; i++) { const x = cx + s * (6 + i * 2), y = base - 3 - (3 - i); P.hl(x - 1, y, 3, '#e8c15a'); dot(x, y - 1, '#fff3cf'); } }
+  for (let i = 0; i < 4; i++) { const x = cx - 9 + i * 6; P.rect(x, top + 5 + (i % 2) * 5, 3, 2, '#d5a64c'); dot(x + 1, top + 5 + (i % 2) * 5, '#fff3cf'); }
+  P.hl(cx - 12, base - 2, 6, '#b8862e'); P.hl(cx + 6, base - 2, 6, '#b8862e');
+};
+H5.mtop.pillage = (px, py, el, own, ang, kk) => {
+  P.rect(px - 7, py - 7, 15, 8, '#7d4a22'); P.hl(px - 7, py - 7, 15, '#b8683a'); P.hl(px - 7, py - 3, 15, '#d5a64c'); P.vl(px - 7, py - 7, 8, '#5a3a22'); P.vl(px + 7, py - 7, 8, '#5a3a22'); P.rect(px - 1, py - 5, 3, 4, '#ffd84a');
+  for (let i = 0; i < 7; i++) { const x = px - 6 + i * 2, y = py - 10 - Math.abs(3 - i) * -1 + (i % 2); P.hl(x - 1, y, 3, i % 2 ? '#e8c15a' : '#ffd84a'); dot(x, y - 1, '#fff3cf'); }
+  SPR(['.yyy.', 'yYYYy', 'yYWYy'], { y: '#d5a64c', Y: '#ffd84a', W: '#fff3cf' }, px - 2, py - 15);
+  const t = fl5(5); SPR(['.oo', 'ooo', 'owo', '.oo'], { o: '#c9783f', w: '#eadfcb' }, px + 8, py - 8 - t);
+  for (let i = 0; i < 3; i++) dot(px - 8 + ((i * 8 + Math.floor(G.t * 5)) % 17), py - 17 - (i % 2) * 3, '#ffd84a');
+};
+// RENARD · RUSE : un masque de renard sur un mât, des lanternes, des pièges à cordes
+H5.mdeco.ruse = (cx, base, top) => {
+  for (const s of [-1, 1]) { P.vl(cx + s * 10, top + 5, 6, K.w2); P.rect(cx + s * 10 - 2, top + 11, 5, 5, '#8a4a22'); P.rect(cx + s * 10 - 1, top + 12, 3, 3, '#ffd84a'); dot(cx + s * 10, top + 13, '#fff3cf'); }
+  ln(cx - 8, base - 3, cx - 2, base - 8, '#d5c89a'); ln(cx - 2, base - 8, cx + 4, base - 3, '#d5c89a'); dot(cx - 2, base - 9, '#d9322b');
+  for (let i = 0; i < 3; i++) dot(cx - 10 + i * 10, base - 2, '#d5c89a');
+};
+H5.mtop.ruse = (px, py, el, own, ang, kk) => {
+  P.vl(px, py - 18, 18, '#6b4a2a'); P.vl(px + 1, py - 18, 18, '#4a3320');
+  SPR(['o.....o', 'oo...oo', 'owoooow', 'owwowwo', '.owwwo.', '..oWo..', '...k...'], { o: '#c9783f', w: '#eadfcb', W: '#f7efe0', k: '#14181c' }, px - 3, py - 20);
+  dot(px - 2, py - 17, '#ffd84a'); dot(px + 2, py - 17, '#ffd84a'); dot(px - 3, py - 17, '#14181c'); dot(px + 3, py - 17, '#14181c');
+  P.hl(px - 5, py - 3, 11, '#d9322b'); P.hl(px - 5, py - 2, 11, '#8a1e1a'); dot(px - 5, py - 4, '#ffd84a'); dot(px + 5, py - 4, '#ffd84a');
+  if (kk) { dot(px - 2, py - 17, '#ffffff'); dot(px + 2, py - 17, '#ffffff'); }
+  const t = Math.floor(G.t * 3) % 2; SPR(['.oo', 'oww', '.oo'], { o: '#c9783f', w: '#eadfcb' }, px + 6, py - 6 + t);
+};
+const H5M = { blizzard: ['cerf', 'Blizzard'], cristal: ['cerf', 'Cristal pur'], rage: ['oursA', 'Rage'], totem: ['oursA', 'Totem'], peste: ['corbV', 'Peste'], nuee: ['corbV', 'Nuée'], pillage: ['renT', 'Pillage'], ruse: ['renT', 'Ruse'] };
+H5.portraitM = (form, ang, kk, five, lvl) => {
+  const [h] = H5M[form], W = 96, Hh = 96, [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x);
+  const ax = 36, ay = 64, own = pcol(0);
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, [0, 0, 0][i], L, R, false, i, own, 0), wx, ay));
+  const evo = 'hm_' + h, tw = towerSprite('frost', 4, evo, own); blit(x, tw, ax, ay);
+  const [tx, ty] = towerTopAt('frost', 4, evo), el = H5EL[h], pown = [PCOL[0], PDARK[0]];
+  const cx = ax + 12, base = ay + 23, top = ay + 23 - towerH('frost', 4, evo) + 7;
+  if (five) { H5.mdeco[form](cx, base, top, el, pown); H5.mtop[form](ax + tx, ay + ty, el, pown, ang, kk); }
+  else HM.top(x, h, 'frost', 4, ang, kk ? 0 : 9, own, ax, ay, tw.oy, 7, tx, ty, false, 0);
+  P = prev; return c;
+};
+
+/* ---- hm11.js (planche du 18/11) ---- */
+/* ===== niveau 5, 2e passe : une idée par tour, gros, net, cerné. Dessiné tourné vers la droite, retourné si besoin. ===== */
+H5.t2 = {};
+const OL = '#1b1612';
+const WD = { d: '#5a3a22', m: '#8a5a2e', l: '#c08a4e' };
+const IR = { d: '#4f7890', m: '#86b4c9', l: '#c4e2ee', x: '#f2fbff' };
+const FIG = (x, y, own, hel) => SPR(['..hhhh..', '.hhhhhh.', '.hhssSh.', '..hSssh.', '.bbbBBbb', '.bbBBBBb', '..BBBBB.'], { h: hel || K.hm, s: K.sk, S: '#1b1612', b: own[0], B: own[1] }, x, y);
+const tube = (x0, y0, a, len, w, cD, cM, cL) => { const ux = Math.cos(a), uy = Math.sin(a), vx = -uy, vy = ux; for (let t = 0; t <= len; t += .5) for (let s = -w / 2; s <= w / 2; s += .5) { const c = s < -w / 2 + 1.2 ? cL : s > w / 2 - 1.2 ? cD : cM; dot(x0 + ux * t + vx * s, y0 + uy * t + vy * s, c); } return [x0 + ux * len, y0 + uy * len]; };
+const disc = (x0, y0, r, c, cl, cd) => { for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = x * x + y * y; if (d <= r * r + r * .6) dot(x0 + x, y0 + y, (cl && x + y < -r * .7) ? cl : (cd && x + y > r * .7) ? cd : c); } };
+const flame = (x, y, s) => { const f = Math.floor(G.t * 10) % 2; disc(x, y, s, '#d9322b'); disc(x, y + 1, s - 1, '#ff9a2e'); disc(x, y + 1, Math.max(1, s - 2), '#ffd84a'); dot(x, y - s - 1 - f, '#ff9a2e'); dot(x - 1, y - s - f, '#d9322b'); dot(x + 1, y - s - 2 + f, '#ffd84a'); };
+
+// PLUIE DE FLÈCHES : un archer tire à la verticale, trois flèches retombent au-dessus
+H5.t2.pluie = (el, own, kk) => {
+  // un grand carquois de flèches en éventail, posé sur la tour ; trois flèches retombent au-dessus
+  for (let i = -3; i <= 3; i++) { const tx = i * 3, ty = -17 + Math.abs(i); P.line(i, -6, tx, ty, WD.l); dot(tx, ty - 1, el.c); dot(tx - 1, ty, el.a); dot(tx + 1, ty, el.a); dot(tx, ty, el.b); dot(i - 1, -7, '#efe6cf'); dot(i + 1, -7, '#efe6cf'); }
+  P.rect(-6, -7, 13, 8, WD.m); P.hl(-6, -7, 13, WD.l); P.vl(-6, -7, 8, WD.l); P.vl(6, -7, 8, WD.d); P.hl(-6, 0, 13, WD.d);
+  P.hl(-6, -4, 13, el.b); P.hl(-6, -3, 13, el.a);
+  const fall = Math.floor(G.t * 7) % 3;
+  for (const [x, y] of [[-11, -28], [10, -31], [0, -35]]) {
+    const yy = y + fall + (x > 0 ? 1 : 0);
+    SPR(['f.f', '.f.', '.W.', '.W.', '.W.', 'ccc', '.c.'], { f: '#efe6cf', W: WD.l, c: el.c }, x - 1, yy);
+    dot(x, yy - 3, el.a); dot(x, yy - 5, el.b);
+  }
+};
+// BALISTE LOURDE : un harpon géant, à pointe barbelée, qui dépasse loin devant
+H5.t2.lourde = (el, own, kk) => {
+  P.rect(-5, -4, 10, 5, WD.m); P.hl(-5, -4, 10, WD.l); P.vl(0, -6, 3, K.i0);
+  P.rect(-10, -10, 16, 4, WD.m); P.hl(-10, -10, 16, WD.l); P.hl(-10, -7, 16, WD.d);
+  const prod = [[3, -18], [3, -17], [4, -16], [4, -15], [5, -14], [5, -13], [5, -12], [5, -11], [5, -10], [5, -9], [5, -8], [5, -7], [5, -6], [5, -5], [4, -4], [4, -3], [3, -2], [3, -1]];
+  for (const [x, y] of prod) { dot(x, y, IR.l); dot(x + 1, y, IR.d); }
+  P.line(3, -18, -7, -9, '#efe6cf'); P.line(3, -1, -7, -8, '#efe6cf');
+  const pull = kk ? 4 : 0;
+  P.rect(-7 + pull, -10, 22, 2, WD.l); P.hl(-7 + pull, -9, 22, WD.d);
+  SPR(['I.....', 'IIk...', 'IIIIk.', 'IIIIIIk', 'jjjjjjk', 'jjjjk..', 'jjk...', 'j.....'], { I: IR.x, j: IR.l, k: IR.m }, 15 + pull, -13);
+  dot(17 + pull, -10, el.c); dot(18 + pull, -10, el.c);
+  for (const yy of [-11, -8]) { dot(-8 + pull, yy, el.a); dot(-9 + pull, yy, el.b); }
+};
+// BALISTE À RÉPÉTITION : une arbalète surmontée d'un grand chargeur plein de carreaux, une manivelle
+H5.t2.repet = (el, own, kk) => {
+  P.rect(-5, -4, 10, 5, WD.m); P.hl(-5, -4, 10, WD.l);
+  P.rect(-9, -8, 15, 3, WD.m); P.hl(-9, -8, 15, WD.l);
+  for (const [x, y] of [[4, -14], [5, -13], [6, -12], [6, -11], [6, -10], [6, -9], [6, -8], [6, -7], [6, -6], [5, -5], [4, -4]]) { dot(x, y, IR.l); dot(x + 1, y, IR.d); }
+  P.line(4, -14, -2, -7, '#efe6cf'); P.line(4, -4, -2, -7, '#efe6cf');
+  P.rect(-6, -22, 10, 14, WD.d); P.rect(-5, -21, 8, 12, '#3a2a1c'); P.vl(-6, -22, 14, WD.l); P.hl(-6, -22, 10, WD.l);
+  for (let i = 0; i < 5; i++) { const y = -20 + i * 2; P.hl(-4, y, 7, WD.l); dot(3, y, el.c); dot(4, y, el.c); dot(-5, y, '#efe6cf'); }
+  P.rect(-6, -15, 10, 1, '#b88a2e'); P.rect(-6, -10, 10, 1, '#b88a2e');
+  P.hl(5, -7, 6, WD.l); dot(11, -7, el.c);
+  SPR(['.i.', 'iji', '.i.'], { i: K.i2, j: K.i0 }, -12, -9); P.line(-11, -8, -14, -4, K.i1); dot(-14, -3, '#b88a2e'); dot(-15, -3, '#b88a2e');
+  if (kk) for (let i = 0; i < 3; i++) { P.hl(13 + i * 6, -7, 4, WD.l); dot(17 + i * 6, -7, el.c); }
+};
+// PILONNAGE : trois gros mortiers en éventail, fumée et obus en l'air
+H5.t2.pilon = (el, own, kk) => {
+  P.rect(-12, -5, 24, 6, IR.m); P.hl(-12, -5, 24, IR.l); P.hl(-12, 0, 24, IR.d);
+  for (const [a, x0] of [[-2.3, -6], [-1.57, 0], [-0.84, 6]]) {
+    const [mx, my] = tube(x0, -4, a, 9, 6, IR.d, IR.m, IR.l);
+    disc(mx, my, 3, IR.d, IR.x); disc(mx, my, 1, '#0e1014');
+    P.line(x0 + Math.cos(a) * 3 - Math.sin(a) * 3, -4 + Math.sin(a) * 3 + Math.cos(a) * 3, x0 + Math.cos(a) * 3 + Math.sin(a) * 3, -4 + Math.sin(a) * 3 - Math.cos(a) * 3, el.b);
+    const p = (Math.floor(G.t * 4) + Math.round(a * 3) + 9) % 3;
+    disc(mx + Math.cos(a) * (5 + p), my + Math.sin(a) * (5 + p), 2, '#d8dde3', '#ffffff', '#a9b0b8');
+  }
+  for (const [x, y] of [[-14, -31], [0, -35], [14, -31]]) { disc(x, y, 2, '#2a2d33', IR.m); dot(x, y - 3, el.c); dot(x, y - 4, '#ffd84a'); }
+};
+// OBUS INCENDIAIRE : un mortier à gueule de bête qui crache une boule de feu
+H5.t2.feu = (el, own, kk) => {
+  for (const s2 of [-1, 1]) { P.rect(s2 * 11 - 3, -6, 6, 7, '#5a3a22'); P.hl(s2 * 11 - 3, -6, 6, '#7d5a38'); P.hl(s2 * 11 - 3, -3, 6, IR.m); flame(s2 * 11, -9, 2); }
+  P.rect(-7, -5, 14, 6, IR.m); P.hl(-7, -5, 14, IR.l); P.hl(-7, 0, 14, IR.d);
+  SPR(['x.x.x.x.x', 'xxxxxxxxx', 'lmmrrrmmd', '.lmmmmmd.', '.lmmmmmd.', '..lmmmd..', '..lmmmd..', '.lmmmmmd.', 'lmmmmmmmd'], { x: '#efe6cf', l: IR.l, m: IR.m, d: IR.d, r: '#ff6a2e' }, -4, -14);
+  P.hl(-3, -10, 7, el.b); P.hl(-3, -9, 7, el.a);
+  dot(-2, -13, '#ffd84a'); dot(2, -13, '#ffd84a');
+  const b = Math.floor(G.t * 6) % 2;
+  flame(0, -24 - b, 5);
+  for (let i = 0; i < 3; i++) dot(-1 + i, -17 - i * 2 + b, i % 2 ? '#ffd84a' : '#ff6a2e');
+};
+// CANON ROYAL : un long canon doré, une grosse couronne, un tapis rouge
+H5.t2.royal = (el, own, kk) => {
+  const back = kk ? 2 : 0;
+  P.rect(-10, -4, 16, 5, '#8a1e2a'); P.hl(-10, -4, 16, '#c23a46'); for (let i = 0; i < 4; i++) dot(-9 + i * 4, 0, '#ffd84a');
+  for (let x = -10; x <= 13; x++) { const r = x < -4 ? 4 : x < 4 ? 3 : 3; const X = x - back; P.vl(X, -10 - r, 2 * r + 1, IR.m); dot(X, -10 - r, IR.l); dot(X, -9 - r, IR.l); dot(X, -10 + r, IR.d); }
+  for (const x of [-8, -2, 5]) { P.vl(x - back, -14, 9, '#d5a64c'); dot(x - back, -14, '#ffe28a'); }
+  P.rect(12 - back, -15, 3, 11, '#d5a64c'); P.vl(12 - back, -15, 11, '#ffe28a'); dot(15 - back, -10, '#0e1014'); P.vl(14 - back, -12, 5, '#0e1014');
+  disc(-12 - back, -10, 2, '#d5a64c', '#ffe28a');
+  disc(-3, -2, 4, '#5a3a22'); disc(-3, -2, 2, '#d5a64c'); dot(-3, -2, '#8a6a22');
+  SPR(['y..y..y', 'yy.y.yy', 'yyyyyyy', 'yryeyry', 'ggggggg'], { y: '#ffd84a', r: '#d9322b', e: el.b, g: '#b8862e' }, -6 - back, -21);
+  dot(-6 - back, -22, '#ffffff'); dot(-3 - back, -22, '#ffffff'); dot(0 - back, -22, '#ffffff');
+};
+// BOULET FENDEUR : un canon d'où sort un énorme boulet hérissé de pointes, fendu de lumière
+H5.t2.fend = (el, own, kk) => {
+  P.rect(-9, -4, 14, 5, WD.m); P.hl(-9, -4, 14, WD.l);
+  for (let x = -10; x <= 6; x++) { const r = x < -4 ? 4 : 3; P.vl(x, -10 - r, 2 * r + 1, IR.m); dot(x, -10 - r, IR.l); dot(x, -9 - r, IR.l); dot(x, -10 + r, IR.d); }
+  P.rect(6, -15, 3, 11, IR.d); P.vl(6, -15, 11, IR.l);
+  disc(-4, -2, 3, WD.d); dot(-4, -2, K.i2);
+  const bx = 13 + (kk ? 4 : 0), by = -10;
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + .39; P.line(bx + Math.cos(a) * 4, by + Math.sin(a) * 4, bx + Math.cos(a) * 7, by + Math.sin(a) * 7, IR.l); dot(bx + Math.cos(a) * 7, by + Math.sin(a) * 7, '#ffffff'); }
+  disc(bx, by, 5, IR.m, IR.l, IR.d);
+  P.line(bx - 2, by - 5, bx + 1, by, '#ff6a2e'); P.line(bx + 1, by, bx - 1, by + 5, '#ff6a2e'); dot(bx, by - 2, '#ffd84a'); dot(bx, by + 2, '#ffd84a');
+  dot(bx - 3, by - 2, el.c);
+};
+H5.t2.elite = null;
+
+H5.drawO = (x, fn, px, py, flip) => {
+  const S = 64, O = 32, B = 48;
+  const [c, cx] = mkCanvas(S, S), prev = P; cx.translate(O, B); P = mkPen(cx); fn(); P = prev;
+  const [o, ox] = mkCanvas(S, S); ox.drawImage(c, 0, 0); ox.globalCompositeOperation = 'source-in'; ox.fillStyle = OL; ox.fillRect(0, 0, S, S);
+  x.save(); if (flip) { x.translate(px * 2 + 1, 0); x.scale(-1, 1); }
+  x.drawImage(c, px - O, py - B); x.restore();
+};
+H5.portrait = (h, form, ang, kk, five) => {
+  const W = 96, Hh = 96, [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x);
+  const ax = 36, ay = 64, own = pcol(0), [type, f] = H5F[form];
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, 0, L, R, false, i, own, 0), wx, ay));
+  const evo = type === 'ballista' ? 'hm_' + h : hmForm(h, f), tw = towerSprite(type, 4, evo, own); blit(x, tw, ax, ay);
+  const [tx, ty] = towerTopAt(type, 4, evo), el = H5EL[h], pown = [PCOL[0], PDARK[0]];
+  if (!five) HM.top(x, h, type, 4, ang, kk ? 0 : 9, own, ax, ay, tw.oy, 7, tx, ty, false, 0);
+  else if (form === 'elite') H5.top.elite(ax + tx, ay + ty, el, pown, ang, kk);
+  else { P = prev; H5.drawO(x, () => H5.t2[form](el, pown, kk), ax + tx, ay + ty, Math.cos(ang) < -0.15); P = mkPen(x); }
+  P = prev; return c;
+};
+
+/* ===== tours de Maison, niveau 5, 2e passe ===== */
+H5.t2m = {};
+const CRAW = (x, y, up, c1, c2) => SPR(up ? ['.L...L...', '.nL.Ln...', '..nnnnnyy', '.nnnnn...', 'n........'] : ['.........', '..nnnnnyy', '.nnnnn...', '.nL.Ln...', '.L...L...'], { n: c1, y: c2, L: '#8a8fa8' }, Math.round(x) - 4, Math.round(y) - 2);
+// CERF · BLIZZARD : un gros nuage de neige accroché aux bois givrés, qui laisse tomber des flocons
+H5.t2m.blizzard = (el, own, kk) => {
+  for (const [x, y, r] of [[-7, -22, 4], [0, -24, 5], [7, -22, 4], [-3, -20, 4], [4, -20, 4]]) disc(x, y, r, '#dbeef6', '#ffffff', '#9fc8dc');
+  P.hl(-10, -17, 21, '#9fc8dc');
+  const t = G.t * 5;
+  for (let i = 0; i < 6; i++) { const x = -9 + i * 3.6, y = -14 + ((t * 2 + i * 5) % 13); dot(x, y, '#ffffff'); if (1) { dot(x - 1, y, '#bfe6f2'); dot(x + 1, y, '#bfe6f2'); dot(x, y - 1, '#bfe6f2'); dot(x, y + 1, '#bfe6f2'); } }
+};
+// CERF · CRISTAL PUR : un grand cristal taillé qui lévite au-dessus de la tour
+H5.t2m.cristal = (el, own, kk) => {
+  const o = Math.floor(G.t * 2) % 2;
+  P.hl(-4, -1, 9, '#6fb4d6'); P.hl(-3, 0, 7, '#3f7fa8');
+  SPR(['....c....', '...cWc...', '...cWC...', '..cWWCc..', '..cWCCc..', '.cWWCCdc.', '.cWCCCdc.', 'cWWCCCddc', 'cWCCCCddc', 'cWCCCCddc', '.cWCCCdc.', '.cWCCddc.', '..cCCdc..', '..cCddc..', '...cdc...', '....c....'], { c: '#2f6f99', W: '#ffffff', C: '#9fdcf2', d: '#5fa8d0' }, -4, -22 - o);
+  for (const [x, y] of [[-9, -14], [9, -10], [-7, -6], [8, -19]]) { const f = (Math.floor(G.t * 3) + x) % 2; dot(x, y + f, '#ffffff'); dot(x - 1, y + f, '#9fdcf2'); dot(x + 1, y + f, '#9fdcf2'); dot(x, y - 1 + f, '#9fdcf2'); dot(x, y + 1 + f, '#9fdcf2'); }
+};
+// OURS · RAGE : une grosse tête d'ours qui rugit, gueule rouge, yeux en feu, vapeur
+H5.t2m.rage = (el, own, kk) => {
+  const f = Math.floor(G.t * 8) % 2;
+  SPR(['.bb.......bb.', 'bBBb.....bBBb', 'bBbbbbbbbbbBb', '.bbbbbbbbbbb.', 'bbOObbbbbOObb', 'bbbOObbbOObbb', 'bbbbbmmmbbbbb', 'bbbbmkkkmbbbb', '.bbwkrrrkwbb.', '.bbkrrrrrkbb.', '..bwkrrrkwb..', '...bbkkkbb...', '....bbbbb....'],
+    { b: '#7a4a28', B: '#c08a5a', O: '#ffd84a', m: '#c08a5a', k: '#2a1410', r: '#d9322b', w: '#fff1c9' }, -6, -18 - f);
+  dot(-3, -14 - f, '#ff6a2e'); dot(3, -14 - f, '#ff6a2e');
+  for (const s of [-1, 1]) { const p = (Math.floor(G.t * 4) + (s > 0 ? 1 : 0)) % 3; disc(s * (10 + p), -16 - p * 2, 1 + (p < 2 ? 1 : 0), '#e8e3dc', '#ffffff'); }
+  P.rect(-7, -5, 15, 4, '#5a3a22'); P.hl(-7, -5, 15, '#8a5a2e');
+};
+// OURS · TOTEM : un mât de trois têtes d'ours sculptées, ailes peintes, des runes qui rayonnent vers les voisines
+H5.t2m.totem = (el, own, kk) => {
+  const face = (y, c1, c2) => { SPR(['b.......b', 'bbbbbbbbb', 'bkkbbbkkb', 'bbbbbbbbb', '.bbmmmbb.', '.bbbkbbb.', '..bbbbb..'], { b: c1, k: '#14181c', m: c2 }, -4, y); dot(-2, y + 2, '#ffd84a'); dot(2, y + 2, '#ffd84a'); };
+  face(-8, '#c9783f', '#f0c08a'); face(-15, '#a85a2e', '#e0a05a'); face(-22, '#8a4a22', '#c9783f');
+  for (const s of [-1, 1]) { for (let i = 0; i < 3; i++) P.hl(s > 0 ? 5 : -5 - (7 - i * 2), -19 + i * 2, 7 - i * 2, i % 2 ? '#2f7fd0' : '#d9322b'); }
+  const p = Math.floor(G.t * 4) % 3;
+  for (const s of [-1, 1]) { const x = s * (12 + p); SPR(['.y.', 'yYy', '.y.'], { y: '#f2b45a', Y: '#fff1c9' }, x - 1, -12); dot(x + s * 2, -11, '#ffd84a'); }
+};
+// CORBEAU · PESTE : un masque de médecin de peste à long bec, yeux de verre, fumées vertes
+H5.t2m.peste = (el, own, kk) => {
+  SPR(['..hhhhhh..', '.hhhhhhhh.', 'hhhhhhhhhh', '..mmmmmm..', '.mGGmmGGm.', '.mGgmmGgm.', '.mGGmmGGmm', '..mmmmmmmmm', '..mmmmmmmmmm', '...mmmmmmmmmm', '....mmmmm.mmm', '....mmm.....m', '...cccc......', '..cccccc.....'],
+    { h: '#1e1f26', m: '#efe6cf', G: '#7fc06c', g: '#e8ffd0', c: '#2b2d36' }, -5, -20);
+  P.hl(-3, -17, 6, '#3f8a3a');
+  const t = G.t * 3; for (let i = 0; i < 5; i++) { const k = (t + i * .9) % 4; disc(-7 + i * 3 + Math.sin(k + i) * 1.5, -6 - k * 4, k < 2 ? 1 : 0, i % 2 ? '#9fe07c' : '#5fa04c'); }
+};
+// CORBEAU · NUÉE : un nid perché, et une nuée de corbeaux qui tourne autour
+H5.t2m.nuee = (el, own, kk) => {
+  P.rect(-7, -6, 15, 5, '#6b4a2a'); for (let i = 0; i < 7; i++) P.line(-8 + i * 2.5, -6, -6 + i * 2.5, -2, i % 2 ? '#8a6a3a' : '#4a3320');
+  CRAW(0, -9, false, '#4a4d62', '#d0a04f');
+  dot(-1, -10, '#7fc06c');
+  for (let i = 0; i < 5; i++) { const a = G.t * 1.4 + i * 1.257, x = Math.cos(a) * 14, y = -19 + Math.sin(a) * 6 - (i % 2) * 4; CRAW(x, y, Math.sin(G.t * 6 + i) > 0, '#4a4d62', '#d0a04f'); }
+};
+// RENARD · PILLAGE : un renard voleur porte un gros sac d'or, les pièces en débordent
+H5.t2m.pillage = (el, own, kk) => {
+  SPR(['...tt...', '..tttt..', '.tyyyyt.', 'tyyyyyyt', 'tyyCyyyt', 'tyCyyyyt', 'tyyCyyyt', 'tyyyCyyt', 'tyyCyyyt', '.tyyyyt.', '..tttt..'], { t: '#8a5a2e', y: '#c9a24a', C: '#fff3cf' }, 0, -14);
+  P.hl(1, -12, 6, '#5a3a22');
+  SPR(['o...o.', 'oo.oo.', 'owoowo', 'owwwwo', '.owkw.', '..ow..'], { o: '#c9783f', w: '#eadfcb', k: '#14181c' }, -9, -15);
+  dot(-8, -12, '#14181c'); dot(-5, -12, '#14181c');
+  P.rect(-8, -9, 5, 6, '#c9783f'); P.hl(-8, -9, 5, '#e09a5a'); P.line(-4, -8, 1, -11, '#c9783f');
+  const t = G.t * 4; for (let i = 0; i < 4; i++) { const k = (t + i * .8) % 3; const x = 3 + i * 2 - k, y = -16 - k * 4; dot(x, y, '#ffd84a'); dot(x + 1, y, '#e8b83a'); dot(x, y - 1, '#fff3cf'); }
+  for (let i = 0; i < 5; i++) dot(-2 + i * 2, -2, i % 2 ? '#ffd84a' : '#e8b83a');
+};
+// RENARD · RUSE : une tête de renard qui fait un clin d'œil, une grande cible rouge au-dessus
+H5.t2m.ruse = (el, own, kk) => {
+  SPR(['o.......o', 'oo.....oo', 'oko...oko', 'ooooooooo', 'owkoookoo', 'owwooowwo', '.owwwwwo.', '..owkwo..', '...owo...'], { o: '#d9823f', w: '#f7efe0', k: '#14181c' }, -4, -12);
+  P.hl(1, -8, 3, '#14181c'); dot(-2, -8, '#ffd84a');
+  const r = Math.floor(G.t * 3) % 2;
+  disc(0, -21, 5, '#d9322b'); disc(0, -21, 3, '#fff3cf'); disc(0, -21, 1, '#d9322b');
+  P.hl(-8 - r, -21, 2, '#d9322b'); P.hl(7 + r, -21, 2, '#d9322b'); P.vl(0, -29 - r, 2, '#d9322b'); P.vl(0, -14 + r, 2, '#d9322b');
+};
+H5.portraitM = (form, ang, kk, five) => {
+  const [h] = H5M[form], W = 96, Hh = 96, [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x);
+  const ax = 36, ay = 64, own = pcol(0);
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, 0, L, R, false, i, own, 0), wx, ay));
+  const evo = 'hm_' + h, tw = towerSprite('frost', 4, evo, own); blit(x, tw, ax, ay);
+  const [tx, ty] = towerTopAt('frost', 4, evo), el = H5EL[h], pown = [PCOL[0], PDARK[0]];
+  if (!five) HM.top(x, h, 'frost', 4, ang, kk ? 0 : 9, own, ax, ay, tw.oy, 7, tx, ty, false, 0);
+  else { P = prev; H5.drawO(x, () => H5.t2m[form](el, pown, kk), ax + tx, ay + ty, false); P = mkPen(x); }
+  P = prev; return c;
+};
+
+/* ---- hm12.js (planche du 18/11) ---- */
+/* ===== Baliste lourde, niveau 5 : harpon à pointe effilée, matière de la Maison, tourne sur 16 directions, tire et recharge ===== */
+const H6 = {};
+window.H6 = H6;
+const HMAT = {
+  cerf: { h: ['#f2fbff', '#9fdcf2', '#4f9ec4'], c: ['#ffffff', '#bfe6f2', '#6fb4d6'], tr: ['#ffffff', '#bfe6f2'] },
+  corbV: { h: ['#d9f5b8', '#7fc06c', '#2f6a2a'], c: ['#b8f09c', '#5fa04c', '#2d5a2a'], tr: ['#9fe07c', '#5fa04c'] },
+  renT: { h: ['#fff3cf', '#ffd84a', '#b8862e'], c: ['#ffe28a', '#d5a64c', '#8a6a22'], tr: ['#ffd84a', '#fff3cf'] },
+  oursA: { h: ['#ffd84a', '#ff6a2e', '#a8321e'], c: ['#ff9a2e', '#7d3a1e', '#3a1e14'], tr: ['#ff9a2e', '#ffd84a'] },
+};
+const WDL = '#c08a4e', WDM = '#8a5a2e', WDD = '#5a3a22', IRL = '#b4bdc9', IRM = '#727a87', IRD = '#3c414c';
+// vue de côté, tournée vers la droite (retournée si la cible est à gauche), comme le Tireur d'élite
+const HEADS = ['H.........', 'HH........', '.HHHH.....', '.HHHHHHHHx', '.MMMMMMMM.', '.DDDD.....', 'DD........', 'D.........'];
+H6.boltS = (x0, y0, h) => {   // x0 = début de la pointe ; y0 = haut du bois (2 px)
+  const m = HMAT[h];
+  P.hl(x0 - 21, y0, 17, WDL); P.hl(x0 - 21, y0 + 1, 17, WDM);
+  for (const [dx, dy] of [[-21, -2], [-20, -1], [-19, -1], [-21, 2], [-20, 3], [-19, 3], [-18, -1], [-18, 3]]) dot(x0 + dx, y0 + dy - (dy > 0 ? 1 : 0), '#efe6cf');
+  P.hl(x0 - 4, y0, 4, m.c[0]); P.hl(x0 - 4, y0 + 1, 4, m.c[2]); dot(x0 - 3, y0, m.c[1]); dot(x0 - 1, y0 + 1, m.c[1]);
+  SPR(HEADS, { H: m.h[0], M: m.h[1], D: m.h[2], x: '#ffffff' }, x0, y0 - 3);
+  if (h === 'cerf') { dot(x0 - 1, y0 - 4, '#ffffff'); dot(x0 - 1, y0 + 5, '#bfe6f2'); dot(x0 - 3, y0 - 1, '#ffffff'); }
+  if (h === 'corbV') { const d = Math.floor(G.t * 5) % 4; dot(x0 + 2, y0 + 3 + d, '#9fe07c'); if (d > 1) dot(x0 + 5, y0 + 2 + d - 1, '#7fc06c'); }
+  if (h === 'renT') { const k = Math.floor(G.t * 4) % 4; if (k === 0) { dot(x0 + 6, y0 - 1, '#ffffff'); dot(x0 + 6, y0 - 2, '#fff3cf'); dot(x0 + 5, y0 - 1, '#fff3cf'); dot(x0 + 7, y0 - 1, '#fff3cf'); } }
+  if (h === 'oursA') { const f = Math.floor(G.t * 10) % 2; dot(x0 + 3, y0 - 2 - f, '#ffd84a'); dot(x0 + 2, y0 - 1, '#ff9a2e'); dot(x0 + 4, y0 - 1 - f, '#ff6a2e'); dot(x0 + 3, y0 - 3 - f, '#ff9a2e'); dot(x0 + 5, y0 - 2 + f, '#ffd84a'); }
+};
+// ph : temps depuis le tir. <0.1 recul et l'arc claque ; 0.55-0.9 nouveau harpon qui glisse ; >0.9 chargé
+H6.local = (h, ph) => {
+  P.rect(-5, -4, 10, 5, WDM); P.hl(-5, -4, 10, WDL); P.hl(-5, 0, 10, WDD); P.vl(0, -6, 3, IRD);
+  const rec = ph >= 0 && ph < .1 ? 2 : ph < .18 ? 1 : 0, snap = ph < .4 ? 1 - ph / .4 : 0;
+  const R = -rec;
+  P.rect(-10 + R, -10, 16, 4, WDM); P.hl(-10 + R, -10, 16, WDL); P.hl(-10 + R, -7, 16, WDD);
+  const top = Math.round(-18 + snap * 2), bot = Math.round(-1 - snap * 2), fx = Math.round(snap * 2);
+  const prod = [[3, -18], [3, -17], [4, -16], [4, -15], [5, -14], [5, -13], [5, -12], [5, -11], [5, -10], [5, -9], [5, -8], [5, -7], [5, -6], [5, -5], [4, -4], [4, -3], [3, -2], [3, -1]];
+  for (const [x, y] of prod) { const yy = Math.round(-9.5 + (y + 9.5) * (1 - snap * .2)), xx = x + (Math.abs(y + 9.5) > 5 ? fx : 0) + R; dot(xx, yy, IRL); dot(xx + 1, yy, IRD); }
+  const loaded = ph > .9, sliding = ph >= .55 && ph <= .9;
+  const nock = (loaded || sliding) ? -7 : snap > 0 ? 3 : -7 + Math.max(0, (.55 - ph) / .15) * 10;
+  P.line(3 + fx + R, top, nock + R, -9, '#efe6cf'); P.line(3 + fx + R, bot, nock + R, -9, '#efe6cf');
+  if (loaded) H6.boltS(15 + R, -10, h);
+  else if (sliding) H6.boltS(Math.round(15 - (1 - (ph - .55) / .35) * 14) + R, -10, h);
+  if (ph >= 0 && ph < .08) { dot(9 + R, -11, '#ffffff'); dot(10 + R, -8, '#ffffff'); dot(8 + R, -13, '#efe6cf'); }
+};
+H6.drawF = (x, fn, px, py, flip) => {
+  const S = 64, O = 32, B = 48, [c, cx] = mkCanvas(S, S), prev = P; cx.translate(O, B); P = mkPen(cx); fn(); P = prev;
+  x.save(); if (flip) { x.translate(px * 2 + 1, 0); x.scale(-1, 1); } x.drawImage(c, px - O, py - B); x.restore();
+};
+// harpon en vol : il part vers la cible (ici dans l'axe de visée), traînée de la Maison
+H6.shot = (x, px, py, h, ang, ph) => {
+  if (ph < 0 || ph > .5) return;
+  const flip = Math.cos(ang) < 0, d = 18 + ph * 150;
+  H6.drawF(x, () => { const m = HMAT[h]; for (let i = 0; i < 8; i++) { const xx = d - 24 - i * 4; if (xx < 16) break; dot(xx, -9 + ((i * 3) % 3) - 1, m.tr[i % 2]); if (h === 'corbV' && i % 2) dot(xx, -6, m.tr[1]); } H6.boltS(Math.round(d), -10, h); }, px, py, flip);
+};
+H6.cell = (h, t, W, Hh) => {
+  const [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x); G.t = t;
+  x.fillStyle = '#2a4048'; x.fillRect(0, 0, W, Hh);
+  const ax = W / 2 - 12, ay = Hh / 2 - 2, own = pcol(0);
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, 0, L, R, false, i, own, 0), wx, ay));
+  const evo = 'hm_' + h, tw = towerSprite('ballista', 4, evo, own); blit(x, tw, ax, ay);
+  const [tx, ty] = towerTopAt('ballista', 4, evo);
+  const ang = t / 8 * Math.PI * 2 + 1.0, per = 1.6, ph = (t % per) / per * 1.6;
+  P = prev; const flip = Math.cos(ang) < 0;
+  H6.drawF(x, () => H6.local(h, ph), ax + tx, ay + ty, flip);
+  H6.shot(x, ax + tx, ay + ty, h, ang, ph); P = mkPen(x);
+  P = prev; return c;
+};
+
+/* ---- hm13.js (planche du 18/11) ---- */
+/* ===== Niveau 5, Cerf seul : même esprit que la baliste lourde. Vue de côté vers la droite, pas de contour, la glace sur ce qui tire. ph = temps depuis le tir (s) ===== */
+const H7 = {};
+window.H7 = H7;
+const IC = ['#f2fbff', '#9fdcf2', '#4f9ec4'];
+const GO = ['#ffe28a', '#d5a64c', '#8a6a22'];
+const pivot = () => { P.rect(-5, -4, 10, 5, WDM); P.hl(-5, -4, 10, WDL); P.hl(-5, 0, 10, WDD); };
+const icetip = (x, y) => { dot(x, y, IC[0]); dot(x - 1, y + 1, IC[1]); dot(x, y + 1, IC[1]); dot(x - 1, y, IC[0]); dot(x + 1, y - 1, '#ffffff'); };
+const orb = (x, y, r) => { disc(x, y, r, IC[1], IC[0], IC[2]); dot(x - Math.ceil(r / 2), y - Math.ceil(r / 2), '#ffffff'); };
+const puff = (x, y, k) => { if (k < 0 || k > 1) return; const r = 1 + Math.round(k * 2); disc(x, y - k * 4, r, k < .6 ? '#e8f4f8' : '#b8c8cf', '#ffffff'); };
+
+// PLUIE DE FLÈCHES : un râtelier incliné, quatre flèches à pointe de glace, qui partent en salve vers le ciel
+H7.pluie = (ph) => {
+  pivot();
+  const fill = (s0, s1, t0, t1, c) => { for (let s = s0; s <= s1; s += .5) for (let t = t0; t <= t1; t += .5) dot(-2 + s * .707 + t * .707, -7 - s * .707 + t * .707, typeof c === 'function' ? c(s, t) : c); };
+  fill(0, 5, -7, 7, (s, t) => t < -6 ? WDL : s > 4.5 ? WDL : s < .5 ? WDD : WDM);
+  P.vl(-1, -6, 4, WDD); P.vl(0, -6, 4, WDM);
+  for (let k = 0; k < 4; k++) {
+    const fired = ph >= 0 && ph < 1 && ph > k * .07, back = ph >= 1 ? 0 : 0;
+    if (fired && ph < .9) continue;
+    const t = -5.5 + k * 3.6, x0 = -2 + 5 * .707 + t * .707, y0 = -7 - 5 * .707 + t * .707;
+    for (let i = 0; i < 7; i++) dot(Math.round(x0 + i), Math.round(y0 - i), WDL);
+    icetip(Math.round(x0 + 7), Math.round(y0 - 7));
+  }
+};
+H7.pluieShot = (ph) => {
+  if (ph < 0 || ph > .9) return;
+  for (let k = 0; k < 4; k++) { const q = ph - k * .07; if (q < 0) continue; const t = -5.5 + k * 3.6, d = 6 + q * 70, x0 = -2 + 5 * .707 + t * .707 + d, y0 = -7 - 5 * .707 + t * .707 - d; for (let i = 0; i < 6; i++) dot(Math.round(x0 + i), Math.round(y0 - i), WDL); icetip(Math.round(x0 + 6), Math.round(y0 - 6)); dot(Math.round(x0 - 3), Math.round(y0 + 3), IC[0]); }
+};
+// BALISTE À RÉPÉTITION : le corps de la baliste, plus fin, et un chargeur de carreaux à pointe de glace ; trois tirs rapides
+H7.repet = (ph) => {
+  pivot();
+  const k = ph < 0 ? -1 : Math.floor(ph / .14), q = ph - Math.max(0, k) * .14, rec = k >= 0 && k < 3 && q < .05 ? 1 : 0, R = -rec;
+  P.rect(-9 + R, -9, 15, 3, WDM); P.hl(-9 + R, -9, 15, WDL); P.hl(-9 + R, -7, 15, WDD);
+  for (const [x, y] of [[3, -15], [4, -14], [4, -13], [5, -12], [5, -11], [5, -10], [5, -9], [5, -8], [5, -7], [5, -6], [4, -5], [4, -4], [3, -3]]) { dot(x + R, y, IRL); dot(x + 1 + R, y, IRD); }
+  const shooting = k >= 0 && k < 3 && q < .08;
+  const nk = shooting ? 3 : -5; P.line(3 + R, -15, nk + R, -9, '#efe6cf'); P.line(3 + R, -3, nk + R, -9, '#efe6cf');
+  // chargeur : trois carreaux debout derrière l'arc, pointes de glace vers le ciel
+  const left = k < 0 || k >= 3 ? 3 : 3 - k;
+  P.rect(-7 + R, -12, 8, 2, IRM); P.hl(-7 + R, -12, 8, IRL);
+  for (let i = 0; i < 3; i++) { if (i >= left) continue; const x = -6 + i * 3 + R; P.vl(x, -21, 9, WDL); SPR(['.x.', 'IMD', 'IMD', 'IMD', '.M.'].reverse().map(r => r).reverse(), { I: IC[0], M: IC[1], D: IC[2], x: '#ffffff' }, x - 1, -26); dot(x - 1, -13, '#efe6cf'); dot(x + 1, -13, '#efe6cf'); }
+  if (!shooting) { P.hl(-4 + R, -10, 13, WDL); SPR(['II..', 'IMMx', 'DD..'], { I: IC[0], M: IC[1], D: IC[2], x: '#ffffff' }, 9 + R, -11); }
+};
+H7.repetShot = (ph) => {
+  if (ph < 0) return;
+  for (let k = 0; k < 3; k++) { const q = ph - k * .14; if (q < 0 || q > .35) continue; const d = 10 + q * 200; P.hl(Math.round(d) - 9, -10, 9, WDL); icetip(Math.round(d), -11); dot(Math.round(d) - 13, -10, IC[0]); dot(Math.round(d) - 17, -10, IC[1]); }
+};
+// PILONNAGE : trois mortiers trapus côte à côte, givrés au bord ; ils tirent l'un après l'autre
+H7.pilon = (ph) => {
+  P.rect(-10, -5, 21, 6, IRM); P.hl(-10, -5, 21, IRL); P.hl(-10, 0, 21, IRD);
+  [[-6, 8], [0, 10], [6, 8]].forEach(([x, h], i) => {
+    const q = ph - i * .18, kick = q >= 0 && q < .08 ? 1 : 0, H = h - kick;
+    P.rect(x - 2, -5 - H, 5, H, IRM); P.vl(x - 2, -5 - H, H, IRL); P.vl(x + 2, -5 - H, H, IRD);
+    P.hl(x - 3, -6 - H, 7, IRL); P.hl(x - 3, -5 - H, 7, IRD); P.hl(x - 1, -6 - H, 3, '#14181c');
+    dot(x - 3, -6 - H, IC[0]); dot(x + 3, -6 - H, IC[0]); dot(x - 3, -4 - H, IC[1]); dot(x + 3, -4 - H, IC[1]); dot(x + 3, -3 - H, IC[2]);
+    if (!(q >= 0 && q < .9)) orb(x, -8 - H, 1);
+  });
+};
+H7.pilonShot = (ph) => {
+  if (ph < 0) return;
+  [[-6, 8], [0, 10], [6, 8]].forEach(([x, h], i) => { const q = ph - i * .18; if (q < 0 || q > .8) return; puff(x - 1, -8 - h, q * 2); if (q < .45) orb(x, -9 - h - q * 90, 2); });
+};
+// OBUS GLACÉ (forme « incendiaire » chez le Cerf) : un gros mortier ventru qui garde un obus de glace dans la gueule
+H7.feu = (ph) => {
+  P.rect(-8, -5, 16, 6, IRM); P.hl(-8, -5, 16, IRL); P.hl(-8, 0, 16, IRD);
+  const kick = ph >= 0 && ph < .1 ? 1 : 0;
+  SPR(['..lmmmmmd..', '.lmmmmmmmd.', 'lmmmmmmmmmd', 'lmmmmmmmmmd', '.lmmmmmmmd.', '..lmmmmmd..', '.lllmmmddd.'], { l: IRL, m: IRM, d: IRD }, -5, -12 + kick);
+  P.rect(-5, -14 + kick, 11, 2, IRL); P.hl(-5, -13 + kick, 11, IRD); P.hl(-3, -14 + kick, 7, '#14181c');
+  for (const x of [-5, -1, 3, 5]) dot(x, -12 + kick + (x % 2 ? 1 : 0), IC[0]);
+  if (!(ph >= 0 && ph < 1)) { orb(0, -16, 3); dot(-4, -19 + (Math.floor(G.t * 4) % 2), '#e8f4f8'); dot(4, -20 + (Math.floor(G.t * 3) % 2), '#e8f4f8'); }
+};
+H7.feuShot = (ph) => { if (ph < 0 || ph > 1) return; puff(-2, -15, ph * 1.6); puff(3, -15, ph * 1.4 - .1); if (ph < .5) orb(0, -17 - ph * 80, 3); };
+// CANON ROYAL : un long canon de fer cerclé d'or, une couronne sur la culasse, bouche givrée
+H7.royal = (ph) => {
+  const rec = ph >= 0 && ph < .12 ? 3 : ph >= 0 && ph < .25 ? 1 : 0, R = -rec;
+  P.rect(-8, -5, 13, 6, WDM); P.hl(-8, -5, 13, WDL); P.hl(-8, 0, 13, WDD);
+  disc(-5, -1, 3, IRD); disc(-5, -1, 2, WDM); dot(-5, -1, GO[1]); dot(-6, -2, WDL);
+  for (let x = -10; x <= 12; x++) { const r = x < -3 ? 3 : 2; P.vl(x + R, -9 - r, 2 * r + 1, IRM); dot(x + R, -9 - r, IRL); dot(x + R, -9 + r, IRD); }
+  for (const x of [-8, -3, 4]) { P.vl(x + R, -12 - (x < -3 ? 1 : 0), 7 + (x < -3 ? 2 : 0), GO[1]); dot(x + R, -12 - (x < -3 ? 1 : 0), GO[0]); }
+  P.rect(12 + R, -13, 2, 9, GO[1]); P.vl(12 + R, -13, 9, GO[0]); P.vl(13 + R, -11, 5, '#14181c');
+  dot(14 + R, -13, IC[0]); dot(14 + R, -5, IC[1]); dot(12 + R, -14, IC[0]);
+  disc(-12 + R, -9, 1, GO[1], GO[0]);
+  SPR(['y.y.y', 'yyyyy', 'gigig'], { y: GO[0], g: GO[1], i: IC[1] }, -7 + R, -16);
+};
+H7.royalShot = (ph) => { if (ph < 0 || ph > .6) return; if (ph < .1) { disc(17, -9, 3, '#ffffff', '#ffffff', IC[1]); dot(21, -9, IC[0]); dot(19, -13, IC[0]); dot(19, -5, IC[0]); } puff(16 + ph * 10, -9, ph * 1.6); if (ph < .4) disc(Math.round(18 + ph * 160), -9, 2, IRM, IRL, IRD); };
+// BOULET FENDEUR : un canon court et trapu, un boulet de glace hérissé d'éclats chargé dans la gueule ; il éclate en vol
+H7.fend = (ph) => {
+  const rec = ph >= 0 && ph < .12 ? 2 : 0, R = -rec;
+  P.rect(-8, -5, 13, 6, WDM); P.hl(-8, -5, 13, WDL); P.hl(-8, 0, 13, WDD); disc(-5, -1, 3, IRD); disc(-5, -1, 2, WDM); dot(-5, -1, GO[1]); dot(-6, -2, WDL);
+  for (let x = -9; x <= 6; x++) { const r = 3; P.vl(x + R, -9 - r, 2 * r + 1, IRM); dot(x + R, -9 - r, IRL); dot(x + R, -9 + r, IRD); }
+  P.rect(6 + R, -13, 2, 9, IRL); P.vl(7 + R, -13, 9, IRD);
+  if (!(ph >= 0 && ph < 1)) H7.spike(11 + R, -9);
+};
+H7.spike = (x, y) => { for (const [dx, dy] of [[0, -5], [4, -3], [5, 1], [2, 4], [-2, 4], [-3, -3]]) { P.line(x, y, x + dx, y + dy, IC[1]); dot(x + dx, y + dy, '#ffffff'); } disc(x, y, 3, IC[1], IC[0], IC[2]); dot(x - 1, y - 1, '#ffffff'); };
+H7.fendShot = (ph) => {
+  if (ph < 0 || ph > .7) return;
+  if (ph < .3) H7.spike(Math.round(12 + ph * 150), -9);
+  else { const k = (ph - .3) / .4, cx = 57; for (let i = 0; i < 6; i++) { const a = i * 1.047 + .3, r = 3 + k * 12; dot(cx + Math.cos(a) * r, -9 + Math.sin(a) * r * .8, i % 2 ? IC[0] : IC[1]); dot(cx + Math.cos(a) * (r - 1), -9 + Math.sin(a) * (r - 1) * .8, IC[2]); } }
+};
+// TOUR DE MAISON · BLIZZARD : un grand flocon qui tourne au-dessus de la tour ; au tir, une onde de givre
+H7.blizzard = (ph) => {
+  // une tornade de neige qui tourne au-dessus de la tour, couronnée d'aiguilles de glace
+  const t = G.t * 5, burst = ph >= 0 && ph < .3 ? 1 : 0;
+  for (const [x, h] of [[-6, 5], [-3, 8], [0, 10], [3, 8], [6, 5]]) { P.vl(x, -2 - h, h, IC[1]); P.vl(x + (x < 0 ? -1 : 1) * 0, -2 - h, 1, '#ffffff'); dot(x, -2, IC[2]); }
+  for (let k = 0; k < 7; k++) {
+    const y = -8 - k * 3.4, rx = 3 + k * 1.9 + burst * 2, ry = 1 + k * .35;
+    for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2, sw = Math.sin(a * 3 + t * (1 + k * .1)); const front = Math.sin(a) > 0; dot(Math.round(Math.cos(a) * rx), Math.round(y + Math.sin(a) * ry), front ? (sw > .2 ? '#ffffff' : IC[0]) : (sw > 0 ? IC[1] : IC[2])); }
+  }
+  for (let i = 0; i < 6; i++) { const a = t * .7 + i * 1.05, r = 16 + (i % 2) * 3; const x = Math.round(Math.cos(a) * r), y = Math.round(-22 + Math.sin(a) * 5); dot(x, y, '#ffffff'); dot(x - 1, y, IC[1]); dot(x + 1, y, IC[1]); dot(x, y - 1, IC[1]); dot(x, y + 1, IC[1]); }
+};
+H7.blizzardShot = (ph) => { if (ph < 0 || ph > .6) return; const R = 8 + ph * 50; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; dot(Math.round(Math.cos(a) * R), -2 + Math.round(Math.sin(a) * R * .45), i % 3 ? IC[0] : '#ffffff'); } };
+// TOUR DE MAISON · CRISTAL PUR : un grand cristal taillé qui lévite ; au tir, un rayon de glace qui transperce
+H7.cristal = (ph) => {
+  // une couronne de cristaux : un grand au centre, deux plus petits penchés, des éclats qui tournent, un halo au sol
+  const o = Math.floor(G.t * 2) % 2, glow = ph >= 0 && ph < .3, W = glow ? '#ffffff' : IC[0];
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; dot(Math.round(Math.cos(a) * 9), Math.round(-2 + Math.sin(a) * 3), i % 2 ? IC[1] : IC[0]); }
+  SPR(['..c..', '.cWC.', '.cWCd', 'cWCCd', 'cWCdd', '.cCd.', '..d..'], { c: IC[2], W, C: IC[1], d: '#3f7fa8' }, -10, -11);
+  SPR(['..c..', '.cWC.', 'cWWCd', 'cWCCd', 'cWCdd', '.cCd.', '..d..'], { c: IC[2], W, C: IC[1], d: '#3f7fa8' }, 6, -12);
+  SPR(['....c....', '...cWC...', '...cWC...', '..cWWCd..', '..cWCCd..', '.cWWCCdd.', '.cWCCCdd.', 'cWWCCCddd', 'cWCCCCddd', 'cWCCCCddd', 'cWCCCCddd', '.cWCCCdd.', '.cWCCddd.', '..cCCdd..', '..cCdd...', '...cdd...', '....d....'], { c: IC[2], W, C: IC[1], d: '#3f7fa8' }, -4, -24 - o);
+  for (let i = 0; i < 3; i++) { const a = G.t * 2 + i * 2.09, x = Math.round(Math.cos(a) * 13), y = Math.round(-14 + Math.sin(a) * 4); SPR(['.c.', 'cWc', '.c.'], { c: IC[1], W: '#ffffff' }, x - 1, y - 1); }
+  const g = Math.floor(G.t * 3) % 4; if (g === 0) { dot(0, -27 - o, '#ffffff'); dot(-1, -26 - o, '#ffffff'); dot(1, -26 - o, '#ffffff'); dot(0, -25 - o, '#ffffff'); dot(0, -29 - o, IC[0]); }
+};
+H7.cristalShot = (ph) => { if (ph < 0 || ph > .35) return; const o = Math.floor(G.t * 2) % 2, y = -15 - o; P.hl(5, y, 80, '#ffffff'); P.hl(5, y - 1, 80, IC[0]); P.hl(5, y + 1, 80, IC[0]); P.hl(5, y - 2, 80, IC[2]); P.hl(5, y + 2, 80, IC[2]); disc(4, y, 3, '#ffffff', '#ffffff', IC[1]); for (let i = 0; i < 6; i++) dot(10 + i * 12 + (Math.floor(G.t * 20) % 4), y + (i % 2 ? -4 : 4), '#ffffff'); };
+
+H7.draw = (x, fn, px, py) => { const S = 200, O = 60, B = 130, [c, cx] = mkCanvas(S, S), prev = P; cx.translate(O, B); P = mkPen(cx); fn(); P = prev; x.drawImage(c, px - O, py - B); };
+const H7F = { pluie: ['arrow', 'double'], repet: ['ballista', ''], pilon: ['cannon', 'mortar'], feu: ['cannon', 'mortar'], royal: ['cannon', 'heavy'], fend: ['cannon', 'heavy'], blizzard: ['frost', 'M'], cristal: ['frost', 'M'] };
+H7.cell = (form, t, W, Hh, still) => {
+  const h = 'cerf', [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x); G.t = t;
+  x.fillStyle = '#2a4048'; x.fillRect(0, 0, W, Hh);
+  const ax = Math.round(W * .32) - 12, ay = Hh - 34, own = pcol(0), [type, f] = H7F[form];
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, 0, L, R, false, i, own, 0), wx, ay));
+  const evo = type === 'ballista' || f === 'M' ? 'hm_' + h : hmForm(h, f), tw = towerSprite(type, 4, evo, own); blit(x, tw, ax, ay);
+  const [tx, ty] = towerTopAt(type, 4, evo);
+  const per = 2.2, ph = still ? 5 : (t % per);
+  P = prev;
+  H7.draw(x, () => H7[form](ph), ax + tx, ay + ty);
+  H7.draw(x, () => H7[form + 'Shot'](ph), ax + tx, ay + ty);
+  P = prev; return c;
+};
+
+/* ---- vox.js (planche du 18/11) ---- */
+/* ===== Rotation 360° : chaque arme est un petit modèle en volume (cubes), rendu en pixels à n'importe quel angle, sans contour ===== */
+const VX = {};
+window.VX = VX;
+const K3 = 0.72;
+const MAT = {
+  wood: ['#c08a4e', '#8a5a2e', '#5a3a22'], iron: ['#9ea8b5', '#6a7280', '#3c414c'], gold: ['#ffe28a', '#d5a64c', '#8a6a22'],
+  ice: ['#f2fbff', '#9fdcf2', '#4f9ec4'], dark: ['#262a30', '#14181c', '#0c0e10'], str: ['#efe6cf', '#d9ccb0', '#b8a888'], white: ['#ffffff', '#f2fbff', '#dfeef5'],
+};
+VX.HP = { cerf: [['#f2fbff', '#9fdcf2', '#4f9ec4'], ['#ffffff', '#f2fbff', '#dfeef5']], oursA: [['#ffd84a', '#ff6a2e', '#a8321e'], ['#fff1c9', '#ffd84a', '#ff9a2e']], corbV: [['#d9f5b8', '#7fc06c', '#2f6a2a'], ['#e8ffd0', '#b8f09c', '#7fc06c']], renT: [['#fff3cf', '#ffd84a', '#b8862e'], ['#ffffff', '#fff3cf', '#ffe28a']] };
+VX.house = (h) => { MAT.ice = VX.HP[h][0]; MAT.white = VX.HP[h][1]; };
+VX.model = () => ({ v: new Map() });
+const key = (s, t, z) => s + ',' + t + ',' + z;
+VX.set = (m, s, t, z, mat) => m.v.set(key(Math.round(s), Math.round(t), Math.round(z)), mat);
+VX.box = (m, s0, s1, t0, t1, z0, z1, mat) => { for (let s = s0; s <= s1; s++) for (let t = t0; t <= t1; t++) for (let z = z0; z <= z1; z++) VX.set(m, s, t, z, typeof mat === 'function' ? mat(s, t, z) : mat); };
+VX.cyl = (m, A, B, r, mat) => {
+  const [ax, ay, az] = A, [bx, by, bz] = B, dx = bx - ax, dy = by - ay, dz = bz - az, L2 = dx * dx + dy * dy + dz * dz, R = typeof r === 'function' ? 6 : r;
+  for (let s = Math.floor(Math.min(ax, bx) - R - 1); s <= Math.max(ax, bx) + R + 1; s++) for (let t = Math.floor(Math.min(ay, by) - R - 1); t <= Math.max(ay, by) + R + 1; t++) for (let z = Math.floor(Math.min(az, bz) - R - 1); z <= Math.max(az, bz) + R + 1; z++) {
+    let u = ((s - ax) * dx + (t - ay) * dy + (z - az) * dz) / L2; if (u < 0 || u > 1) continue;
+    const px = ax + dx * u - s, py = ay + dy * u - t, pz = az + dz * u - z, d = Math.sqrt(px * px + py * py + pz * pz), rr = typeof r === 'function' ? r(u) : r;
+    if (d <= rr) VX.set(m, s, t, z, typeof mat === 'function' ? mat(u, d / rr, s, t, z) : mat);
+  }
+};
+VX.sph = (m, c, r, mat) => { const [cs, ct, cz] = c; for (let s = Math.floor(cs - r); s <= cs + r; s++) for (let t = Math.floor(ct - r); t <= ct + r; t++) for (let z = Math.floor(cz - r); z <= cz + r; z++) { const d = Math.hypot(s - cs, t - ct, z - cz); if (d <= r) VX.set(m, s, t, z, typeof mat === 'function' ? mat(d / r, s, t, z) : mat); } };
+VX.line = (m, A, B, mat) => { const n = Math.ceil(Math.max(Math.abs(B[0] - A[0]), Math.abs(B[1] - A[1]), Math.abs(B[2] - A[2])) * 2); for (let i = 0; i <= n; i++) { const u = i / n; VX.set(m, A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u, A[2] + (B[2] - A[2]) * u, mat); } };
+// liste de points prêts à dessiner, avec la normale (faces à l'air) de chaque cube
+VX.bake = (m) => {
+  const out = [];
+  for (const [k, mat] of m.v) {
+    const [s, t, z] = k.split(',').map(Number); let ns = 0, nt = 0, nz = 0, open = 0;
+    for (const [a, b, c] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) if (!m.v.has(key(s + a, t + b, z + c))) { ns += a; nt += b; nz += c; open++; }
+    if (!open) continue;
+    out.push([s, t, z, mat, ns, nt, nz]);
+  }
+  return out;
+};
+// dessine des modèles cuits, tournés de l'angle a (sur l'écran), origine (ox, oy), parties décalées le long de l'axe
+VX.draw = (x, parts, a, ox, oy) => {
+  const ca = Math.cos(a), sa = Math.sin(a), Z = new Map();
+  const L = [-.55, .35, .76];
+  for (const [pts, off] of parts) {
+    const [os, ot, oz] = off || [0, 0, 0];
+    for (const [s, t, z, mat, ns, nt, nz] of pts) {
+      const wx = ns * ca - nt * sa, wy = ns * sa + nt * ca, nl = Math.hypot(wx, wy, nz) || 1, lum = (wx * L[0] + wy * L[1] + nz * L[2]) / nl;
+      const col = (MAT[mat] || MAT.iron)[lum > .42 ? 0 : lum > -.15 ? 1 : 2];
+      for (const ds of [-.25, .25]) for (const dt of [-.25, .25]) for (const dz of [-.25, .25]) {
+        const S = s + os + ds, T = t + ot + dt, Zz = z + oz + dz, yw = S * sa + T * ca;
+        const X = Math.round(ox + S * ca - T * sa), Y = Math.round(oy + yw * K3 - Zz), d = yw + K3 * Zz, k2 = X + ',' + Y, cur = Z.get(k2);
+        if (!cur || d > cur[0]) Z.set(k2, [d, col]);
+      }
+    }
+  }
+  for (const [k2, [, col]] of Z) { const [X, Y] = k2.split(',').map(Number); x.fillStyle = col; x.fillRect(X, Y, 1, 1); }
+};
+VX.scr = (a, s, t, z, ox, oy) => { const ca = Math.cos(a), sa = Math.sin(a); return [ox + s * ca - t * sa, oy + (s * sa + t * ca) * K3 - z]; };
+
+/* ---- les armes (Cerf) ---- */
+const HEADW = [[0, 1], [1, 3], [2, 2], [3, 2], [4, 1.5], [5, 1.2], [6, 1], [7, .6], [8, .3], [9, 0]];
+const boltV = (m, s0, z, t0 = 0, len = 21) => {
+  VX.line(m, [s0 - len, t0, z], [s0 - 5, t0, z], 'wood');
+  for (const sg of [-1, 1]) VX.line(m, [s0 - len, t0 + sg * 2, z], [s0 - len + 2, t0 + sg * 1, z], 'str');
+  VX.line(m, [s0 - 4, t0, z], [s0, t0, z], 'ice');
+  for (const [ds, w] of HEADW) for (let tt = -Math.round(w); tt <= Math.round(w); tt++) VX.set(m, s0 + ds, t0 + tt, z, ds > 7 ? 'white' : 'ice');
+};
+VX.build = {
+  lourde: (st) => {
+    const m = VX.model();
+    VX.box(m, -10, 7, -1, 1, 4, 5, 'wood');
+    for (let t = -11; t <= 11; t++) { const s = Math.round(5 - Math.abs(t) * .28); VX.set(m, s, t, 5, 'iron'); VX.set(m, s, t, 6, 'iron'); }
+    const nock = st.loaded ? -6 : 3;
+    for (const sg of [-1, 1]) VX.line(m, [2, sg * 11, 6], [nock, 0, 7], 'str');
+    if (st.loaded) boltV(m, 15, 7);
+    VX.box(m, -10, -8, -1, 1, 3, 6, 'iron');
+    return m;
+  },
+  repet: (st) => {
+    const m = VX.model();
+    VX.box(m, -8, 6, -1, 1, 4, 5, 'wood');
+    for (let t = -8; t <= 8; t++) { const s = Math.round(5 - Math.abs(t) * .3); VX.set(m, s, t, 5, 'iron'); VX.set(m, s, t, 6, 'iron'); }
+    const nock = st.shooting ? 3 : -5;
+    for (const sg of [-1, 1]) VX.line(m, [2, sg * 8, 6], [nock, 0, 7], 'str');
+    VX.box(m, -4, -2, -4, 4, 6, 7, 'iron');
+    for (let i = 0; i < 3; i++) { if (i >= st.left) continue; const t = -2 + i * 2; VX.line(m, [-3, t, 8], [-3, t, 16], 'wood'); VX.box(m, -3, -3, t, t, 17, 19, 'ice'); VX.set(m, -3, t, 20, 'white'); VX.set(m, -2, t, 17, 'ice'); VX.set(m, -4, t, 17, 'ice'); }
+    if (!st.shooting) boltV(m, 11, 7, 0, 14);
+    return m;
+  },
+  pilon: (st) => {
+    const m = VX.model();
+    VX.cyl(m, [0, 0, 0], [0, 0, 2], 7, 'iron');
+    [-6, 0, 6].forEach((t, i) => {
+      const k = st.kick[i] ? -1.5 : 0, A = [-3 + k * .6, t, 2], B = [5 + k * .6, t, 14 + k];
+      VX.cyl(m, A, B, 2.2, (u, d) => u > .88 ? (d < .62 ? 'dark' : 'ice') : (Math.abs(u - .4) < .05 ? 'ice' : 'iron'));
+      if (st.loaded[i]) VX.sph(m, [5.6 + k * .6, t, 15 + k], 1.2, 'white');
+    });
+    return m;
+  },
+  feu: (st) => {
+    const m = VX.model();
+    VX.cyl(m, [0, 0, 0], [0, 0, 2], 7, 'iron');
+    const k = st.kick ? -1.5 : 0;
+    VX.cyl(m, [-3, 0, 2], [3 + k * .5, 0, 14 + k], (u) => 3.6 + Math.sin(u * Math.PI) * 1.6, (u, d) => u > .9 ? (d < .72 ? 'dark' : 'ice') : (Math.abs(u - .5) < .05 || Math.abs(u - .25) < .04 ? 'ice' : 'iron'));
+    if (st.loaded) VX.sph(m, [3.5 + k * .5, 0, 15 + k], 2.2, (d) => d < .4 ? 'white' : 'ice');
+    return m;
+  },
+  royal: (st) => {
+    const m = VX.model(), R = st.rec;
+    VX.box(m, -8, 3, -3, 3, 0, 4, 'wood');
+    for (const sg of [-1, 1]) VX.cyl(m, [-3, sg * 4, 3], [-3, sg * 5, 3], 3.4, (u, d) => d > .72 ? 'iron' : 'wood');
+    const p = VX.model();
+    VX.cyl(p, [-11, 0, 7], [16, 0, 7], (u) => 3.1 - u * .9, (u, d, s) => (u > .97 ? (d < .6 ? 'dark' : 'gold') : [-7, -1, 7].includes(s) ? 'gold' : 'iron'));
+    VX.cyl(p, [15, 0, 7], [16, 0, 7], 2.9, (u, d) => d < .55 ? 'dark' : 'gold');
+    VX.sph(p, [-12, 0, 7], 1.6, 'gold');
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; VX.set(p, -6 + Math.cos(a) * 2, Math.sin(a) * 2, 11, 'gold'); }
+    for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + .785; VX.set(p, -6 + Math.cos(a) * 2, Math.sin(a) * 2, 12, 'gold'); VX.set(p, -6 + Math.cos(a) * 2, Math.sin(a) * 2, 13, 'gold'); }
+    VX.set(p, -6, 0, 11, 'ice'); VX.set(p, -6, 0, 12, 'ice');
+    return [m, p, R];
+  },
+  fend: (st) => {
+    const m = VX.model(), R = st.rec;
+    VX.box(m, -7, 2, -3, 3, 0, 4, 'wood');
+    for (const sg of [-1, 1]) VX.cyl(m, [-3, sg * 4, 3], [-3, sg * 5, 3], 3.2, (u, d) => d > .7 ? 'iron' : 'wood');
+    const p = VX.model();
+    VX.cyl(p, [-8, 0, 7], [6, 0, 7], 3.8, (u, d) => u > .93 ? (d < .62 ? 'dark' : 'iron') : 'iron');
+    VX.cyl(p, [-8, 0, 7], [-6, 0, 7], 4.3, 'iron');
+    if (st.loaded) VX.spike(p, [10, 0, 7]);
+    return [m, p, R];
+  },
+};
+VX.spike = (m, c) => {
+  VX.sph(m, c, 2.7, (d) => d < .5 ? 'white' : 'ice');
+  for (const [a, b, cc] of [[1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1], [.7, .7, .3], [.7, -.7, .3], [-.5, .6, .6], [-.5, -.6, .6], [.6, 0, -.8]]) { const n = Math.hypot(a, b, cc); VX.line(m, c, [c[0] + a / n * 5, c[1] + b / n * 5, c[2] + cc / n * 5], 'ice'); VX.set(m, c[0] + a / n * 5.5, c[1] + b / n * 5.5, c[2] + cc / n * 5.5, 'white'); }
+};
+
+/* ---- hm15.js (planche du 18/11) ---- */
+/* ===== Tours de Maison niveau 5, qui partent du niveau 4 : Tambour (Ours), Chaudron (Corbeau), Terrier (Renard) ===== */
+const H9 = {};
+window.H9 = H9;
+const HD = ['#f2e6c8', '#d9c69a', '#a8905e'], WR = ['#c08a4e', '#8a5a2e', '#5a3a22'], BN = ['#f2ead8', '#d9ccb0', '#a8987a'], EM = ['#ffd84a', '#ff9a2e', '#d9322b'];
+const IRN = ['#9ea8b5', '#6a7280', '#3c414c', '#262a30'], GR = ['#e8ffd0', '#9fe07c', '#5fa04c', '#2f6a2a'], OR = ['#fff3cf', '#ffd84a', '#d5a64c', '#8a6a22'];
+// un tambour vu de trois quarts : peau (ellipse claire), fût de bois cerclé, cordes en zigzag
+const drum = (cx, cy, rx, h, hit) => {
+  const ry = Math.max(2, Math.round(rx * .45));
+  for (let y = 0; y <= h; y++) for (let x = -rx; x <= rx; x++) { const e = (x * x) / (rx * rx); if (e > 1) continue; const yy = cy + y + Math.round(Math.sqrt(1 - e) * ry); dot(cx + x, yy, x < -rx * .5 ? WR[0] : x > rx * .5 ? WR[2] : WR[1]); }
+  for (let x = -rx; x <= rx; x++) { const e = 1 - (x * x) / (rx * rx); const yb = cy + h + Math.round(Math.sqrt(e) * ry); dot(cx + x, yb, BN[2]); dot(cx + x, yb - 1, BN[1]); const yt = cy + Math.round(Math.sqrt(e) * ry); dot(cx + x, yt + 1, BN[1]); }
+  for (let i = -rx + 1; i < rx; i += 3) { const e1 = 1 - (i * i) / (rx * rx), e2 = 1 - ((i + 1.5) ** 2) / (rx * rx); P.line(cx + i, cy + 2 + Math.round(Math.sqrt(Math.max(0, e1)) * ry), cx + i + 1.5, cy + h - 1 + Math.round(Math.sqrt(Math.max(0, e2)) * ry), BN[0]); }
+  for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) { if ((x * x) / (rx * rx) + (y * y) / (ry * ry) > 1) continue; dot(cx + x, cy + y, hit ? '#ffffff' : (x + y < -rx * .4 ? HD[0] : x + y > rx * .5 ? HD[2] : HD[1])); }
+};
+const mallet = (x0, y0, x1, y1) => { P.line(x0, y0, x1, y1, BN[1]); P.line(x0 + 1, y0, x1 + 1, y1, BN[2]); disc(x1, y1, 1, BN[0], '#ffffff', BN[2]); };
+const ring = (R, k, c1, c2, y0 = -2) => { for (let i = 0; i < 32; i++) { const a = i / 32 * Math.PI * 2; dot(Math.round(Math.cos(a) * R), y0 + Math.round(Math.sin(a) * R * .45), i % 2 ? c1 : c2); } };
+
+// OURS · GRAND TAMBOUR : un tambour énorme, deux massues d'os ; au coup, une grande onde de braise qui étourdit
+H9.grand = (ph) => {
+  const hit = ph >= 0 && ph < .1, up = ph < 0 ? .6 : ph < .5 ? 0 : Math.min(1, (ph - .5) / .6);
+  drum(0, -13, 10, 9, hit);
+  for (let i = 0; i < 5; i++) { const a = -2.6 + i * .55; dot(Math.round(Math.cos(a) * 12), -10 + Math.round(Math.sin(a) * 5), EM[i % 2]); }
+  const lift = hit ? 0 : Math.round(up * 7);
+  mallet(-12, -12 - lift, -3, -20 - lift); mallet(12, -12 - lift, 3, -20 - lift);
+  if (Math.floor(G.t * 6) % 2) { dot(-9, -20, EM[0]); dot(8, -21, EM[1]); }
+};
+H9.grandShot = (ph) => { if (ph < 0 || ph > .7) return; for (const k of [0, .12]) { const q = ph - k; if (q < 0 || q > .55) continue; ring(10 + q * 80, q, q < .25 ? EM[0] : EM[1], EM[2]); } if (ph > .1 && ph < .7) for (let i = 0; i < 3; i++) { const a = G.t * 6 + i * 2.1; dot(48 + Math.cos(a) * 4, -8 + Math.sin(a) * 1.5, '#ffd84a'); } };
+// OURS · TAMBOURS DE RAGE : deux tambours, des baguettes qui frappent de plus en plus vite, des flammes qui montent
+H9.rage2 = (ph) => {
+  const sp = 6 + Math.min(ph < 0 ? 0 : ph, 2.2) * 9, b = Math.floor(G.t * sp) % 2, heat = ph < 0 ? 0 : Math.min(1, ph / 1.6);
+  drum(-6, -9, 6, 6, b === 0); drum(7, -11, 6, 6, b === 1);
+  for (const [x, l] of [[-6, b], [7, 1 - b]]) { const lift = l ? 5 : 0; mallet(x - 4, -16 - lift, x - 1, -11 - lift + (l ? 0 : 1)); }
+  const fh = 3 + Math.round(heat * 7);
+  for (const x of [-11, 0, 12]) for (let i = 0; i < fh; i++) { const w = Math.max(0, Math.round((fh - i) / 4)); for (let j = -w; j <= w; j++) dot(x + j + Math.round(Math.sin(G.t * 14 + i + x) * .7), -6 - i, i < fh * .35 ? EM[2] : i < fh * .7 ? EM[1] : EM[0]); }
+};
+H9.rage2Shot = (ph) => { if (ph < 0) return; const n = Math.min(6, 1 + Math.floor(ph * 3)); for (let k = 0; k < n; k++) { const q = (ph * (1 + k * .3) + k * .17) % .5; if (q > .4) continue; const d = 8 + q * 120; disc(d, -12 + (k % 3) * 2, 1, EM[1], EM[0], EM[2]); } };
+// CORBEAU · GRAND CHAUDRON : une marmite énorme sur trois pieds, qui déborde ; il lance une grosse fiole, la flaque est très large
+const cauldron = (rx, ry, h, lip, fill, bub) => {
+  for (let y = 0; y <= h; y++) { const f = y / h, w = Math.round(rx * (f < .75 ? .82 + .18 * Math.sin(f / .75 * Math.PI / 2) : Math.sqrt(1 - ((f - .75) / .3) ** 2))); for (let x = -w; x <= w; x++) dot(x, -h + y - 2, x < -w * .55 ? IRN[0] : x > w * .55 ? IRN[2] : IRN[1]); }
+  for (let y = -ry; y <= ry; y++) for (let x = -lip; x <= lip; x++) { const e = (x * x) / (lip * lip) + (y * y) / (ry * ry); if (e > 1) continue; dot(x, -h - 2 + y, e > .62 ? (y < 0 ? IRN[0] : IRN[2]) : (x + y < -2 ? fill[0] : fill[1])); }
+  for (let i = 0; i < bub; i++) { const k = (G.t * 1.5 + i / bub) % 1, x = Math.round(Math.sin(i * 2.7) * (lip - 3)), y = -h - 2 + Math.round(Math.cos(i * 1.9) * (ry - 1)); if (k < .6) disc(x, y - Math.round(k * 2), k < .3 ? 0 : 1, fill[0], '#ffffff'); }
+};
+H9.grandc = (ph) => {
+  for (const x of [-8, 0, 8]) { P.vl(x, -4, 4, IRN[2]); dot(x, -1, IRN[3]); }
+  cauldron(10, 4, 10, 11, [GR[0], GR[1]], 5);
+  for (const [x, l] of [[-10, 6], [-4, 9], [5, 7], [10, 5]]) { const d = Math.floor(G.t * 3 + x) % 3; P.vl(x, -12, l, GR[1]); dot(x, -12 + l + d, GR[0]); }
+  P.line(6, -22, 12, -14, WR[1]); P.line(7, -22, 13, -14, WR[2]); disc(5, -14, 1, IRN[1]);
+};
+H9.grandcShot = (ph) => { if (ph < 0 || ph > 1.6) return; if (ph < .5) { const q = ph / .5, x = q * 50, y = -18 - Math.sin(q * Math.PI) * 26 + q * 12; SPR(['.k.', 'gGg', 'ggg', '.g.'], { k: WR[1], g: GR[2], G: GR[0] }, Math.round(x) - 1, Math.round(y) - 2); } else { const k = Math.min(1, (ph - .5) / .3), R = 6 + k * 14; for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, r = R * (.75 + ((i * 7) % 5) / 16); dot(50 + Math.round(Math.cos(a) * r), -4 + Math.round(Math.sin(a) * r * .4), i % 3 ? GR[1] : GR[2]); } for (let i = 0; i < 4; i++) { const q = (G.t * 2 + i / 4) % 1; dot(42 + i * 5, -6 - Math.round(q * 8), GR[0]); } } };
+// CORBEAU · CHAUDRON DE PESTE : un chaudron à bord hérissé, un poison plus vif, trois gouttes reliées qui tournent au-dessus (le poison qui saute)
+H9.peste2 = (ph) => {
+  cauldron(8, 3, 8, 9, ['#d9ffb0', '#7fe04c'], 4);
+  for (let i = -8; i <= 8; i += 4) { dot(i, -14, IRN[0]); dot(i, -15, IRN[1]); }
+  const o = [0, 1, 2].map(i => { const a = G.t * 2.4 + i * 2.094; return [Math.round(Math.cos(a) * 13), -14 + Math.round(Math.sin(a) * 5)]; });
+  for (let i = 0; i < 3; i++) { const [a, b] = [o[i], o[(i + 1) % 3]]; P.line(a[0], a[1], b[0], b[1], ph >= 0 && ph < .3 ? '#ffffff' : GR[2]); }
+  for (const [x, y] of o) { disc(x, y, 1, GR[1], GR[0], GR[3]); }
+  for (let i = 0; i < 4; i++) { const k = (G.t * 1.2 + i / 4) % 1; dot(Math.round(Math.sin(i * 2 + k * 5) * 3), -14 - Math.round(k * 10), k < .5 ? GR[1] : GR[2]); }
+};
+H9.peste2Shot = (ph) => { if (ph < 0 || ph > .35) return; const pts = [[0, -22], [22, -8], [38, -14], [54, -4], [66, -10]]; for (let i = 0; i < pts.length - 1; i++) { P.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], GR[0]); P.line(pts[i][0], pts[i][1] + 1, pts[i + 1][0], pts[i + 1][1] + 1, GR[2]); } for (let i = 1; i < pts.length; i++) disc(pts[i][0], pts[i][1], 2, GR[1], '#ffffff', GR[3]); };
+// RENARD · le terrier (créneaux d'or, l'entrée sombre, le renard qui guette), la base des deux formes
+const burrow = () => {
+  P.rect(-8, -10, 17, 9, OR[2]); P.hl(-8, -10, 17, OR[1]); P.vl(-8, -10, 9, OR[1]); P.vl(8, -10, 9, OR[3]);
+  for (const x of [-8, -3, 2, 7]) { P.rect(x, -13, 2, 3, OR[2]); dot(x, -13, OR[0]); }
+  P.rect(-5, -8, 11, 6, '#262a30'); P.hl(-4, -9, 9, '#262a30');
+  SPR(['o.....o', 'oo...oo', 'owoooow', '.okwko.', '..owo..'], { o: '#d9823f', w: '#f2e6d8', k: '#14181c' }, -3, -8);
+};
+// RENARD · PIÈGES À MÂCHOIRES : une grande mâchoire de fer ouverte sur le terrier ; elle jette des pièges qui se referment et blessent
+const jaw = (x, y, s, open) => {
+  // un piège à mâchoires vu de face : deux arcs de fer à dents ; ouvert, les arcs s'écartent
+  const g = open ? Math.round(s * .55) : 0;
+  for (let i = -s; i <= s; i++) { const k = Math.round(Math.sqrt(1 - (i * i) / (s * s)) * s * .5); dot(x + i, y + g + k, IRN[1]); dot(x + i, y + g + k + 1, IRN[2]); dot(x + i, y - g - k, IRN[0]); dot(x + i, y - g - k - 1, IRN[1]); if (i % 2 === 0 && Math.abs(i) < s) { dot(x + i, y + g + k - 1, '#ffffff'); dot(x + i, y - g - k + 1, '#ffffff'); } }
+  P.hl(x - s - 2, y, 3, OR[2]); P.hl(x + s, y, 3, OR[2]); dot(x - s - 2, y, OR[0]); dot(x + s + 2, y, OR[0]);
+};
+H9.machoires = (ph) => {
+  burrow();
+  const snap = ph >= 0 && ph < .12;
+  jaw(0, -20, 8, !snap);
+  P.vl(-10, -19, 6, IRN[2]); P.vl(10, -19, 6, IRN[2]);
+};
+H9.machoiresShot = (ph) => { if (ph < 0 || ph > 1.4) return; if (ph < .45) { const q = ph / .45; jaw(Math.round(q * 50), Math.round(-18 - Math.sin(q * Math.PI) * 14 + q * 14), 4, true); } else { const shut = ph < .6; jaw(50, -4, 4, false); for (let i = 0; i < 3; i++) dot(47 + i * 3, -9 - (Math.floor(G.t * 8 + i) % 2), '#d9322b'); if (shut) for (let i = 0; i < 6; i++) { const a = i * 1.05; dot(50 + Math.cos(a) * 6, -4 + Math.sin(a) * 3, '#ffffff'); } } };
+// RENARD · TERRIER AUX TRÉSORS : le terrier déborde d'or, des pièces sur les créneaux ; ses pièges font jaillir des pièces
+H9.tresor = (ph) => {
+  burrow();
+  SPR(['....yy....', '..yyYyyy..', '.yYyyyyYy.', 'yyyyYyyyyy'], { y: OR[1], Y: OR[0] }, -5, -17);
+  for (const x of [-8, -3, 2, 7]) { dot(x, -14, OR[1]); dot(x + 1, -14, OR[0]); }
+  for (let i = 0; i < 4; i++) { const k = (G.t * .8 + i / 4) % 1, x = Math.round(Math.sin(i * 2.1) * (2 + k * 8)), y = -16 - Math.round(Math.sin(k * Math.PI) * 10); const f = Math.floor(G.t * 8 + i) % 4; if (f % 2) { P.vl(x, y - 1, 3, OR[2]); dot(x, y - 1, OR[0]); } else disc(x, y, 1, OR[1], OR[0], OR[3]); }
+  if (Math.floor(G.t * 3) % 4 === 0) { dot(-1, -19, '#ffffff'); dot(-2, -19, OR[0]); dot(0, -19, OR[0]); dot(-1, -20, OR[0]); dot(-1, -18, OR[0]); }
+};
+H9.tresorShot = (ph) => { if (ph < 0 || ph > 1.2) return; if (ph < .45) { const q = ph / .45; jaw(Math.round(q * 50), Math.round(-14 - Math.sin(q * Math.PI) * 12 + q * 10), 3, true); } else { jaw(50, -4, 3, false); const q = ph - .45; for (let i = 0; i < 8; i++) { const a = -Math.PI / 2 + (i - 3.5) * .3, r = q * 40; const x = 50 + Math.cos(a) * r, y = -6 + Math.sin(a) * r + q * q * 50; disc(x, y, 1, OR[1], OR[0], OR[3]); } } };
+const H9H = { grand: 'oursA', rage2: 'oursA', grandc: 'corbV', peste2: 'corbV', machoires: 'renT', tresor: 'renT' };
+H9.cell = (form, t, W, Hh, still) => {
+  const h = H9H[form], [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x); G.t = t;
+  x.fillStyle = '#2a4048'; x.fillRect(0, 0, W, Hh);
+  const ax = Math.round(W * .3) - 12, ay = Hh - 34, own = pcol(0);
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, 0, L, R, false, i, own, 0), wx, ay));
+  const evo = 'hm_' + h, tw = towerSprite('frost', 4, evo, own); blit(x, tw, ax, ay);
+  const [tx, ty] = towerTopAt('frost', 4, evo), ph = still ? 5 : (t % 2.4);
+  if (still === 'l4') { HM.top(x, h, 'frost', 4, 1.57, 9, own, ax, ay, tw.oy, 7, tx, ty, false, 0); P = prev; return c; }
+  P = prev;
+  H7.draw(x, () => H9[form](still ? -1 : ph), ax + tx, ay + ty);
+  if (!still) H7.draw(x, () => H9[form + 'Shot'](ph), ax + tx, ay + ty);
+  P = prev; return c;
+};
+
+/* ---- hm16.js (planche du 18/11) ---- */
+/* ===== Tours de Maison niveau 5, 2e passe : Ours, Corbeau, Renard, vues en action au milieu des créatures ===== */
+const HA = {};
+window.HA = HA;
+const LT = ['#e8c39a', '#b8865a', '#7d4a2a', '#4a2a18'], BNa = ['#f2ead8', '#d9ccb0', '#a8987a'], EMa = ['#ffd84a', '#ff9a2e', '#d9322b'], HDa = ['#f2e2c0', '#d6bf8e', '#a88e5e'];
+const IRa = ['#9ea8b5', '#6a7280', '#3c414c', '#262a30'], GRa = ['#e8ffd0', '#9fe07c', '#5fa04c', '#2f6a2a'], ORa = ['#fff3cf', '#ffd84a', '#d5a64c', '#8a6a22'], EA = ['#a8805a', '#7d5a3a', '#5a3e26', '#3a2818'];
+const pxA = (x, X, Y, c) => { x.fillStyle = c; x.fillRect(Math.round(X), Math.round(Y), 1, 1); };
+
+/* ---- dessins (origine = haut de la tour, pinceau P) ---- */
+// un tambour de guerre debout : fût haut de cuir sombre, cerclé d'os, peau tendue claire, laçage en V, trois griffures de braise
+HA.drum = (cx, top, w, h, hit, glow) => {
+  const rx = w, ry = Math.max(2, Math.round(w * .32));
+  for (let y = 0; y <= h; y++) for (let x = -rx; x <= rx; x++) { const e = 1 - (x * x) / (rx * rx); const yy = top + y + Math.round(Math.sqrt(e) * ry); const f = x / rx; dot(cx + x, yy, f < -.55 ? LT[1] : f > .5 ? LT[3] : LT[2]); }
+  for (let x = -rx + 2; x <= rx - 2; x += 4) { const e = 1 - (x * x) / (rx * rx); const y0 = top + 2 + Math.round(Math.sqrt(e) * ry); P.line(cx + x, y0, cx + x + 2, y0 + h - 4, BNa[1]); P.line(cx + x + 2, y0 + h - 4, cx + x + 4, y0, BNa[2]); }
+  for (const yb of [top + 1, top + h - 1]) for (let x = -rx; x <= rx; x++) { const e = 1 - (x * x) / (rx * rx); const yy = yb + Math.round(Math.sqrt(e) * ry); dot(cx + x, yy, BNa[0]); dot(cx + x, yy + 1, BNa[2]); }
+  for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) { if ((x * x) / (rx * rx) + (y * y) / (ry * ry) > 1) continue; dot(cx + x, top + y, hit ? '#ffffff' : (x < -rx * .3 && y < 0 ? HDa[0] : x > rx * .4 ? HDa[2] : HDa[1])); }
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; dot(cx + Math.round(Math.cos(a) * rx), top + Math.round(Math.sin(a) * ry), BNa[2]); }
+};
+const malletA = (x0, y0, x1, y1) => { P.line(x0, y0, x1, y1, BNa[1]); P.line(x0, y0 + 1, x1, y1 + 1, BNa[2]);
+  const t = G.t * 12 + x1;
+  for (let j = -4; j <= 3; j++) for (let i = -3; i <= 3; i++) { const d = Math.hypot(i, j * (j < 0 ? .7 : 1.1)); const lick = j < 0 ? (Math.sin(i * 1.7 + t) * .8 + 1) : 0; if (d > 3 + lick) continue; const c = d < 1.3 ? '#fff1c9' : d < 2.2 ? EMa[0] : d < 3 ? EMa[1] : EMa[2]; dot(x1 + i, y1 + j, c); }
+  const f = Math.floor(t) % 3; dot(x1 - 1 + f, y1 - 6, EMa[1]); dot(x1 + 1 - f, y1 - 7, EMa[0]); };
+// OURS · GRAND TAMBOUR : un tambour de guerre énorme, deux massues de cuir ; au coup, l'onde de braise
+HA.grand = (ph) => {
+  const hit = ph >= 0 && ph < .1, up = ph < 0 ? .6 : ph < .5 ? 0 : Math.min(1, (ph - .5) / .6), lift = hit ? 0 : Math.round(up * 6);
+  HA.drum(0, -17, 11, 14, hit, hit);
+  malletA(-14, -14 - lift, -5, -21 - lift); malletA(14, -14 - lift, 5, -21 - lift);
+  if (Math.floor(G.t * 5) % 2) { dot(-10, -24, EMa[0]); dot(9, -25, EMa[1]); }
+};
+// OURS · TAMBOURS DE RAGE : deux tambours de guerre et un étendard ; leur rythme renforce les tours voisines
+HA.rage = (ph) => {
+  const b = Math.floor(G.t * 4) % 2;
+  HA.drum(-6, -11, 6, 8, b === 0, b === 0); HA.drum(7, -9, 6, 8, b === 1, b === 1);
+  malletA(-12, -16 - (b ? 4 : 0), -7, -12 - (b ? 4 : 0)); malletA(13, -14 - (b ? 0 : 4), 8, -10 - (b ? 0 : 4));
+};
+// CORBEAU · GRAND CHAUDRON : une marmite très large, posée sur un foyer, qui déborde de tous côtés
+HA.pot = (rx, h, lip, ry, fill, bub) => {
+  for (let y = 0; y <= h; y++) { const f = y / h, w = Math.round(rx * (f < .7 ? .86 + .14 * Math.sin(f / .7 * Math.PI / 2) : Math.sqrt(Math.max(0, 1 - ((f - .7) / .32) ** 2)))); for (let x = -w; x <= w; x++) dot(x, -h + y - 3, x < -w * .55 ? IRa[0] : x > w * .55 ? IRa[2] : IRa[1]); }
+  for (let y = -ry; y <= ry; y++) for (let x = -lip; x <= lip; x++) { const e = (x * x) / (lip * lip) + (y * y) / (ry * ry); if (e > 1) continue; dot(x, -h - 3 + y, e > .66 ? (y < 0 ? IRa[0] : IRa[2]) : (x + y < -2 ? fill[0] : fill[1])); }
+  for (let i = 0; i < bub; i++) { const k = (G.t * 1.4 + i / bub) % 1, x = Math.round(Math.sin(i * 2.7) * (lip - 3)), y = -h - 3 + Math.round(Math.cos(i * 1.9) * (ry - 1)); if (k < .65) disc(x, y - Math.round(k * 2), k < .35 ? 0 : 1, fill[0], '#ffffff'); }
+};
+HA.grandc = (ph) => {
+  // une très grande marmite sur trois pieds ; le poison déborde : une nappe sur le bord, puis des coulées qui épousent le ventre et s'amincissent, une goutte qui se forme et tombe
+  const RX = 14, H = 15, LIP = 15, RY = 4, top = -H - 4;
+  for (const x of [-11, 0, 11]) { P.vl(x, -4, 4, IRa[2]); P.vl(x + 1, -4, 3, IRa[3]); }
+  const wAt = (y) => { const f = (y - top) / H; return RX * (f < .7 ? .86 + .14 * Math.sin(f / .7 * Math.PI / 2) : Math.sqrt(Math.max(0, 1 - ((f - .7) / .32) ** 2))); };
+  for (let y = top; y <= top + H; y++) { const w = Math.round(wAt(y)); for (let x = -w; x <= w; x++) dot(x, y, x < -w * .55 ? IRa[0] : x > w * .55 ? IRa[2] : IRa[1]); }
+  for (let y = -RY; y <= RY; y++) for (let x = -LIP; x <= LIP; x++) { const e = (x * x) / (LIP * LIP) + (y * y) / (RY * RY); if (e > 1) continue; dot(x, top + y, e > .5 ? (y < 0 ? IRa[0] : e > .8 ? IRa[2] : IRa[1]) : (x + y < -3 ? GRa[0] : GRa[1])); }
+  for (let i = 0; i < 7; i++) { const k = (G.t * 1.3 + i / 7) % 1, x = Math.round(Math.sin(i * 2.7) * (LIP - 6)), y = top + Math.round(Math.cos(i * 1.9) * (RY - 2)); if (k < .6) disc(x, y - Math.round(k * 2), k < .35 ? 0 : 1, GRa[0], '#ffffff'); }
+  // nappe qui passe par-dessus le bord avant
+  for (const [a0, a1] of [[-10, -6], [-4, 1], [3, 6], [8, 11]]) for (let x = a0; x <= a1; x++) { const yb = top + Math.round(Math.sqrt(1 - (x * x) / (LIP * LIP)) * RY); dot(x, yb, GRa[1]); dot(x, yb + 1, GRa[2]); }
+  // coulées : larges en haut, fines en bas, qui suivent la courbe ; une goutte qui grossit puis tombe
+  for (const [x0, L, ph0] of [[-8, 6, 0], [-2, 9, .4], [9, 5, .7]]) {
+    const y0 = top + Math.round(Math.sqrt(1 - (x0 * x0) / (LIP * LIP)) * RY) + 1;
+    for (let j = 0; j < L; j++) { const y = y0 + j, xx = Math.round(x0 * (wAt(y) / RX) * .95); if (Math.abs(xx) > wAt(y) - 1) break; const wd = j < L * .45 ? 1 : 0; for (let k = -wd; k <= 0; k++) dot(xx + k, y, k ? GRa[2] : GRa[1]); if (j === 0) dot(xx + 1, y, GRa[2]); }
+    const k = (G.t * .7 + ph0) % 1, yEnd = y0 + L, xe = Math.round(x0 * (wAt(yEnd) / RX) * .95);
+    if (k < .6) { dot(xe, yEnd, GRa[1]); if (k > .3) dot(xe, yEnd + 1, GRa[0]); } else { const fy = yEnd + 2 + Math.round((k - .6) * 30); if (fy < 1) dot(xe, fy, GRa[0]); }
+  }
+};
+// CORBEAU · CHAUDRON DE PESTE : un chaudron au poison plus vif, des gouttes qui sautent du bord
+HA.peste = (ph) => {
+  HA.pot(9, 9, 10, 3, ['#d9ffb0', '#7fe04c'], 5);
+  const o = [0, 1, 2].map(i => { const a = G.t * 2.4 + i * 2.094; return [Math.round(Math.cos(a) * 10), -22 + Math.round(Math.sin(a) * 3)]; });
+  for (let i = 0; i < 3; i++) { const [a, b] = [o[i], o[(i + 1) % 3]]; P.line(a[0], a[1], b[0], b[1], ph >= 0 && ph < .3 ? '#ffffff' : GRa[2]); }
+  for (const [x, y] of o) disc(x, y, 1, GRa[1], GRa[0], GRa[3]);
+  for (const x of [-9, 9]) { P.vl(x, -12, 4, GRa[1]); dot(x, -8 + (Math.floor(G.t * 3) % 3), GRa[0]); }
+};
+// RENARD · le terrier : une butte de terre, des racines, une entrée sombre ; deux versions
+// RENARD · PIÈGES À MÂCHOIRES : une tour de pierre grise ordinaire (créneaux), coiffée d'une grande mâchoire d'or qui claque
+const SA = ['#c8ccd2', '#9aa0a8', '#6c727a', '#4a4f56'];
+const stoneTop = () => {
+  P.rect(-9, -8, 19, 7, SA[1]); P.hl(-9, -8, 19, SA[0]); P.vl(-9, -8, 7, SA[0]); P.vl(9, -8, 7, SA[2]); P.hl(-9, -2, 19, SA[3]);
+  for (let i = 0; i < 3; i++) P.hl(-8 + i * 6, -5, 4, SA[2]);
+  for (const x of [-9, -4, 1, 6]) { P.rect(x, -11, 3, 3, SA[1]); P.hl(x, -11, 3, SA[0]); dot(x + 2, -9, SA[2]); }
+};
+const jawG = (x, y, s, open) => { const g = open ? Math.round(s * .55) : 0;
+  for (let i = -s; i <= s; i++) { const k = Math.round(Math.sqrt(1 - (i * i) / (s * s)) * s * .5); dot(x + i, y + g + k, ORa[1]); dot(x + i, y + g + k + 1, ORa[3]); dot(x + i, y - g - k, ORa[0]); dot(x + i, y - g - k - 1, ORa[2]); if (i % 2 === 0 && Math.abs(i) < s) { dot(x + i, y + g + k - 1, '#ffffff'); dot(x + i, y - g - k + 1, '#ffffff'); if (open) { dot(x + i, y + g + k - 2, '#e8eef2'); dot(x + i, y - g - k + 2, '#e8eef2'); } } }
+  P.hl(x - s - 2, y, 3, ORa[2]); P.hl(x + s, y, 3, ORa[2]); disc(x - s - 2, y, 1, ORa[1], ORa[0], ORa[3]); disc(x + s + 2, y, 1, ORa[1], ORa[0], ORa[3]); };
+HA.machoires = (ph) => {
+  stoneTop();
+  const snap = ph >= 0 && ph < .12;
+  P.vl(-1, -14, 4, SA[2]); P.vl(0, -14, 4, SA[3]);
+  jawG(0, -19, 9, !snap);
+};
+// RENARD · TERRIER AUX TRÉSORS : un gros tas de pièces bien rondes, trois piles de pièces, des pièces qui jaillissent
+const coinB = (x, y) => { dot(x, y, ORa[1]); dot(x + 1, y, ORa[1]); dot(x, y - 1, ORa[0]); dot(x + 1, y - 1, ORa[1]); dot(x - 1, y, ORa[2]); dot(x + 2, y, ORa[2]); dot(x, y + 1, ORa[3]); dot(x + 1, y + 1, ORa[3]); dot(x - 1, y - 1, ORa[2]); dot(x + 2, y - 1, ORa[3]); };
+const stack = (x, y, n) => { for (let i = 0; i < n; i++) { const yy = y - i * 2; P.hl(x - 2, yy, 5, i % 2 ? ORa[2] : ORa[1]); P.hl(x - 2, yy + 1, 5, ORa[3]); dot(x - 2, yy, ORa[0]); } P.hl(x - 2, y - n * 2 + 1, 5, ORa[0]); P.hl(x - 1, y - n * 2, 3, ORa[0]); };
+HA.tresor = (ph) => {
+  // un coffre au trésor de trois quarts sur la tour : couvercle bombé ouvert en arrière (doublure rouge), caisse en planches cerclée d'or, serrure ; les pièces débordent et roulent
+  stoneTop();
+  const cx = 0, by = -9;
+  // couvercle ouvert : bombé, penché vers l'arrière
+  for (let i = -8; i <= 8; i++) { const k = Math.round(Math.sqrt(1 - (i * i) / 81) * 3); for (let j = 0; j <= 4 + k; j++) { const y = by - 13 - k - 4 + j; dot(cx + i, y, j === 0 ? LT[0] : j > 2 + k ? '#8a1e2a' : (i < -5 ? LT[1] : i > 5 ? LT[3] : LT[2])); } }
+  for (const x of [-6, 5]) for (let j = 0; j < 7; j++) dot(cx + x, by - 20 + j + (Math.abs(x) > 5 ? 1 : 0), ORa[2]);
+  P.hl(cx - 8, by - 13, 17, ORa[3]);
+  // caisse
+  P.rect(cx - 9, by - 9, 19, 9, LT[2]); P.vl(cx - 9, by - 9, 9, LT[1]); P.vl(cx + 9, by - 9, 9, LT[3]); P.hl(cx - 9, by - 1, 19, LT[3]);
+  P.hl(cx - 9, by - 5, 19, LT[3]);
+  for (const x of [-9, -6, 6, 9]) P.vl(cx + x, by - 9, 9, Math.abs(x) === 9 ? ORa[2] : ORa[1]);
+  P.hl(cx - 9, by - 10, 19, ORa[1]); P.hl(cx - 9, by - 9, 19, ORa[2]);
+  P.rect(cx - 1, by - 8, 3, 4, ORa[1]); dot(cx, by - 6, '#262a30'); dot(cx - 1, by - 8, ORa[0]);
+  // l'or dans le coffre, qui déborde au-dessus du bord
+  const pile = [[-7, -12], [-4, -12], [-1, -12], [2, -12], [5, -12], [7, -12], [-5, -14], [-2, -14], [1, -14], [4, -14], [-3, -16], [0, -16], [3, -16], [-1, -18]];
+  for (const [x, y] of pile) coinB(cx + x, by + y + 2);
+  disc(cx - 4, by - 13, 1, '#d9322b', '#ff8a7a'); disc(cx + 4, by - 12, 1, '#2f7fd0', '#9fd0ff');
+  // pièces tombées sur le devant
+  for (const [x, y] of [[-11, -1], [10, -2], [12, 0], [-8, 1]]) coinB(cx + x, by + y);
+  // pièces qui jaillissent
+  for (let i = 0; i < 5; i++) { const k = (G.t * .9 + i / 5) % 1, x = cx + Math.round(Math.sin(i * 2.1) * (2 + k * 10)), y = by - 16 - Math.round(Math.sin(k * Math.PI) * 12); const f = Math.floor(G.t * 8 + i) % 4; if (f % 2) { P.vl(x, y - 1, 3, ORa[2]); dot(x, y - 1, ORa[0]); } else coinB(x, y); }
+  const g = Math.floor(G.t * 3) % 3; const [sx, sy] = [[-5, by - 14], [3, by - 17], [6, by - 11]][g]; dot(sx, sy, '#ffffff'); dot(sx - 1, sy, ORa[0]); dot(sx + 1, sy, ORa[0]); dot(sx, sy - 1, ORa[0]); dot(sx, sy + 1, ORa[0]);
+};
+
+/* ---- la scène : une file de créatures sur le chemin, la tour agit sur elles ---- */
+HA.noFlag = (fn) => { const p0 = pennant, t0 = SPR_T; pennant = () => {}; SPR_T = t0 + 'nf'; try { return fn(); } finally { pennant = p0; SPR_T = t0; } };
+HA.H = { grand: 'oursA', rage: 'oursA', grandc: 'corbV', peste: 'corbV', machoires: 'renT', tresor: 'renT' };
+const crA = (x, X, Y, st) => {
+  const { hit, stun, pois, held, buffHit } = st;
+  for (let i = -3; i <= 3; i++) pxA(x, X + i, Y + 4, 'rgba(0,0,0,.25)');
+  const b = hit ? '#ffffff' : pois ? '#5a7a3a' : '#7a3a5a', bl = hit ? '#ffffff' : pois ? '#8ab05a' : '#a85a7e';
+  for (let r = 0; r <= 3; r++) for (let i = -r; i <= r; i++) { pxA(x, X + i, Y - 3 + r, b); pxA(x, X + i, Y + 3 - r, b); }
+  for (let i = -3; i <= 3; i++) pxA(x, X + i, Y, b);
+  pxA(x, X - 2, Y - 2, bl); pxA(x, X + 1, Y - 1, '#ffd84a'); pxA(x, X - 1, Y - 1, '#ffd84a');
+  if (!held) { const s = Math.floor(G.t * 8 + X) % 2; pxA(x, X - 2, Y + 4 - s, b); pxA(x, X + 2, Y + 3 + s, b); }
+  if (stun) for (let i = 0; i < 3; i++) { const a = G.t * 6 + i * 2.1; pxA(x, X + Math.cos(a) * 4, Y - 7 + Math.sin(a) * 1.5, '#ffd84a'); }
+  if (pois) { const k = (G.t * 2 + X * .1) % 1; pxA(x, X + Math.sin(k * 6) * 2, Y - 5 - k * 6, k < .5 ? GRa[1] : GRa[2]); }
+};
+HA.cell = (form, t, W, Hh, still) => {
+  const h = HA.H[form], [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x); G.t = t;
+  x.fillStyle = '#2a4048'; x.fillRect(0, 0, W, Hh);
+  const lane = Hh - 12; x.fillStyle = '#33505a'; x.fillRect(0, lane - 5, W, 11);
+  const ax = form === 'rage' ? 110 : 52, ay = lane - 40, own = pcol(0), rage = form === 'rage';
+  const walls = rage ? [[ax - 48, false, true], [ax - 24, true, true], [ax, true, true], [ax + 24, true, true], [ax + 48, true, false]] : [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]];
+  walls.forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, 0, L, R, false, i, own, 0), wx, ay));
+  const evo = 'hm_' + h, tw = HA.noFlag(() => towerSprite('frost', 4, evo, own));
+  const [tx, ty] = towerTopAt('frost', 4, evo), ox = ax + tx, oy = ay + ty;
+  // créatures : 4, espacées, qui avancent de gauche à droite et bouclent
+  const sp = 16, n = 4, gap = 30, span = W + 40;
+  const per = 2.4, ph = still ? -1 : t % per, cyc = Math.floor(t / per);
+  const cre = []; for (let i = 0; i < n; i++) { let X = ((t * sp + i * gap) % span) - 20; cre.push({ X, Y: lane, st: {} }); }
+  // qui est retenu par un piège (Renard) : il ne bouge plus pendant 1 s après le coup
+  const trapX = ox + 46;
+  if (form === 'machoires' || form === 'tresor') { const tt = ph - .45; if (tt >= 0 && tt < 1.6) cre.forEach(cr => { if (Math.abs(cr.X - trapX) < 14) { cr.X = trapX + (cr.X - trapX) * .3; cr.st.held = true; if (form === 'machoires' && tt < .15) cr.st.hit = true; } }); }
+  if (form === 'grand') { const R = ph >= 0 && ph < .55 ? 10 + ph * 80 : -1; cre.forEach(cr => { const d = Math.hypot((cr.X - ox) * .5, (cr.Y - oy - 30) * 1); if (ph >= .05 && ph < 2 && d < 30) { cr.st.stun = true; if (ph < .15) cr.st.hit = true; } }); }
+  if (form === 'grandc') { const pxl = ox + 40; cre.forEach(cr => { if (ph > .5 && Math.abs(cr.X - pxl) < 22) cr.st.pois = true; }); }
+  // peste : le poison saute de créature en créature, le long d'un fil de gouttes
+  const chain = []; if (form === 'peste') { const sorted = cre.filter(c2 => c2.X > ox - 4 && c2.X < W - 4).sort((a, b) => a.X - b.X); for (let i = 0; i < sorted.length; i++) { const t0 = .35 + i * .35; if (ph >= t0) sorted[i].st.pois = true; if (ph >= t0 - .35 && ph < t0 && i) chain.push([sorted[i - 1], sorted[i], (ph - (t0 - .35)) / .35]); if (i === 0 && ph < .35 && ph >= 0) chain.push([{ X: ox, Y: oy - 14 }, sorted[0], ph / .35]); } }
+  // tours voisines (Tambours de rage) : deux Archers de l'Ours qui tirent plus vite quand le rythme les touche
+  const nbs = rage ? [ax - 24, ax + 24] : [];
+  const aura = (cx0, front) => { const beat = (t * 2) % 1, R = 11 + (beat < .2 ? 2 : 0); for (let i = 0; i < 6; i++) { const a = t * 2 + i / 6 * Math.PI * 2, X = cx0 + Math.cos(a) * R, Y = oy - 4 + Math.sin(a) * R * .4; if ((Math.sin(a) > 0) !== front) continue; pxA(x, X, Y, EMa[0]); pxA(x, X - 1, Y, EMa[1]); pxA(x, X + 1, Y, EMa[1]); if (beat < .25) { pxA(x, X, Y - 1, EMa[1]); pxA(x, X, Y + 1, EMa[2]); } } };
+  if (rage) for (const nx of nbs) { const tw2 = towerSprite('arrow', 2, hmForm(h, 'double'), own), [t2x] = towerTopAt('arrow', 2, hmForm(h, 'double')); aura(nx + t2x, false); }
+  if (rage) for (const nx of nbs) { const tw2 = towerSprite('arrow', 2, hmForm(h, 'double'), own); blit(x, tw2, nx, ay); const [t2x, t2y] = towerTopAt('arrow', 2, hmForm(h, 'double')); P = mkPen(x); HM.top(x, h, 'arrow', 2, .3, 9, own, nx, ay, tw2.oy, 7, t2x, t2y, false, 0); P = prev; }
+  blit(x, tw, ax, ay);
+  P = prev;
+  const dy = (form === 'machoires' || form === 'tresor') ? 9 : 0;
+  H7.draw(x, () => HA[form](ph), ox, oy + dy);
+  // effets
+  if (form === 'grand' && ph >= 0 && ph < .7) for (const k of [0, .12]) { const q = ph - k; if (q < 0 || q > .55) continue; const R = 10 + q * 90; for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; pxA(x, ox + Math.cos(a) * R, oy + 26 + Math.sin(a) * R * .35, i % 2 ? (q < .25 ? EMa[0] : EMa[1]) : EMa[2]); } }
+  if (rage) {
+    for (const nx of nbs) { const [t2x] = towerTopAt('arrow', 2, hmForm(h, 'double')); aura(nx + t2x, true); }
+    const beat = (t * 2) % 1;
+    for (const nx of nbs) { const [t2x] = towerTopAt('arrow', 2, hmForm(h, 'double')), tx2 = nx + t2x, s2 = Math.sign(tx2 - ox); if (beat < .5) { const q = beat / .5, X = ox + (tx2 - ox) * q, Y = oy - 8 - Math.sin(q * Math.PI) * 8; pxA(x, X, Y, EMa[0]); pxA(x, X - s2, Y, EMa[1]); pxA(x, X - 2 * s2, Y + 1, EMa[2]); } }
+    for (const nx of nbs) { const [t2x] = towerTopAt('arrow', 2, hmForm(h, 'double')), tx2 = nx + t2x, k = (t * 3.2 + (nx > ox ? .5 : 0)) % 1, tgt = cre.slice().sort((p, q) => Math.abs(p.X - tx2) - Math.abs(q.X - tx2))[0]; if (k < .45) { const q = k / .45, X = tx2 + (tgt.X - tx2) * q, Y = oy - 2 + (tgt.Y - 2 - oy + 2) * q; pxA(x, X, Y, '#ffffff'); pxA(x, X - (tgt.X - tx2) * .05, Y - (tgt.Y - oy) * .05, EMa[1]); pxA(x, X - (tgt.X - tx2) * .1, Y - (tgt.Y - oy) * .1, EMa[2]); } }
+  }
+  if (form === 'grandc' && ph >= 0) { const pxl = ox + 40; if (ph < .5) { const q = ph / .5, X = ox + (pxl - ox) * q, Y = oy - 16 + (lane - oy + 16) * q - Math.sin(q * Math.PI) * 24; P = mkPen(x); SPR(['.k.', 'gGg', 'ggg', '.g.'], { k: LT[2], g: GRa[2], G: GRa[0] }, Math.round(X) - 1, Math.round(Y) - 2); P = prev; } else if (ph < 2.3) { const k = Math.min(1, (ph - .5) / .3), R = 6 + k * 18; for (let i = 0; i < 56; i++) { const a = i / 56 * Math.PI * 2, r = R * (.8 + ((i * 7) % 5) / 18); pxA(x, pxl + Math.cos(a) * r, lane + 1 + Math.sin(a) * r * .3, i % 3 ? GRa[1] : GRa[2]); } for (let i = 0; i < 5; i++) { const q = (G.t * 1.6 + i / 5) % 1; pxA(x, pxl - 14 + i * 7, lane - 1 - q * 8, GRa[0]); } } }
+  if (form === 'peste') for (const [a, b, q] of chain) { const X0 = a.X, Y0 = a.Y - 3, X1 = b.X, Y1 = b.Y - 3; for (let i = 0; i <= 16; i++) { const u = i / 16; if (u > q) break; const X = X0 + (X1 - X0) * u, Y = Y0 + (Y1 - Y0) * u - Math.sin(u * Math.PI) * 12 + Math.sin(u * 9 + G.t * 12) * 1.2; pxA(x, X, Y, i % 3 ? GRa[1] : GRa[0]); if (i % 4 === 0) pxA(x, X, Y + 1, GRa[2]); } const u = q, X = X0 + (X1 - X0) * u, Y = Y0 + (Y1 - Y0) * u - Math.sin(u * Math.PI) * 12; for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) if (i * i + j * j < 2) pxA(x, X + i, Y + j, i + j < 0 ? GRa[0] : GRa[1]); }
+  if ((form === 'machoires' || form === 'tresor') && ph >= 0) {
+    if (ph < .45) { const q = ph / .45, X = ox + (trapX - ox) * q, Y = oy - 12 + (lane - oy + 12) * q - Math.sin(q * Math.PI) * 18; P = mkPen(x); SPR(['i.i.i', 'iiiii', '.ggg.', 'iiiii', 'i.i.i'], { i: IRa[1], g: ORa[2] }, Math.round(X) - 2, Math.round(Y) - 2); P = prev; }
+    else if (ph < 2.1) { const shut = ph > .5; P = mkPen(x); SPR(shut ? ['.iiiii.', 'iwiwiwi', 'iwiwiwi', '.iiiii.'] : ['i.....i', 'iw.w.wi', 'iiigiii'], { i: IRa[1], w: '#ffffff', g: ORa[2] }, Math.round(trapX) - 3, lane - 1); P = prev;
+      if (form === 'machoires' && ph < .65) for (let i = 0; i < 6; i++) pxA(x, trapX + Math.cos(i) * 6, lane - 3 + Math.sin(i) * 3, '#ffffff');
+      if (form === 'tresor') { const q = ph - .5; if (q < .9) for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * .32, r = q * 36, X = trapX + Math.cos(a) * r, Y = lane - 4 + Math.sin(a) * r + q * q * 40; for (let k = -1; k <= 1; k++) for (let j = -1; j <= 1; j++) if (k * k + j * j < 2) pxA(x, X + k, Y + j, k + j < 0 ? ORa[0] : ORa[1]); } } }
+  }
+  for (const cr of cre) crA(x, cr.X, cr.Y, cr.st);
+  P = prev; return c;
+};
+
+/* ================================================================ version 145 · le niveau 5 (Patrick, 18/11, 19 h 12 : « Très bien, je valide, tu peux publier »)
+   Planche « Domus TD · À valider », tours 14 à 25. Line Towers avec une Maison seulement.
+   - Une tour de niveau 4 prend l'une de deux formes du niveau 5 (t.f5) ; elle garde t.lvl = 4, donc tout le reste du jeu la voit au niveau 4,
+     et ce module ajoute ce que fait la forme (tir, effet, dessin). Rien de neuf ne voyage sauf 16 codes de tour (TCODES « type:5:forme »).
+   - Archer · Tir double : Pluie de flèches / Tireur d'élite ; Baliste : lourde / à répétition ; Canon · Mortier : Pilonnage / Obus de la Maison ;
+     Canon · Gros calibre : Canon royal / Boulet fendeur ; tour de Maison : Cerf Blizzard / Cristal pur, Ours Grand Tambour / Tambours de rage,
+     Corbeau Grand Chaudron / Chaudron de peste, Renard Pièges à mâchoires / Terrier aux trésors.
+   - Prix (retour de joueur : un saut énorme entre deux niveaux) : chaque niveau ≈ 2,5 × le précédent, niveau 5 = 15 × le prix de la tour.
+   - Les armes à tir direct sont de petits volumes rendus en pixels sur 16 directions (vox) ; plus de fanion sur les tours de Maison. */
+HM.F.up = [0, 1, 2.5, 6, 15];
+const F5 = {
+  pluie: { type: 'arrow', evo: 'double', n: 'Pluie de flèches', d: 'Une salve de quatre flèches sur quatre créatures à la fois.' },
+  elite: { type: 'arrow', evo: 'double', n: 'Tireur d’élite', d: 'Un tir énorme, de très loin, sur la créature la plus solide.' },
+  lourde: { type: 'ballista', evo: '', n: 'Baliste lourde', d: 'Un harpon géant qui transperce toute la file et la ralentit.' },
+  repet: { type: 'ballista', evo: '', n: 'Baliste à répétition', d: 'Trois carreaux d’affilée à chaque tir.' },
+  pilon: { type: 'cannon', evo: 'mortar', n: 'Pilonnage', d: 'Trois obus par tir, sur une très large zone.' },
+  feu: { type: 'cannon', evo: 'mortar', n: 'Obus', d: 'Le sol garde la matière de ta Maison et blesse tout ce qui passe.' },
+  royal: { type: 'cannon', evo: 'heavy', n: 'Canon royal', d: 'Un coup énorme qui étourdit les créatures touchées.' },
+  fend: { type: 'cannon', evo: 'heavy', n: 'Boulet fendeur', d: 'Le boulet éclate : ses éclats blessent les créatures autour.' },
+  blizzard: { type: 'frost', evo: 'maison', m: 'cerf', n: 'Blizzard', d: 'Une tempête de neige ralentit et blesse tout ce qui l’entoure.' },
+  cristal: { type: 'frost', evo: 'maison', m: 'cerf', n: 'Cristal pur', d: 'Un rayon de glace qui transperce toute la file.' },
+  grand: { type: 'frost', evo: 'maison', m: 'ours', n: 'Grand Tambour', d: 'Une onde plus large, plus forte, qui étourdit plus longtemps.' },
+  rage: { type: 'frost', evo: 'maison', m: 'ours', n: 'Tambours de rage', d: 'Les tours tout autour de lui tirent plus vite et plus fort.' },
+  grandc: { type: 'frost', evo: 'maison', m: 'griffon', n: 'Grand Chaudron', d: 'Une flaque de poison bien plus large, qui dure plus longtemps.' },
+  peste: { type: 'frost', evo: 'maison', m: 'griffon', n: 'Chaudron de peste', d: 'Le poison saute d’une créature à l’autre.' },
+  machoires: { type: 'frost', evo: 'maison', m: 'renard', n: 'Pièges à mâchoires', d: 'Ses pièges retiennent plus de créatures et les blessent fort.' },
+  tresor: { type: 'frost', evo: 'maison', m: 'renard', n: 'Terrier aux trésors', d: 'Chaque créature prise dans un piège lâche bien plus d’or.' },
+};
+const F5_OBUS = { cerf: 'Obus glacé', ours: 'Obus incendiaire', griffon: 'Obus empoisonné', renard: 'Obus doré' };
+const F5_MAISON = { cerf: ['blizzard', 'cristal'], ours: ['grand', 'rage'], griffon: ['grandc', 'peste'], renard: ['machoires', 'tresor'] };
+const f5Name = (f, b) => f === 'feu' ? (F5_OBUS[hmMaison(b)] || 'Obus') : F5[f].n;
+function f5Offer(b, t) {
+  if (!b || !b.jt || !hmMaison(b) || !t || t.lvl !== 4 || t.f5) return null;
+  if (t.type === 'arrow' && t.evo === 'double') return ['pluie', 'elite'];
+  if (t.type === 'ballista') return ['lourde', 'repet'];
+  if (t.type === 'cannon' && t.evo === 'mortar') return ['pilon', 'feu'];
+  if (t.type === 'cannon' && t.evo === 'heavy') return ['royal', 'fend'];
+  if (t.type === 'frost') return F5_MAISON[hmMaison(b)] || null;
+  return null;
+}
+const HM5 = { zones: [], beams: [], chains: [], fx: [], cT: null, vc: new Map() };
+window.HM5 = HM5;
+
+/* ---------------------------------------------------------------- the codes of the towers: 16 more, one character each */
+const TCH5 = TCHARS + 'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜ';
+for (const f in F5) TCODES.push(F5[f].type + ':5:' + f);
+tcode = function (t) { const key = t.type === 'wall' ? 'wall' : t.f5 ? `${t.type}:5:${t.f5}` : t.lvl < 3 || !EVO[t.type] ? `${t.type}:${t.lvl}` : `${t.type}:${t.lvl}:${t.evo}`; const i = TCODES.indexOf(key); return i >= 0 ? TCH5[i] : '.'; };
+tdecode = function (ch) { const i = TCH5.indexOf(ch); if (i < 0 || i >= TCODES.length) return null; const [type, lvl, evo] = TCODES[i].split(':');
+  if (lvl === '5' && F5[evo]) return { type, lvl: 4, evo: F5[evo].evo, f5: evo }; return { type, lvl: lvl ? +lvl : 1, evo: evo || '' }; };
+{ const base = rebuildGrid; rebuildGrid = function (b, ts) { const r = base.apply(this, arguments);
+    for (let i = 0; i < b.grid.length; i++) { const g = b.grid[i]; if (!g || g.type === 'wall') continue; const d = ts[i] && ts[i] !== '.' ? tdecode(ts[i]) : null; const f = d && d.f5 || '';
+      if ((g.f5 || '') !== f) { g.f5 = f; if (f) g.spent = spentFor(g.type, 4) + Math.round(T[g.type].cost * HM.F.up[4]); } }
+    return r; }; }
+
+/* ---------------------------------------------------------------- taking the form */
+{ const base = upgrade; upgrade = function (k, t, evo) {
+    const b = G.b[k];
+    if (evo === 'crown') { if (t && t.f5) return 'x'; return base.apply(this, arguments); }
+    const off = f5Offer(b, t);
+    if (!off) return base.apply(this, arguments);
+    let f = evo; if (!off.includes(f)) { if (b.bot) f = off[Math.random() < 0.5 ? 0 : 1]; else return 'x'; }
+    const cost = upCost(t); if (b.gold < cost) return "Pas assez d'or";
+    b.gold -= cost; t.spent += cost; t.f5 = f; t.cd = 0.3; if (!G.quiet) t.born = G.t;
+    if (fxOn(k)) { sfx('evolve'); b.rings.push({ x: t.c + 0.5, y: t.r + 0.5, r0: 0.3, r1: 1.6, t: 0.55, ttl: 0.55, color: C.gold });
+      for (let i = 0; i < 18; i++) { const a = Math.random() * Math.PI * 2; b.parts.push({ x: t.c + 0.5, y: t.r + 0.5, vx: Math.cos(a) * 3, vy: Math.sin(a) * 3, t: 0.6, ttl: 0.6, color: C.gold, size: 0.07 }); } }
+    return '';
+}; }
+// the bots: a level-4 tower takes a form of level 5 when they have the gold (the old masterpiece stays theirs to crown)
+{ const base = aiBuild; aiBuild = function (k) { const me = G.b[k];
+    if (me && me.jt && hmMaison(me) && Math.random() < 0.6) { const c = me.grid.filter(t => t && f5Offer(me, t) && me.gold >= upCost(t) && !(t.type === 'frost' && !jtChefBuiltType(me) && me.grid.filter(u => u && u.type === 'frost' && u.lvl >= 4 && !u.f5).length < 2));
+      if (c.length) { const t = c[(Math.random() * c.length) | 0], off = f5Offer(me, t); if (upgrade(k, t, off[Math.random() < 0.5 ? 0 : 1]) === '') return true; } }
+    return base.apply(this, arguments); }; }
+
+/* ---------------------------------------------------------------- what each form does */
+const F5S = {
+  pluie: o => { o.dmg *= 1.25; o.range += 0.3; },
+  elite: o => { o.dmg *= 3.2; o.range += 1.5; o.rate *= 1.3; },
+  lourde: o => { o.dmg *= 2.4; },
+  repet: o => { o.dmg *= 0.85; },
+  pilon: o => { o.dmg *= 0.85; o.splash += 0.15; },
+  feu: o => { o.dmg *= 1.4; },
+  royal: o => { o.dmg *= 2.4; o.splash += 0.1; },
+  fend: o => { o.dmg *= 1.6; },
+  blizzard: o => { o.dmg *= 1.3; o.range += 0.5; },
+  cristal: o => { o.dmg *= 2.6; o.rate *= 1.2; o.range += 0.5; },
+  grand: o => { o.range += 0.8; },
+  grandc: o => { o.dmg *= 1.6; },
+  peste: o => { o.dmg *= 1.6; },
+};
+{ const base = stat; stat = function (t, b) { const o = base.apply(this, arguments); if (!t) return o;
+    if (t.f5 && F5S[t.f5]) F5S[t.f5](o, t, b);
+    if (b && b._rage && t.type !== 'wall' && t.f5 !== 'rage' && b._rage.has(idx(t.c, t.r))) { o.rate *= 0.72; o.dmg *= 1.15; }
+    return o; }; }
+{ const base = launch; launch = function (b, t, st, target, real, x, y) {
+    const f = t && t.f5; if (!f || t._f5b) return base.apply(this, arguments);
+    if (f === 'elite') { const list = inRange(b, x, y, st.range); if (list.length) target = list.reduce((a, c) => (c.hp > a.hp ? c : a), list[0]); return base.call(this, b, t, st, target, real, x, y); }
+    if (f === 'pluie') { if (t._vf === G.t) return; t._vf = G.t; const list = inRange(b, x, y, st.range); for (let i = 0; i < 4; i++) base.call(this, b, t, st, list[i % Math.max(1, list.length)] || target, real, x, y); return; }
+    if (f === 'repet') { base.apply(this, arguments); t._rq = [G.t + 0.12, G.t + 0.24]; return; }
+    if (f === 'pilon') { if (t._vf === G.t) return; t._vf = G.t; for (const [dx, dy] of [[0, 0], [0.75, 0.35], [-0.6, 0.5]]) base.call(this, b, t, st, { x: target.x + dx, y: target.y + dy, hp: target.hp }, real, x, y); return; }
+    if (f === 'cristal') { const dx = target.x - x, dy = target.y - y, d = Math.hypot(dx, dy) || 1, L = st.range + 1, ux = dx / d, uy = dy / d;
+      if (real) for (const cr of b.creeps) { if (cr.dead || cr.y < 0 || cr.x < 0 || moleUnder(cr)) continue; const u = (cr.x - x) * ux + (cr.y - y) * uy; if (u < 0 || u > L) continue; if (Math.hypot(x + ux * u - cr.x, y + uy * u - cr.y) > 0.45 + cr.size * 0.5) continue; slow(cr, 0.55, 1); damage(b, cr, st.dmg, t); }
+      HM5.beams.push({ k: b.k, x0: x, y0: y - 0.6, x1: x + ux * L, y1: y + uy * L - 0.3, t0: G.t, t1: G.t + 0.28 }); return; }
+    return base.apply(this, arguments);
+}; }
+{ const base = explode; explode = function (b, p, x, y, r, dmg, main) { base.apply(this, arguments);
+    const f = p && p.src && p.src.f5; if (!f || !main) return;
+    if (f === 'royal') { if (p.real) for (const cr of b.creeps) if (!cr.dead && cr.y >= 0 && !cr.noStun && Math.hypot(cr.x - x, cr.y - y) <= r + cr.size * 0.5) cr.stunUntil = Math.max(cr.stunUntil, G.t + 0.8); HM5.fx.push({ k: b.k, kind: 'stun', x, y, t0: G.t, t1: G.t + 0.8 }); }
+    if (f === 'fend') { if (p.real) for (const cr of b.creeps) { if (cr.dead || cr.y < 0) continue; const d = Math.hypot(cr.x - x, cr.y - y); if (d > r && d < 1.6) damage(b, cr, dmg * 0.45, p.src); } HM5.fx.push({ k: b.k, kind: 'shards', x, y, t0: G.t, t1: G.t + 0.45, h: HMH[hmMaison(b)] || 'cerf' }); }
+    if (f === 'feu') HM5.zones.push({ k: b.k, x, y, r: 1, t0: G.t, t1: G.t + 3, dps: dmg * 0.5, src: p.src, h: HMH[hmMaison(b)] || 'cerf', tk: 0 });
+}; }
+{ const base = damage; damage = function (b, cr, dmg, src) { const r = base.apply(this, arguments); if (src && src.f5 === 'lourde' && !cr.dead) slow(cr, 0.5, 1.2); return r; }; }
+// the Ours: the Grand Tambour (wider, stronger, longer) and the Tambours de rage (their beat drives the towers around)
+{ const base = HM_V.oursA.hstep; HM_V.oursA.hstep = function (b, t, chef) { if (!t.f5 || chef) return base.apply(this, arguments);
+    const R = hmR().drum, big = t.f5 === 'grand'; t.cd = 1; if (t.hmT > G.t) return;
+    const range = 2.3 + (big ? 0.8 : 0), list = inRange(b, t.c + 0.5, t.r + 0.5, range); if (!list.length) return;
+    t.hmT = G.t + R.every * (big ? 1 : 0.8); t.kick = G.t; b.rings.push({ x: t.c + 0.5, y: t.r + 0.5, r0: 0.3, r1: range, t: 0.45, ttl: 0.45, color: big ? '#ff9a2e' : '#efe6cf' });
+    if (!HM.REAL) return; const stun = R.stunByLvl[3] * (big ? 1.7 : 1), mul = big ? 2 : 1.4;
+    for (const cr of list) { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, G.t + stun); damage(b, cr, R.dmg * R.byLvl[3] * mul * (cr.fly ? (R.flyMul || 1) : 1), t); } }; }
+// the Corbeau: the big puddle; the poison that jumps
+{ const base = HX.hits['hm_corbV']; HX.hits['hm_corbV'] = function (b, p, cr) { const n0 = HM.puddles.length; base.apply(this, arguments); const f = p.src && p.src.f5; if (!f) return;
+    if (f === 'grandc') for (let i = n0; i < HM.puddles.length; i++) { const pd = HM.puddles[i]; if (pd.k !== b.k) continue; pd.r *= 1.8; pd.t1 = G.t + (pd.t1 - G.t) * 1.6; pd.dps *= 1.3; }
+    if (f === 'peste') { let cur = cr; const hit = [cr], pts = [[cr.x, cr.y]];
+      for (let j = 0; j < 3; j++) { const nx = b.creeps.filter(c => !c.dead && c.y >= 0 && !hit.includes(c) && Math.hypot(c.x - cur.x, c.y - cur.y) < 1.8).sort((a, c) => Math.hypot(a.x - cur.x, a.y - cur.y) - Math.hypot(c.x - cur.x, c.y - cur.y))[0]; if (!nx) break;
+        hit.push(nx); pts.push([nx.x, nx.y]); if (p.real) nx.poison = { dps: p.dmg * hmR().chaud.poison, until: G.t + 3, src: p.src }; cur = nx; }
+      if (pts.length > 1) HM5.chains.push({ k: b.k, pts, t0: G.t, t1: G.t + 0.7 }); } }; }
+// every board, every step: the beat of the rage drums, the bursts, the blizzard, the burning ground, the Renard's traps
+{ const base = HX.step; HX.step = function (b, dt, real) {
+    let rg = null;
+    for (const t of b.grid) if (t && t.f5 === 'rage') { if (!rg) rg = new Set(); for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) if ((dc || dr) && t.c + dc >= 0 && t.c + dc < COLS && t.r + dr >= 0 && t.r + dr < ROWS) rg.add(idx(t.c + dc, t.r + dr)); }
+    b._rage = rg;
+    const before = new Map(); for (const tr of HX.traps) if (tr.k === b.k) before.set(tr, tr.charges);
+    base.apply(this, arguments);
+    const R = HM.R.trap;
+    for (const tr of HX.traps) { if (tr.k !== b.k || !tr.src || !tr.src.f5) continue; const f = tr.src.f5;
+      if (!before.has(tr) && !tr._f5) { tr._f5 = 1; tr.charges += f === 'machoires' ? 2 : 1; continue; }
+      const c0 = before.get(tr); if (c0 === undefined || tr.charges >= c0) continue;
+      if (f === 'machoires') { tr.shut += 0.35; if (real) { const cr = b.creeps.find(c => !c.dead && !c.fly && Math.hypot(c.x - tr.c - 0.5, c.y - tr.r - 0.5) < 0.5); if (cr) { if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil, tr.shut); damage(b, cr, R.base * R.byLvl[3] * 1.5, tr.src); } } }
+      if (f === 'tresor' && real) { b.gold += 4; G.floats.push({ k: b.k, x: tr.c + 0.5, y: tr.r - 0.2, txt: '+4', color: C.gold, t: 1, ttl: 1 }); } }
+    for (const t of b.grid) {
+      if (!t || !t.f5) continue;
+      if (t.f5 === 'repet' && t._rq && t._rq.length && G.t >= t._rq[0]) { t._rq.shift(); const st = stat(t, b), list = inRange(b, t.c + 0.5, t.r + 0.5, st.range); if (list.length) { t._f5b = 1; try { t.ang = Math.atan2(list[0].y - t.r - 0.5, list[0].x - t.c - 0.5); t.kick = G.t; launch(b, t, st, list[0], real, t.c + 0.5, t.r + 0.5); } finally { t._f5b = 0; } } }
+      if (t.f5 === 'blizzard' && !(t._bz > G.t) && !(t.stoneT > G.t) && !(t.stunT > G.t)) { t._bz = G.t + 0.5; const st = stat(t, b), list = inRange(b, t.c + 0.5, t.r + 0.5, st.range + 0.8); if (real) for (const cr of list) { slow(cr, 0.4, 1); damage(b, cr, st.dmg * 0.3, t, true); } }
+    }
+    for (const z of HM5.zones) { if (z.k !== b.k || G.t > z.t1 || G.t < z.tk) continue; z.tk = G.t + 0.25;
+      for (const cr of b.creeps) { if (cr.dead || cr.y < 0 || (cr.fly && z.h !== 'corbV') || Math.hypot(cr.x - z.x, cr.y - z.y) > z.r) continue; if (z.h === 'cerf') slow(cr, 0.5, 0.6); if (real) damage(b, cr, z.dps * 0.25, z.src, true); } }
+    HM5.zones = HM5.zones.filter(z => G.t <= z.t1 && G.b[z.k] && G.b[z.k].alive);
+    HM5.beams = HM5.beams.filter(q => G.t <= q.t1); HM5.chains = HM5.chains.filter(q => G.t <= q.t1); HM5.fx = HM5.fx.filter(q => G.t <= q.t1);
+}; }
+{ const base = newGame; newGame = function () { HM5.zones = []; HM5.beams = []; HM5.chains = []; HM5.fx = []; return base.apply(this, arguments); }; }
+
+/* ---------------------------------------------------------------- the panel: level 4 offers the two forms; level 5 shows its own */
+{ const base = openPop; openPop = function (c, r) { const res = base.apply(this, arguments);
+    try { const t = selTower(), me = G && G.b[G.me]; if (!t || t.type === 'wall' || !me) return res; const p = $('pop');
+      if (t.f5) { const b = p.querySelector('.ttl b'); if (b) b.textContent = f5Name(t.f5, me) + ' · niv. 5';
+        p.querySelectorAll('.evo-h,.info,.evos,.pact.chef').forEach(n => n.remove());
+        const acts = p.querySelector('.acts'); if (acts) acts.insertAdjacentHTML('beforebegin', `<div class="evo-h">Niveau 5</div><div class="info">${esc(F5[t.f5].d)}</div>`);
+        placePop(); return res; }
+      const off = f5Offer(me, t); if (!off) return res;
+      const cost = upCost(t), btn = f => `<button class="evo jt-form" type="button" data-act="u" data-evo="${f}" data-cost="${cost}"><b>${esc(f5Name(f, me))}</b><span>${esc(F5[f].d)}</span><em>${cost}</em></button>`;
+      const acts = p.querySelector('.acts'); if (acts) acts.insertAdjacentHTML('beforebegin', `<div class="evo-h">Niveau 5 : choisis sa forme</div><div class="evos">${off.map(btn).join('')}</div>`);
+      placePop(); } catch (e) {}
+    return res; }; }
+{ const base = jtEvoPop; jtEvoPop = function () { return base.apply(this, arguments); }; }
+
+/* ---------------------------------------------------------------- the pictures */
+// no pennant on a House tower (Patrick, 18/11, 18 h 57)
+{ const base = towerSprite; towerSprite = function (type, lvl, evo, k) {
+    if (type !== 'frost' || !evo || !String(evo).startsWith('hm_')) return base.apply(this, arguments);
+    const p0 = pennant, t0 = SPR_T; pennant = () => {}; SPR_T = t0 + 'nf'; try { return base.apply(this, arguments); } finally { pennant = p0; SPR_T = t0; } }; }
+{ const base = drawStruct; drawStruct = function (x, b, s) { HM5.cT = s && s.t; HM5.cB = b; try { return base.apply(this, arguments); } finally { HM5.cT = null; } }; }
+// one scratch canvas for the moving drawings (no canvas made each frame)
+const F5SC = mkCanvas(200, 200);
+H7.draw = (x, fn, px, py) => { const [c, cx] = F5SC, prev = P; cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, 200, 200); cx.setTransform(1, 0, 0, 1, 60, 130); P = mkPen(cx); try { fn(); } finally { P = prev; cx.setTransform(1, 0, 0, 1, 0, 0); } x.drawImage(c, Math.round(px) - 60, Math.round(py) - 130); };
+const ICS = { cerf: ['#f2fbff', '#9fdcf2', '#4f9ec4'], oursA: ['#ffd84a', '#ff6a2e', '#a8321e'], corbV: ['#d9f5b8', '#7fc06c', '#2f6a2a'], renT: ['#fff3cf', '#ffd84a', '#b8862e'] };
+const setIC = h => { const c = ICS[h] || ICS.cerf; IC[0] = c[0]; IC[1] = c[1]; IC[2] = c[2]; };
+// the weapons in volume: one picture per form, House, direction and moment, kept
+const F5V = { lourde: 'ballista', repet: 'ballista', pilon: 'cannon', feu: 'cannon', royal: 'cannon', fend: 'cannon' };
+const F5MZ = { lourde: [24, 7], repet: [20, 7], pilon: [6, 15], feu: [4, 16], royal: [17, 7], fend: [11, 7] };
+function f5State(f, ph) {
+  if (f === 'lourde') return { loaded: !(ph >= 0 && ph < 0.9) };
+  if (f === 'repet') { const k = Math.floor(ph / 0.14), q = ph - Math.max(0, k) * 0.14; return { shooting: k >= 0 && k < 3 && q < 0.07, left: ph > 0.9 || ph < 0 ? 3 : Math.max(0, 3 - (k + 1)) }; }
+  if (f === 'pilon') return { kick: [0, 1, 2].map(i => { const q = ph - i * 0.16; return q >= 0 && q < 0.1; }), loaded: [0, 1, 2].map(i => !(ph - i * 0.16 >= 0 && ph < 1.1)) };
+  if (f === 'feu') return { kick: ph >= 0 && ph < 0.12, loaded: !(ph >= 0 && ph < 1.1) };
+  return { rec: ph >= 0 && ph < 0.1 ? 3 : ph < 0.2 ? 2 : ph < 0.3 ? 1 : 0, loaded: !(ph >= 0 && ph < 1) };
+}
+function f5Vox(f, h, dir, ph) {
+  const st = f5State(f, ph), key = f + h + dir + JSON.stringify(st);
+  let c = HM5.vc.get(key); if (c) return c;
+  if (HM5.vc.size > 900) HM5.vc.clear();
+  VX.house(h); const bm = VX.build[f](st), parts = Array.isArray(bm) ? [[VX.bake(bm[0])], [VX.bake(bm[1]), [-bm[2], 0, 0]]] : [[VX.bake(bm)]];
+  const [cv, cx] = mkCanvas(80, 80);
+  if (F5V[f] === 'ballista') { cx.fillStyle = '#8a5a2e'; cx.fillRect(35, 53, 10, 4); cx.fillStyle = '#c08a4e'; cx.fillRect(35, 53, 10, 1); }
+  VX.draw(cx, parts, dir / 16 * Math.PI * 2, 40, 54);
+  c = cv; HM5.vc.set(key, c); return c;
+}
+{ const base = HM.top; HM.top = function (x, h, type, lvl, ang, kick, own, X, Y, oy, id, tx, ty) {
+    const t = HM5.cT; if (!t || !t.f5 || !F5[t.f5]) return base.apply(this, arguments);
+    const f = t.f5, px = X + tx, py = Y + ty, ph = typeof kick === 'number' ? kick : 9, a = t.ang ?? 1.57;
+    try {
+      if (F5V[f]) { const dir = ((Math.round(a / (Math.PI * 2) * 16) % 16) + 16) % 16; x.drawImage(f5Vox(f, h, dir, ph), Math.round(px) - 40, Math.round(py) - 2 - 54); return; }
+      if (f === 'elite') { const c = pcol(HM5.cB ? HM5.cB.k : 0); H5.top.elite(px, py, H5EL[h] || H5EL.cerf, [PCOL[own] || PCOL[c], PDARK[own] || PDARK[c]], a, ph < 0.16); return; }
+      setIC(h);
+      if (f === 'pluie') { H7.draw(x, () => H7.pluie(ph < 1 ? ph : 5), px, py); return; }
+      if (f === 'blizzard' || f === 'cristal') { H7.draw(x, () => H7[f](ph < 1 ? ph : -1), px, py); return; }
+      if (HA[f]) { H7.draw(x, () => HA[f](ph < 2.2 ? ph : -1), px, py + (f === 'machoires' || f === 'tresor' ? 9 : 0)); return; }
+    } catch (e) {}
+    return base.apply(this, arguments);
+}; }
+// the effects on the ground: the House's shell ground, the crystal's ray, the jumping poison, stun stars, shards, the rage aura, the blizzard
+{ const prev = window.__jtDrawHook; window.__jtDrawHook = function (o) {
+  if (prev) prev(o);
+  const { b, items } = o, X = v => AX0 + v * CS, Y = v => AY0 + v * CS;
+  const pp = (x, px, py, c) => { x.fillStyle = c; x.fillRect(Math.round(px), Math.round(py), 1, 1); };
+  for (const z of HM5.zones) { if (z.k !== b.k) continue; const cx = X(z.x), cy = Y(z.y), R = z.r * CS, fade = Math.min(1, (z.t1 - G.t) / 0.5), c = ICS[z.h] || ICS.cerf;
+    items.push({ y: cy - 14, fx: x => { const a0 = x.globalAlpha; x.globalAlpha = 0.85 * fade;
+      for (let i = 0; i < 44; i++) { const a = i / 44 * Math.PI * 2, rr = R * (0.7 + ((i * 7) % 5) / 14); pp(x, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.4, i % 3 ? c[1] : c[2]); }
+      for (let i = 0; i < 6; i++) { const q = (G.t * 1.5 + i / 6 + z.x) % 1, a = i * 1.05; pp(x, cx + Math.cos(a) * R * 0.5, cy + Math.sin(a) * R * 0.2 - q * 8, q < 0.5 ? c[0] : c[1]); }
+      x.globalAlpha = a0; } }); }
+  for (const q of HM5.beams) { if (q.k !== b.k) continue; const x0 = X(q.x0), y0 = Y(q.y0), x1 = X(q.x1), y1 = Y(q.y1);
+    items.push({ y: 1e6, fx: x => { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0)); for (let i = 0; i <= n; i += 1) { const u = i / n, px = x0 + (x1 - x0) * u, py = y0 + (y1 - y0) * u; pp(x, px, py, '#ffffff'); pp(x, px, py - 1, '#9fdcf2'); pp(x, px, py + 1, '#9fdcf2'); if (i % 9 === 0) pp(x, px, py - 3 + ((i / 9) % 2) * 6, '#ffffff'); } } }); }
+  for (const q of HM5.chains) { if (q.k !== b.k) continue; const u0 = Math.min(1, (G.t - q.t0) / 0.5) * (q.pts.length - 1);
+    items.push({ y: 1e6, fx: x => { for (let s = 0; s < q.pts.length - 1; s++) { const [ax, ay] = q.pts[s], [bx, by] = q.pts[s + 1], lim = Math.min(1, u0 - s); if (lim <= 0) break;
+      for (let i = 0; i <= 16; i++) { const u = i / 16; if (u > lim) break; const px = X(ax + (bx - ax) * u), py = Y(ay + (by - ay) * u) - 8 - Math.sin(u * Math.PI) * 12 + Math.sin(u * 9 + G.t * 12) * 1.2; pp(x, px, py, i % 3 ? '#9fe07c' : '#e8ffd0'); if (i % 4 === 0) pp(x, px, py + 1, '#5fa04c'); } } } }); }
+  for (const q of HM5.fx) { if (q.k !== b.k) continue; const cx = X(q.x), cy = Y(q.y), k = (G.t - q.t0) / (q.t1 - q.t0);
+    if (q.kind === 'stun') items.push({ y: cy, fx: x => { const R = 6 + k * 30; for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2; if (k < 0.4) pp(x, cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.5, k < 0.2 ? '#ffffff' : '#ffe28a'); } for (let i = 0; i < 3; i++) { const a = G.t * 6 + i * 2.1; pp(x, cx + Math.cos(a) * 5, cy - 12 + Math.sin(a) * 2, '#ffd84a'); } } });
+    if (q.kind === 'shards') { const c = ICS[q.h] || ICS.cerf; items.push({ y: cy, fx: x => { for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 + 0.3, r = 3 + k * 26; pp(x, cx + Math.cos(a) * r, cy - 4 + Math.sin(a) * r * 0.6, '#ffffff'); pp(x, cx + Math.cos(a) * (r - 1), cy - 4 + Math.sin(a) * (r - 1) * 0.6, c[1]); pp(x, cx + Math.cos(a) * (r - 2), cy - 4 + Math.sin(a) * (r - 2) * 0.6, c[2]); } } }); }
+  }
+  // the rage aura: embers turning round each tower beside the rage drums
+  if (b._rage) { const beat = (G.t * 2) % 1;
+    for (const t of b.grid) { if (!t || t.type === 'wall' || t.f5 === 'rage' || !b._rage.has(idx(t.c, t.r))) continue; const cx = X(t.c + 0.5), cy = Y(t.r + 0.5) - 14;
+      for (const front of [false, true]) items.push({ y: Y(t.r + 0.5) + (front ? 30 : -30), fx: x => { const R = 11 + (beat < 0.2 ? 2 : 0); for (let i = 0; i < 6; i++) { const a = G.t * 2 + i / 6 * Math.PI * 2; if ((Math.sin(a) > 0) !== front) continue; const px = cx + Math.cos(a) * R, py = cy + Math.sin(a) * R * 0.4; pp(x, px, py, '#ffd84a'); pp(x, px - 1, py, '#ff9a2e'); pp(x, px + 1, py, '#ff9a2e'); if (beat < 0.25) { pp(x, px, py - 1, '#ff9a2e'); pp(x, px, py + 1, '#d9322b'); } } } }); } }
+  // the blizzard's whirl of snow on the ground around it
+  for (const t of b.grid) { if (!t || t.f5 !== 'blizzard') continue; const cx = X(t.c + 0.5), cy = Y(t.r + 0.5), R = (stat(t, b).range + 0.8) * CS;
+    items.push({ y: cy - 20, fx: x => { const a0 = x.globalAlpha; x.globalAlpha = 0.6; for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2 + G.t * 0.8; if (i % 3) pp(x, cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.5, i % 2 ? '#ffffff' : '#bfe6f2'); } x.globalAlpha = a0; } }); }
+}; }
+/* ================================================================ /version 145 */
+
+})();
+
 useTerrain(TERKEY);
 demo();
 layout(); Object.assign(cam, allCam());
