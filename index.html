@@ -2187,6 +2187,21 @@ html body #defiBtn.df-card.df-card.df-card{height:92px!important}
 .rk-st[data-k=tous] .im::after{content:'Tous';font:400 22px/1 var(--ft);color:#8ea2a7;letter-spacing:.04em}
 .rk-st[data-k=tous][aria-checked=true] .im::after{color:var(--gold)}
 </style>
+<style id="jg146">/* v146 (18/11): le jongleur, the whole width of the phone, two big round buttons */
+.jt-entr.jg-on .jt-pal-box{width:calc(100% + var(--u)*16);margin-left:calc(var(--u)*-8);margin-right:calc(var(--u)*-8)}
+.jg-b{position:absolute;z-index:4;border:0;border-radius:50%;padding:0;margin:0;font:400 19px/1 var(--ft);letter-spacing:.06em;color:#e0e5e6;background:radial-gradient(circle at 50% 38%,#36484f,#2c3d44 70%);box-shadow:inset 0 -7px 0 #22313a,0 0 0 3px #3a4d55;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.jg-b[hidden]{display:none}
+.jt-entr.jg-on.jg-live .jt-pal-foot{display:none!important}
+.jg-b.lit{color:#1b2b34;background:radial-gradient(circle at 50% 38%,#f4d97f,#e4c35a 70%);box-shadow:inset 0 -7px 0 #b99a3c,0 0 0 4px #fff2b4,0 0 22px 4px rgba(255,226,122,.45)}
+.jg-b::after{content:'';position:absolute;inset:-5px;border-radius:50%;border:3px solid #e6c35a;transform:scale(calc(1 + var(--k,1) * .2));opacity:var(--o,0);pointer-events:none}
+.jg-b:active{transform:scale(.95)}
+.jg-mid{position:absolute;z-index:3;transform:translateY(-50%);text-align:center;font:400 19px/1.15 var(--ft);letter-spacing:.05em;color:var(--gold);pointer-events:none}
+.jg-mid[hidden]{display:none}
+.jg-pop{position:absolute;z-index:5;transform:translate(-50%,0);font:400 20px/1 var(--ft);color:#fff2b4;text-shadow:0 2px 0 #1b2b34;white-space:nowrap;pointer-events:none;opacity:0}
+.jg-pop.red{color:#ffb0a0}.jg-pop.gold{color:#fff2b4}
+.jg-pop.on{animation:jgPop .8s steps(8) forwards}
+@keyframes jgPop{0%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-30px)}}
+</style>
 <style id="md126">
 /* version 126 (16/11, Patrick 18 h 20, planches 13 to 17): the screen of the modes in banners: each mode on its pixel picture (made with Higgsfield,
    brought to big pixels), its logo centred above the line, one short line, « Solo » over the players, right; « Rejoindre une table » at the
@@ -23565,7 +23580,7 @@ fgText = function fgText4() {
   const g = FG[E.game], me = G.b[G.me], plays = fgIn(G.me), st = fgMine(), end = E.phase === 'end' && E.res;
   const mine = st || fgInit(E.game);
   // who plays: the Houses' chips (the cabbages each one has, a gold mark at the end of the race or the pole)
-  const val = k => { const s = fgStOf(E, k); return E.game === 'choux' || E.game === 'etend' ? String(s.score | 0) : s.fin >= 0 ? '<i></i>' : ''; };
+  const val = k => { const s = fgStOf(E, k); return E.game === 'jongle' ? String(jgN(s)) : E.game === 'choux' || E.game === 'etend' ? String(s.score | 0) : s.fin >= 0 ? '<i></i>' : ''; };
   const who = $('jtPalWho'), wh = E.order.map(k => `<span class="pw${k === G.me ? ' on' : ''}">${palIcon(k)}<span>${palName(k)}</span><em class="fg-v">${val(k)}</em></span>`).join('');
   if (FGX.txt.who !== wh) { FGX.txt.who = wh; who.style.setProperty('--n', Math.min(4, E.order.length)); who.innerHTML = wh; }
   // what to do now
@@ -23599,6 +23614,7 @@ fgText = function fgText4() {
   const sub = w < 0 ? 'Personne ne gagne la relique cette fois'
     : E.game === 'course' ? (w === G.me ? 'Ton sanglier arrive le premier' : `Le sanglier de ${G.b[w].name} arrive le premier`)
     : E.game === 'choux' || E.game === 'etend' ? (w === G.me ? 'Tu as le plus de points' : `${G.b[w].name} a le plus de points`)
+    : E.game === 'jongle' ? (w === G.me ? 'Tu as le plus de balles en l’air' : `${G.b[w].name} a le plus de balles en l’air`)
     : (fgStOf(E, w).fin >= 0 ? (w === G.me ? 'Tu es le premier en haut du mât' : `${G.b[w].name} est le premier en haut du mât`) : (w === G.me ? 'Tu es le plus haut sur le mât' : `${G.b[w].name} est le plus haut sur le mât`));
   setTxt('jtPalSub', sub);
   const key = [w, s2, E.sack, E.botRelic, (me && me.jt.relicPick || []).join(','), E.myPick || '', NET.mode].join('|');
@@ -27324,6 +27340,360 @@ const ficheFoot = nm => `<div class="am2-foot">${FI.del ? `<p class="fi-ask">Ret
     for (const k of ['lt/all'].concat(RK_LT.map(t => 'lt/' + t))) for (const o of base(k)) { const p = best.get(o.pid); if (!p || o.s > p.s) best.set(o.pid, o); }
     return [...best.values()].sort((a, b) => b.s - a.s || (a.t || 0) - (b.t || 0) || (a.pid < b.pid ? -1 : 1));
 }; }
+/* ================================================================ version 146 (18/11): le jongleur, and the Entracte's draw without the race nor the pole
+   Patrick, 18/11, 19 h 28: « Pour le moment, c'est le seul que je mettrai dans le jeu. Et tu peux enlever le sanglier… Le mât aussi, tu
+   peux l'enlever, il est moins fun. » The game is the prototype's (artifact « Jeux du fou, prototype », 18/11, 18 h 54 → 19 h 27):
+   seen through your own eyes, at the fête à la nuit tombée (C); your two hands in front, in the House's colour, animated (they breathe,
+   rise to a coming ball, close round it, toss it up); the fou throws you one more ball every 5 seconds; the other Houses juggle (or
+   drop their balls) on a stage at the back; at the bottom, a track for each hand brings each ball to its ring, and two big round
+   buttons at the two ends, a gold ring closing in on each as its ball comes: tap that hand when the ball lands in it.
+   The rules are pure, from the seed (the throws, the flight of each toss) and the taps (each with its hand): the same on every page.
+   The ranking: the most balls still in the air at the end, then the most catches. */
+FG.jongle = { c: 'g', n: 'Le jongleur', k: 'ENTRACTE · LE JONGLEUR', short: 'le jongleur', dur: 35,
+  d: 'Le plus de balles en l’air choisit une relique', say: '« Oyez ! Le jongleur ! Je t’envoie une balle… et une de plus toutes les cinq secondes ! »',
+  cnt: '« Qui jongle encore ? »', cv: 'Tes mains, les balles, et le fou qui les lance' };
+FG_DEC.g = 'jongle';
+for (const g of ['course', 'mat']) { const i = FG_POOL.indexOf(g); if (i >= 0) FG_POOL.splice(i, 1); }
+FG_POOL.push('jongle');
+FG_SIDE.jongle = 1;
+const JGD = { WIN: 0.19, PER: 0.07, OFF: 0.04, LEAD: 1.3, FLY: 1.25, HOLD: 0.1, MAXB: 7, W: 176, H: 270 };
+const JG_BC = ['#e6c35a', '#b5655b', '#7192b6', '#6fa56c', '#c4809f', '#c78a4c', '#ece6d6'];
+const JG_HANDS = [[46, 214], [130, 214]];
+function jgCond(seed) {
+  const R = prng(seed + 23), throws = [], T = [];
+  for (let k = 0; k < 7; k++) throws.push(k ? k * 5 : 0.4);
+  for (let i = 0; i < 96; i++) T.push(Math.round((1.05 + R() * 0.4) * 100) / 100);
+  return { throws, T };
+}
+const jgN = st => st ? (st.balls ? st.balls.length : (st.n | 0)) : 0;
+const jgFree = (st, h, ta) => st.balls.every(b => (b.to === h ? Math.abs(b.ta - ta) > 0.42 : Math.abs(b.ta - ta) > 0.24));
+function jgThrow(st, tt) {
+  const n0 = st.balls.filter(b => b.to === 0).length, n1 = st.balls.length - n0, h = n0 <= n1 ? 0 : 1;
+  let ta = tt + JGD.FLY; for (let i = 0; i < 30 && !jgFree(st, h, ta); i++) ta += 0.1;
+  st.balls.push({ to: h, from: -1, t0: tt, ta: Math.round(ta * 100) / 100, c: st.k % JG_BC.length }); st.k++;
+}
+// what happens up to T: the fou's throws, and the balls that nobody caught fall
+function jgRun(st, cond, T) {
+  for (;;) {
+    const tt = st.k < cond.throws.length && st.balls.length < JGD.MAXB ? cond.throws[st.k] : Infinity;
+    let lb = null; for (const b of st.balls) if (!lb || b.ta < lb.ta) lb = b;
+    const tl = lb ? lb.ta + JGD.WIN : Infinity;
+    if (Math.min(tt, tl) > T + 1e-9) break;
+    if (tt <= tl) jgThrow(st, tt);
+    else { st.balls.splice(st.balls.indexOf(lb), 1); st.lost++; st.ev.push({ t: Math.round(tl * 100) / 100, s: lb.to ? 'r' : 'l', r: 'lost', c: lb.c }); }
+  }
+}
+function jgTap(st, cond, tp) {
+  const T = tp.t - JGD.OFF, h = tp.s === 'l' ? 0 : 1;
+  jgRun(st, cond, T);
+  let b = null, bd = 9; for (const x of st.balls) if (x.to === h && x.t0 <= T + 1e-9) { const d = Math.abs(T - x.ta); if (d < bd) { bd = d; b = x; } }
+  if (!b || bd > JGD.WIN + 1e-9) { st.ev.push({ t: tp.t, s: tp.s, r: 'stray' }); return; }
+  let F = cond.T[st.c % cond.T.length]; st.c++;
+  const to = 1 - h, t0 = Math.round((T + JGD.HOLD) * 100) / 100;
+  for (let i = 0; i < 30 && !jgFree(st, to, t0 + F); i++) F += 0.07;
+  b.from = h; b.to = to; b.t0 = t0; b.ta = Math.round((t0 + F) * 100) / 100;
+  st.catches++;
+  st.ev.push({ t: tp.t, s: tp.s, r: bd <= JGD.PER ? 'per' : 'ok', c: b.c });
+}
+{ const base = fgCond; fgCond = function (game, seed) { return game === 'jongle' ? jgCond(seed) : base.apply(this, arguments); }; }
+{ const base = fgInit; fgInit = function (game) { return game === 'jongle' ? { t: 0, i: 0, balls: [], k: 0, c: 0, catches: 0, lost: 0, ev: [], h: 0 } : base.apply(this, arguments); }; }
+{ const base = fgAdvance; fgAdvance = function (game, cond, st, taps, tTo) {
+    if (game !== 'jongle') return base.apply(this, arguments);
+    tTo = Math.min(tTo, FG.jongle.dur);
+    while (st.i < taps.length && taps[st.i].t <= tTo + 1e-9) jgTap(st, cond, taps[st.i++]);
+    jgRun(st, cond, tTo - JGD.OFF);
+    st.h = st.catches > 0 ? 1 : 0;
+    if (tTo > st.t) st.t = tTo;
+    return st;
+}; }
+// a guest's tap that reaches the host after his balls were judged: that House's game is played again from its first tap
+{ const base = fgSync; fgSync = function (E, k, t) {
+    if (E.game === 'jongle') { const st = E.st[k], taps = E.taps[k]; if (st && st.i < taps.length && taps[st.i].t < st.t - 1e-9) E.st[k] = fgInit('jongle'); }
+    return base.apply(this, arguments);
+}; }
+{ const base = fgRank; fgRank = function (E) {
+    if (E.game !== 'jongle') return base.apply(this, arguments);
+    const R = E.order.map(k => ({ k, st: E.st[k] || fgInit('jongle') }));
+    R.sort((a, c) => (jgN(c.st) - jgN(a.st)) || ((c.st.catches | 0) - (a.st.catches | 0)) || ((a.st.lost | 0) - (c.st.lost | 0)) || (a.k - c.k));
+    return R.map(r => ({ k: r.k }));
+}; }
+// the bots: they play the very rules, catching each ball by their level (a little less sure with each ball more)
+const JG_BOT = { easy: { p: 0.9, dn: 0.035, sd: 0.06 }, normal: { p: 0.95, dn: 0.022, sd: 0.05 }, hard: { p: 0.985, dn: 0.012, sd: 0.04 } };
+{ const base = fgBotPlan; fgBotPlan = function (E) {
+    if (E.game !== 'jongle') return base.apply(this, arguments);
+    const B = JG_BOT[(NET.mode === 'host' && NET.diff) || diffKey] || JG_BOT.normal, D = FG.jongle.dur, st = fgInit('jongle'), out = [];
+    const gauss = () => { let s = 0; for (let i = 0; i < 4; i++) s += Math.random(); return (s - 2) * 1.732; };
+    for (let guard = 0; guard < 600; guard++) {
+      const tt = st.k < E.cond.throws.length && st.balls.length < JGD.MAXB ? E.cond.throws[st.k] : Infinity;
+      let nb = null; for (const b of st.balls) if (!nb || b.ta < nb.ta) nb = b;
+      const ta = nb ? nb.ta : Infinity;
+      if (Math.min(tt, ta) > D) break;
+      if (tt < ta) { fgAdvance('jongle', E.cond, st, out, tt + JGD.OFF + 0.001); continue; }
+      if (Math.random() < Math.max(0.5, B.p - B.dn * Math.max(0, st.balls.length - 1))) {
+        let t = fgR2(ta + JGD.OFF + Math.max(-0.15, Math.min(0.15, gauss() * B.sd)));
+        if (out.length && t < out[out.length - 1].t) t = out[out.length - 1].t;
+        out.push({ t, s: nb.to ? 'r' : 'l' }); fgAdvance('jongle', E.cond, st, out, t);
+        if (st.balls.includes(nb) && nb.ta === ta) fgAdvance('jongle', E.cond, st, out, ta + JGD.OFF + JGD.WIN + 0.01);
+      } else fgAdvance('jongle', E.cond, st, out, ta + JGD.OFF + JGD.WIN + 0.01);
+    }
+    return out;
+}; }
+// my taps: the left half (or the left round button) is the left hand
+{ const base = fgTap; fgTap = function (ax, ay, inCv, side) {
+    const E = G && G.entr;
+    if (E && E.game === 'jongle') { fgTapSide(side || (ax < FG_W / 2 ? 'l' : 'r')); return; }
+    return base.apply(this, arguments);
+}; }
+{ const base = fgNow; fgNow = function () {
+    const E = G.entr, t = base.apply(this, arguments);
+    if (!E || E.game !== 'jongle' || t < 0) return t;
+    return Math.round(etClock(E) * 100) / 100;
+}; }
+// at once on my screen: the hand's gesture, a sound
+const JG = { anim: [null, null], fx: [], miss: [], evI: 0, bg: {}, rx: {}, built: false, err: 0, seed: -1, ft: 0 };
+function jgReset() { JG.anim = [null, null]; JG.fx = []; JG.miss = []; JG.evI = 0; JG.rx = {}; JG.seed = -1; JG.ft = 0; }
+{ const base = fgStart; fgStart = function (game) { if (game === 'jongle') jgReset(); return base.apply(this, arguments); }; }
+{ const base = fgTapFx; fgTapFx = function (E, tp, st) {
+    if (!E || E.game !== 'jongle') return base.apply(this, arguments);
+    const last = st && st.ev[st.ev.length - 1], h = tp.s === 'l' ? 0 : 1, now = performance.now();
+    // the host judges my tap at its next step: until then, the same rule on the balls as they are
+    let ev = last && last.t === tp.t ? last : null;
+    if (!ev && st) { const T = tp.t - JGD.OFF; let b = null, bd = 9; for (const x of st.balls) if (x.to === h && x.t0 <= T + 1e-9) { const d = Math.abs(T - x.ta); if (d < bd) { bd = d; b = x; } } ev = b && bd <= JGD.WIN + 1e-9 ? { r: bd <= JGD.PER ? 'per' : 'ok', c: b.c } : { r: 'stray' }; }
+    if (ev && (ev.r === 'ok' || ev.r === 'per')) {
+      JG.anim[h] = { at: now, ok: true }; JG.fx.push({ h, at: now, c: JG_BC[ev.c] });
+      sfx('tick'); buzz('build'); if (ev.r === 'per') { etBell(); fgPopJg('Parfait', 'gold', h); }
+    } else {
+      JG.anim[h] = { at: now, ok: false };
+      if (now - JG.ft > 500) { JG.ft = now; const other = st && st.balls.some(b => b.to !== h && Math.abs(fgT(E) - JGD.OFF - b.ta) <= JGD.WIN); fgPopJg(other ? 'L’autre main !' : 'Trop tôt', other ? 'red' : '', h); }
+    }
+}; }
+
+/* ---------------------------------------------------------------- the look: the fête à la nuit tombée, the hands, the balls */
+const JG_SKIN = '#e0b48a', JG_SKIND = '#b98a62';
+function jgBgC(key, fn) { if (!JG.bg[key]) { const [c, x] = mkCanvas(JGD.W, JGD.H), prev = P; P = mkPen(x); try { fn(x); } finally { P = prev; } JG.bg[key] = c; } return JG.bg[key]; }
+function jgBg(x) {
+  const W = JGD.W, H = JGD.H, bands = ['#1d2c38', '#223443', '#283c4c', '#304657', '#3b5263', '#4a5d6c'];
+  for (let y = 0; y < 90; y++) P.hl(0, y, W, bands[Math.min(5, Math.floor(y / 15))]);
+  for (let i = 0; i < 26; i++) P.px(Math.floor(phash(i, 1, 5) * W), Math.floor(phash(i, 2, 5) * 50), phash(i, 3, 5) > 0.5 ? '#dfe8ee' : '#9fb3c2');
+  P.ell(140, 18, 6, 6, '#e9e4d2'); P.ell(142, 17, 5, 5, '#d8d2bd');
+  for (const [x0, top, w] of [[0, 66, 26], [24, 58, 30], [52, 64, 22], [72, 54, 34], [104, 62, 24], [126, 56, 30], [154, 64, 26]]) {
+    for (let j = 0; j < 12; j++) P.hl(x0 + j, top + 24 - j, w - j * 2, '#2a2a33');
+    P.rect(x0, top + 24, w, 120 - top - 24, '#33323b');
+    for (let k = 0; k < 2; k++) { const wx = x0 + 6 + k * Math.max(8, w - 16), wy = top + 30; P.rect(wx, wy, 4, 5, '#e0a95a'); P.px(wx + 1, wy + 1, '#f4d97f'); }
+  }
+  P.rect(0, 104, W, 7, '#4a3c40'); P.hl(0, 104, W, '#6b5238'); P.rect(0, 111, W, 4, '#2e2729');
+  for (let xx = 0; xx < W; xx++) { const yy = 30 + Math.round(Math.sin(xx / W * Math.PI) * 12); P.px(xx, yy, '#1b1418'); if (xx % 14 === 7) { P.ell(xx, yy + 4, 2, 3, '#e0954a'); P.px(xx, yy + 3, '#f4d97f'); x.globalAlpha = 0.15; P.ell(xx, yy + 4, 7, 6, '#f4d97f'); x.globalAlpha = 1; } }
+  for (let y = 115; y < 236; y++) for (let xx = 0; xx < W; xx++) {
+    const r = Math.floor((y - 115) / 6), off = (r % 2) * 5, edge = ((xx + off) % 10 === 0) || ((y - 115) % 6 === 0);
+    const lit = Math.max(0, 1 - Math.hypot(xx - 150, (y - 132) * 1.6) / 90);
+    P.px(xx, y, edge ? '#3f3d46' : tint('#57545d', 0.35 - lit * 0.35, '#1b1418'));
+  }
+  P.rect(0, 236, W, H - 236, '#2b2a2a'); P.hl(0, 236, W, '#4a3c40');
+}
+function jgBall(cx, cy, r, c) { P.ell(cx, cy + 0.5, r, r, tint(c, 0.45, '#000000')); P.ell(cx, cy, r, r, c); if (r >= 2) P.ell(cx - r / 3, cy - r / 3, Math.max(1, r / 3), Math.max(1, r / 3), tint(c, 0.45, '#ffffff')); }
+function jgPos(b, t) {
+  const [x1, y1] = JG_HANDS[b.to], u = Math.max(0, Math.min(1.25, (t - b.t0) / Math.max(0.01, b.ta - b.t0)));
+  if (b.from < 0) { const x0 = JGD.W / 2 + 9, y0 = 112; return [x0 + (x1 - x0) * u, y0 + (y1 - 12 - y0) * u - 184 * u * (1 - u), 1.5 + 2.8 * Math.min(1, u)]; }
+  const x0 = JG_HANDS[b.from][0], hgt = 60 + (b.ta - b.t0) * 55;
+  return [x0 + (x1 - x0) * u, y1 - 12 - hgt * 4 * u * (1 - u), 4.3];
+}
+// a hand's pose: at rest it breathes; a coming ball, it rises and opens; the catch gives under the ball and closes; the toss swings up
+function jgPose(h, an, appr, t, now) {
+  const ease = u => 1 - (1 - u) * (1 - u);
+  let dy = Math.sin(t * 2.3 + h * 1.7) * 1.2, dx = Math.sin(t * 1.3 + h * 2.9) * 0.8, curl = 0, open = 0, sq = 0, shake = 0;
+  if (appr > 0) { dy -= appr * 4; open = appr; }
+  if (an) {
+    const u = (now - an.at) / 1000;
+    if (an.ok) {
+      if (u < 0.08) { const k = u / 0.08; dy += 5 * Math.sin(k * Math.PI / 2); curl = k; sq = k; open = 0; }
+      else if (u < 0.2) { const k = (u - 0.08) / 0.12; dy += 5 - ease(k) * 19; curl = 1 - k; sq = 1 - k; }
+      else if (u < 0.42) { const k = (u - 0.2) / 0.22; dy += -14 + ease(k) * 14 - Math.sin(k * Math.PI) * 2; open = Math.max(open, (1 - k) * 0.6); }
+    } else if (an.lost) { const k = Math.min(1, u / 0.42); dy += Math.sin(k * Math.PI) * 6; curl = 0.6 * Math.sin(k * Math.PI); }
+    else if (u < 0.25) { const k = u / 0.25; dy -= Math.sin(k * Math.PI) * 3; shake = Math.sin(k * 30) * 2 * (1 - k); curl = 0.4 * Math.sin(k * Math.PI); }
+  }
+  return { dx: dx + shake, dy, curl, open, sq };
+}
+function jgHand(x, y, flip, h, an, glow, appr, held, t, now, k) {
+  const col = PCOL[pcol(k)], dk = PDARK[pcol(k)], g = tint(col, 0.08, '#ffffff'), gd = dk, gl = tint(col, 0.35, '#ffffff');
+  const Q = jgPose(h, an, appr, t, now), sgn = flip ? -1 : 1;
+  x = Math.round(x + Q.dx); const yy = Math.round(y + Q.dy);
+  for (let j = yy + 9; j < 236; j++) {
+    const w = 9 + Math.round((j - yy) * 0.26), l = x - w - sgn * 2 - Math.round((j - yy) * 0.05 * sgn);
+    const c = (Math.floor((j - yy) / 4) % 2) ? col : dk;
+    P.hl(l, j, w * 2, c); P.px(l, j, tint(c, 0.35, '#000000')); P.px(l + w * 2 - 1, j, tint(c, 0.35, '#000000'));
+  }
+  const cw = 11; P.rect(x - cw - sgn, yy + 6, cw * 2, 4, '#ece6d6'); P.hl(x - cw - sgn, yy + 6, cw * 2, '#c9b27a'); P.hl(x - cw - sgn, yy + 9, cw * 2, '#b9ad97');
+  for (let i = -cw + 2; i < cw - 1; i += 3) P.px(x + i - sgn, yy + 8, '#b5655b');
+  if (glow) { P.x.globalAlpha = 0.3; P.ell(x, yy - 2, 18, 11, '#fff2b4'); P.x.globalAlpha = 0.45; P.ell(x, yy - 2, 14, 8, '#fff2b4'); P.x.globalAlpha = 1; }
+  const prx = 11 + Math.round(Q.sq), pry = 5 - Math.round(Q.sq);
+  P.ell(x, yy + 3, prx + 1, pry + 1, gd); P.ell(x, yy + 2, prx, pry, g); P.hl(x - 6, yy, 10, gl);
+  if (held) jgBall(x, yy - 2, 4, held);
+  const base = [8, 10, 10, 8];
+  for (let i = 0; i < 4; i++) {
+    const order = flip ? 3 - i : i, c = Math.max(0, Math.min(1, Q.curl * 1.25 - order * 0.08));
+    const len = Math.max(2, Math.round(base[i] * (1 - c * 0.7) + Q.open * 2)), spread = Math.round((i - 1.5) * Q.open * 1.4);
+    const fx = x - 10 + i * 5 + (flip ? 1 : 0) + spread, tilt = Math.round(c * (i < 2 ? 1 : -1) * 1.5), top = yy - len + Math.round(Math.abs(i - 1.5)) + Math.round(c);
+    P.rect(fx + tilt, top, 4, len + 2, g); P.vl(fx + tilt + 3, top + 1, len + 1, gd); P.vl(fx + tilt, top + 1, Math.max(1, len - 1), gl);
+    if (c > 0.6) P.hl(fx + tilt, top, 4, gd);
+  }
+  const tx = flip ? x - 14 + Math.round(Q.curl * 4) : x + 11 - Math.round(Q.curl * 4), ty = yy - 1 + Math.round(Q.curl) - Math.round(Q.open * 2);
+  P.rect(tx, ty, 4, 5, g); P.vl(tx + (flip ? 0 : 3), ty + 1, 4, gd); P.hl(tx, ty, 4, gl);
+  return [x, yy];
+}
+function jgPerson(x, y, k, up) {
+  const c = PCOL[pcol(k)], d = PDARK[pcol(k)];
+  P.x.globalAlpha = 0.28; P.ell(x + 3, y + 12, 4, 1, '#281e14'); P.x.globalAlpha = 1;
+  P.rect(x + 2, y, 3, 1, '#5a3c2a'); P.rect(x + 2, y + 1, 3, 3, JG_SKIN); P.px(x + 2, y + 1, '#5a3c2a'); P.px(x + 3, y + 2, '#2e2a30');
+  P.rect(x + 1, y + 4, 5, 5, c); P.vl(x + 1, y + 4, 5, d); P.hl(x + 1, y + 8, 5, d);
+  if (up) { P.px(x, y + 3, JG_SKIN); P.px(x, y + 4, c); P.px(x + 6, y + 3, JG_SKIN); P.px(x + 6, y + 4, c); }
+  else { P.px(x + 6, y + 5, c); P.px(x + 7, y + 5, JG_SKIN); P.px(x, y + 6, JG_SKIN); }
+  P.vl(x + 2, y + 9, 3, '#4a3c40'); P.vl(x + 4, y + 9, 3, '#4a3c40'); P.px(x + 1, y + 11, '#2e2729'); P.px(x + 5, y + 11, '#2e2729');
+}
+function jgDraw(x, E) {
+  const W = JGD.W, t = fgT(E), now = performance.now(), rm = fgRM();
+  x.drawImage(jgBgC('c', jgBg), 0, 0);
+  // the fire, by the stage
+  { const fl = rm ? 0 : Math.sin(now / 90) + Math.sin(now / 137); x.globalAlpha = 0.16 + 0.04 * fl; P.ell(150, 132, 26, 12, '#f0b45a'); x.globalAlpha = 1;
+    for (let i = 0; i < 7; i++) { const hh = 5 + ((i * 3 + Math.floor(now / 70)) % 5); P.vl(146 + i, 132 - hh, hh, i % 3 ? '#e0954a' : '#f4d97f'); }
+    P.rect(144, 132, 12, 3, '#5a4436'); P.hl(144, 132, 12, '#8a6a48'); }
+  // the others on the stage: their balls going round, the dropped ones at their feet
+  const others = E.order.filter(k => k !== G.me || !fgIn(G.me)), n = others.length, gap = W / (n + 1);
+  others.forEach((k, i) => {
+    const st = fgStOf(E, k), nb = Math.min(JGD.MAXB, jgN(st));
+    let R = JG.rx[k]; if (!R || R.seed !== E.seed) R = JG.rx[k] = { seed: E.seed, n: nb, drop: 0, down: [] };
+    if (nb < R.n) { R.drop = now; for (let j = nb; j < R.n; j++) R.down.push(JG_BC[R.down.length % JG_BC.length]); }
+    R.n = nb;
+    const px0 = Math.round(gap * (i + 1)) - 3, py = 96, bad = now - R.drop < 800;
+    jgPerson(px0, py, k, !bad);
+    for (let j = 0; j < nb; j++) { const a = (rm ? 0 : now / 1000) * (4 + nb * 0.4) + j * (6.283 / Math.max(1, nb)); P.px(px0 + 3 + Math.round(Math.cos(a) * 5), py - 5 + Math.round(Math.sin(a) * 2.5), JG_BC[j % JG_BC.length]); }
+    R.down.slice(-4).forEach((c, j) => P.px(px0 - 1 + j * 2, py + 13, c));
+    if (bad) { P.px(px0 + 3, py - 6, '#ffffff'); P.px(px0 + 3, py - 4, '#ffffff'); }
+  });
+  // the fou, who throws the balls
+  const st = fgMine(), plays = fgIn(G.me) && st;
+  let throwing = false; if (E.phase === 'play') for (const tt of E.cond.throws) if (t - tt > -0.25 && t - tt < 0.3) throwing = true;
+  const rows = throwing ? 'throw' : 'front';
+  x.save(); x.translate(W / 2, 140); x.scale(2, 2); x.translate(-W / 2, -140);
+  P.x.globalAlpha = 0.3; P.ell(W / 2, 140, 6, 2, '#281e14'); P.x.globalAlpha = 1;
+  P.spr(JEST_ROWS[rows], JEST_PAL, W / 2 - 7, 140 - 17);
+  x.restore();
+  if (!plays) return;
+  // my catches since the last frame: the rings
+  if (JG.evI > st.ev.length) JG.evI = 0;
+  while (JG.evI < st.ev.length) { const ev = st.ev[JG.evI++]; if (ev.r === 'lost') { const h = ev.s === 'l' ? 0 : 1; JG.anim[h] = { at: now, lost: true }; JG.miss.push({ h, at: now, c: JG_BC[ev.c] }); if (G.entr && E.phase === 'play') { sfx('reel'); fgPopJg('Perdue', 'red', h); } } }
+  for (const f of JG.fx) { const u = (now - f.at) / 500; if (u >= 1) continue; const [hx, hy] = JG_HANDS[f.h], r = 8 + u * 16; for (let i = 0; i < 24; i++) { const a = i / 24 * 6.283; P.px(hx + Math.cos(a) * r, hy - 6 + Math.sin(a) * r * 0.45, u < 0.5 ? f.c : tint(f.c, 0.5, '#ffffff')); } }
+  JG.fx = JG.fx.filter(f => now - f.at < 500);
+  const lit = [0, 1].map(h => st.balls.some(b => b.to === h && b.t0 <= t && Math.abs(t - JGD.OFF - b.ta) <= JGD.WIN));
+  const appr = [0, 1].map(h => { let a = 0; for (const b of st.balls) if (b.to === h && t >= b.t0) { const d = b.ta + JGD.OFF - t; if (d >= -0.1 && d < 0.5) a = Math.max(a, Math.max(0, Math.min(1, 1 - d / 0.5))); } return a; });
+  const held = [0, 1].map(h => { const b = st.balls.find(b => b.from === h && t < b.t0); return b ? JG_BC[b.c] : null; });
+  for (let h = 0; h < 2; h++) if (JG.anim[h] && now - JG.anim[h].at > 450) JG.anim[h] = null;
+  for (let h = 0; h < 2; h++) jgHand(JG_HANDS[h][0], JG_HANDS[h][1], h === 1, h, JG.anim[h], lit[h], appr[h], held[h], rm ? 0 : now / 1000, now, G.me);
+  // the balls in the air, the far ones first; the trail of a ball just tossed
+  const bs = st.balls.filter(b => !(b.from >= 0 && t < b.t0) && !(b.from < 0 && t < b.t0)).map(b => [b, jgPos(b, t)]).sort((a, c) => a[1][2] - c[1][2]);
+  for (const [b, [bx, by, r]] of bs) {
+    if (b.from >= 0 && t - b.t0 < 0.3 && !rm) for (let q = 4; q >= 1; q--) { const p2 = jgPos(b, t - q * 0.035); x.globalAlpha = 0.5 - q * 0.1; P.ell(p2[0], p2[1], Math.max(1, r - q * 0.6), Math.max(1, r - q * 0.6), tint(JG_BC[b.c], 0.3, '#ffffff')); x.globalAlpha = 1; }
+    jgBall(bx, by, r, JG_BC[b.c]);
+  }
+  for (const m of JG.miss) { const u = (now - m.at) / 1000; if (u > 0.9) continue; jgBall(JG_HANDS[m.h][0] + u * 18, JG_HANDS[m.h][1] - 8 + u * u * 120, 4, m.c); }
+  JG.miss = JG.miss.filter(m => now - m.at < 900);
+  // the two tracks: each ball slides to the ring of the hand where it will land
+  const RING = [[14, 252], [W - 15, 252]], SPAN = 66;
+  for (let h = 0; h < 2; h++) {
+    const [rx, ry] = RING[h], dir = h ? -1 : 1, on = lit[h];
+    P.rect(h ? W / 2 + 2 : 4, ry - 4, W / 2 - 6, 9, '#3a3436'); P.hl(h ? W / 2 + 2 : 4, ry - 4, W / 2 - 6, '#4a4245');
+    P.ell(rx, ry, 7, 7, on ? '#fff2b4' : '#e6c35a'); P.ell(rx, ry, 5, 5, on ? '#e6c35a' : '#2b2a2a');
+    for (const b of st.balls) if (b.to === h && b.t0 <= t + JGD.LEAD) { const d = b.ta + JGD.OFF - t; if (d > JGD.LEAD || d < -JGD.WIN) continue; jgBall(Math.round(rx + dir * Math.max(0, d) / JGD.LEAD * SPAN), ry, 3, JG_BC[b.c]); }
+  }
+}
+{ const base = fgDraw; fgDraw = function () {
+    const E = G && G.entr; if (!E || E.game !== 'jongle' || !PAL.cv) return base.apply(this, arguments);
+    const cv = PAL.cv;
+    if (cv.width !== JGD.W || cv.height !== JGD.H) { cv.width = JGD.W; cv.height = JGD.H; }
+    const x = cv.getContext('2d'), prev = P; P = mkPen(x); x.imageSmoothingEnabled = false;
+    try { x.clearRect(0, 0, JGD.W, JGD.H); jgDraw(x, E); } catch (e) { if (!JG.err) { JG.err = 1; console.warn('fou:', e); } } finally { P = prev; }
+    fgBubble(E); fgCountdown(E);
+    try { fgCtlFrame(); } catch (e) { if (!JG.err) { JG.err = 1; console.warn('fou:', e); } }
+}; }
+
+/* ---------------------------------------------------------------- the two big round buttons, the layout (the whole width of the phone) */
+function jgBuild() {
+  if (JG.built) return true;
+  const cv = $('jtPalCv'), box = cv && cv.parentElement; if (!box) return false;
+  JG.built = true;
+  box.insertAdjacentHTML('beforeend', '<button type="button" class="jg-b" id="jgL" data-side="l" hidden aria-label="Main gauche">GAUCHE</button><button type="button" class="jg-b" id="jgR" data-side="r" hidden aria-label="Main droite">DROITE</button><div class="jg-mid" id="jgMid" hidden aria-hidden="true">Tape la main<br>où la balle arrive</div><div class="jg-pop" id="jgPopL" aria-hidden="true"></div><div class="jg-pop" id="jgPopR" aria-hidden="true"></div>');
+  for (const id of ['jgL', 'jgR']) {
+    const b = $(id);
+    b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); fgTapSide(b.dataset.side); }, { passive: false });
+    for (const ev of ['pointerup', 'click', 'touchstart']) b.addEventListener(ev, e => { e.stopPropagation(); if (ev !== 'touchstart') e.preventDefault(); }, { passive: false });
+  }
+  return true;
+}
+function fgPopJg(txt, cls, h) {
+  const el = $(h ? 'jgPopR' : 'jgPopL'); if (!el) return;
+  el.textContent = txt; el.className = 'jg-pop ' + (cls || ''); void el.offsetWidth; el.classList.add('on');
+}
+function jgHide() { for (const id of ['jgL', 'jgR', 'jgMid']) { const el = $(id); if (el && !el.hidden) el.hidden = true; } const en = $('jtEntr'); if (en) en.classList.remove('jg-on', 'jg-live'); }
+function jgLayout() {
+  const cv = PAL.cv; if (!cv || !fgCtlBuild() || !jgBuild()) return;
+  const box = cv.parentElement, bw = box.clientWidth, bh = box.clientHeight, d = Math.min(3, window.devicePixelRatio || 1);
+  const btn = Math.round(Math.max(84, Math.min(112, bw * 0.28))), foot = btn + 16;
+  const sc = Math.max(1, Math.floor(Math.min(bw / JGD.W, (bh - foot) / JGD.H) * d * 4) / 4) / d;
+  const w = JGD.W * sc, h = JGD.H * sc, cx = bw / 2, ct = Math.max(0, Math.round((bh - foot - h) / 2));
+  cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.width = JGD.W; cv.height = JGD.H; PAL.sc = sc;
+  cv.style.left = Math.round(cx) + 'px'; cv.style.top = Math.round(ct + h / 2) + 'px';
+  Object.assign(FGB, { cl: cx - w / 2, cr: cx + w / 2, ct, cw: w, ch: h, bw, bh, bsz: btn, btnTop: ct + h + 8, mode: 'jongle' });
+  const by = Math.round(Math.min(bh - btn - 4, ct + h + 8)), side = Math.max(4, Math.round(bw * 0.04));
+  for (const [id, l] of [['jgL', side], ['jgR', bw - side - btn]]) { const el = $(id); el.style.left = l + 'px'; el.style.top = by + 'px'; el.style.width = btn + 'px'; el.style.height = btn + 'px'; }
+  const mid = $('jgMid'); mid.style.left = (side + btn + 6) + 'px'; mid.style.width = Math.max(40, bw - 2 * (side + btn + 6)) + 'px'; mid.style.top = (by + btn / 2) + 'px';
+  for (const [id, h2] of [['jgPopL', 0], ['jgPopR', 1]]) { const el = $(id); el.style.left = Math.round(FGB.cl + JG_HANDS[h2][0] * sc) + 'px'; el.style.top = Math.round(ct + (JG_HANDS[h2][1] - 34) * sc) + 'px'; }
+  const tm = $('fgTime');
+  tm.style.left = Math.round(FGB.cl + 8 * sc) + 'px'; tm.style.top = Math.round(ct + 1 * sc) + 'px'; tm.style.width = Math.round(w - 16 * sc) + 'px'; tm.style.height = Math.max(5, Math.round(4 * sc)) + 'px';
+}
+{ const base = fgColLayout; fgColLayout = function () { const E = G && G.entr; if (E && E.game === 'jongle') return jgLayout(); return base.apply(this, arguments); }; }
+function jgFrame() {
+  const E = G && G.entr; if (!E || !E.game || !PAL.cv) return;
+  if (!fgCtlBuild() || !jgBuild()) return;
+  const en = $('jtEntr'); if (en && !en.classList.contains('jg-on')) { en.classList.add('jg-on'); FGB.lay = ''; }
+  const want = 'jongle|' + PAL.cv.parentElement.clientWidth + 'x' + PAL.cv.parentElement.clientHeight;
+  if (FGB.lay !== want) { FGB.lay = want; palLayout(); }
+  for (const id of ['fgBtnR', 'fgBtnL', 'fgHint']) { const el = $(id); if (el && !el.hidden) el.hidden = true; }
+  const cd = $('fgCd'); if (cd && FGB.cw) cd.style.left = Math.round(FGB.cl + FGB.cw / 2) + 'px';
+  const t = fgT(E), g = FG.jongle, left = Math.max(0, g.dur - t), st = fgMine();
+  const tm = $('fgTime'), on = E.phase === 'play'; tm.hidden = !on;
+  if (on) { tm.firstChild.style.width = (100 * left / g.dur).toFixed(2) + '%'; tm.classList.toggle('hurry', left < 5); }
+  const live = fgIn(G.me) && st && (E.phase === 'intro' || E.phase === 'play');
+  for (const id of ['jgL', 'jgR', 'jgMid']) $(id).hidden = !live;
+  en.classList.toggle('jg-live', !!live);   // while I juggle, the words are between the two round buttons: the parchment gives its room to the game
+  if (!live) return;
+  [['jgL', 0], ['jgR', 1]].forEach(([id, h]) => {
+    let k = null, lit = false;
+    for (const b of st.balls) { if (b.to !== h || b.t0 > t) continue; const d = b.ta + JGD.OFF - t; if (Math.abs(d) <= JGD.WIN) lit = true; if (d >= -JGD.WIN && d <= JGD.LEAD) { const q = Math.max(0, d) / JGD.LEAD; if (k == null || q < k) k = q; } }
+    const el = $(id); el.classList.toggle('lit', lit && on); el.style.setProperty('--o', k == null || !on ? 0 : 1); el.style.setProperty('--k', k == null ? 1 : k);
+  });
+}
+{ const base = fgCtlFrame; fgCtlFrame = function () { const E = G && G.entr; if (E && E.game === 'jongle') return jgFrame(); jgHide(); return base.apply(this, arguments); }; }
+{ const base = fgCleanup; fgCleanup = function () { const r = base.apply(this, arguments); try { jgHide(); jgReset(); } catch (e) {} return r; }; }
+// the words: what to do now; at the end, the ranking's score in balls
+{ const base = fgText; fgText = function () {
+    const r = base.apply(this, arguments), E = G && G.entr;
+    try {
+      if (E && E.game === 'jongle' && E.phase === 'play' && fgIn(G.me)) {
+        const st = fgMine(), n = jgN(st), mh = `<span class="jt-k">À TOI · ${n} BALLE${n > 1 ? 'S' : ''} EN L’AIR</span><b>Tape la main où la balle arrive · une balle ratée est perdue</b>`;
+        if (FGX.txt.msg !== mh) { FGX.txt.msg = mh; $('jtPalMsg').innerHTML = mh; }
+      }
+    } catch (e) { console.warn('fou:', e); }
+    return r;
+}; }
+{ const base = frVal; frVal = function (E, k) {
+    if (E.game !== 'jongle') return base.apply(this, arguments);
+    const n = jgN(E.st[k]); return { big: String(n), unit: n > 1 ? 'BALLES' : 'BALLE' };
+}; }
+// between friends: 5 characters a House: the balls in the air, the catches, the lost ones, a bit that flips at each catch
+{ const be = fgEncSt, bd = fgDecSt;
+  fgEncSt = function (game, st) { return game === 'jongle' ? b36(Math.min(35, jgN(st)), 1) + b36(Math.min(1295, st.catches | 0), 2) + b36(Math.min(35, st.lost | 0), 1) + ((st.catches | 0) % 2) : be.apply(this, arguments); };
+  fgDecSt = function (game, s) { return game === 'jongle' ? { n: parseInt(s[0], 36) || 0, catches: parseInt(s.slice(1, 3), 36) || 0, lost: parseInt(s[3], 36) || 0 } : bd.apply(this, arguments); };
+}
+/* ================================================================ /version 146 */
 /* version 111 (11/11): anonymous statistics — a random id at each opening (never the profile's), time spent, games, tables */
 (function v111() {
   const ST = { sid: '', q: [], cur: null, t0: Date.now(), last: Date.now(), src: '', inNet: false, mute: false };
