@@ -18719,8 +18719,8 @@ const l2LineTower = me => l2LineCells().some(([c, r]) => { const t = me.grid[idx
     const was = t && t.lvl, r = base.apply(this, arguments);
     if (!r && G && !G.quiet && k === G.me && t && t.lvl === 4 && was === 3 && !isChef(t.type)) {
       let seen = false; try { seen = localStorage.getItem('ddl-tip-chef') === '1'; localStorage.setItem('ddl-tip-chef', '1'); } catch (e) {}
-      if (!seen) { const hk = G.b[k] && G.b[k].jt && ({ cerf: 1, ours: 1, griffon: 1, renard: 1 })[G.b[k].jt.maison], html = hk ? (t.type === 'frost' ? 'Niveau 4 ! Ta tour de Maison est au sommet : touche-la et <b>couronne-la</b> pour bâtir ton chef-d’œuvre.' : 'Niveau 4 ! Monte ta tour de Maison au niveau 4 : tu pourras la <b>couronner</b>, c’est ton chef-d’œuvre.') : 'Niveau 4 ! Quand deux familles (l’Arc, les Arcanes, la Poudre) ont chacune une tour au sommet, <b>un chef-d’œuvre</b> s’ouvre dans Construire.';
-        if (!fouRare(html, { force: true, dur: 6000 })) toast(hk ? 'Niveau 4 : la tour de Maison au sommet se couronne' : 'Niveau 4 : deux familles au sommet ouvrent un chef-d’œuvre dans Construire', 'gold'); }
+      if (!seen) { const hk = G.b[k] && G.b[k].jt && ({ cerf: 1, ours: 1, griffon: 1, renard: 1 })[G.b[k].jt.maison], html = hk ? (t.type === 'frost' ? 'Niveau 4 ! Ta tour de Maison est au sommet : <b>ton chef-d’œuvre</b> t’attend dans Construire, pose-le sur un mur.' : 'Niveau 4 ! Monte ta tour de Maison au niveau 4 : <b>ton chef-d’œuvre</b> s’ouvrira dans Construire.') : 'Niveau 4 ! Quand deux familles (l’Arc, les Arcanes, la Poudre) ont chacune une tour au sommet, <b>un chef-d’œuvre</b> s’ouvre dans Construire.';
+        if (!fouRare(html, { force: true, dur: 6000 })) toast(hk ? 'Niveau 4 : ton chef-d’œuvre t’attend dans Construire' : 'Niveau 4 : deux familles au sommet ouvrent un chef-d’œuvre dans Construire', 'gold'); }
     }
     return r;
 }; }
@@ -29417,7 +29417,7 @@ HM.vs = (b, t) => { const e = hmEv(b, t); if (!e.startsWith('hm_')) return ''; c
 // « Comment jouer », the page of the House and its towers
 { const pg = TUTO.find(q => q.k === 'embleme');
   if (pg) {
-    pg.p = "La statue de ta Maison frappe les créatures et renforce les tours voisines : construis autour d’elle. Ta Maison a sa tour : le Givre du Cerf, le Tambour de l’Ours, le Chaudron du Corbeau, le Terrier du Renard. L’Archer et le Canon choisissent leur forme au niveau 3. Au niveau 4, ta tour de Maison se couronne : c’est ton chef-d’œuvre, un seul par partie.";
+    pg.p = "La statue de ta Maison frappe les créatures et renforce les tours voisines : construis autour d’elle. Ta Maison a sa tour : le Givre du Cerf, le Tambour de l’Ours, le Chaudron du Corbeau, le Terrier du Renard. L’Archer et le Canon choisissent leur forme au niveau 3. Au niveau 4, ta tour de Maison ouvre ton chef-d’œuvre dans Construire (un seul par partie). Au niveau 5, trois tours au plus prennent une forme d’exception.";
     pg.x = () => tsec('Au niveau 3', ['arc', 'poudre'].map(f => { const F = FAMS[f]; return `<div class="tvoie">${ICON[F.form]}<div><b>${esc(T[F.base].n)} → ${esc(T[F.form].n)}</b><span>ou ${esc(EVO[F.base][F.evo].n)} : ${esc(EVO[F.base][F.evo].d.charAt(0).toLowerCase() + EVO[F.base][F.evo].d.slice(1))}</span></div></div>`; }).join(''), 'tut-voies') +
       tsec('Ta tour de Maison, au niveau 4', Object.keys(HM_CHF).map(k => `<div class="tvoie"><div><b>${esc(HM_NAME[HM_CHF[k].m].n)} → ${esc(HM_CHF[k].full)}</b><span>${esc(HM_CHF[k].d)}</span></div></div>`).join(''), 'tut-voies');
   } }
@@ -29461,8 +29461,9 @@ const hmJt = () => !!(G && G.b && G.b.some(b => b && b.jt));
       tsec('Ta tour de Maison, au niveau 4', Object.keys(HM_CHF).map(k => `<div class="tvoie"><div><b>${esc(HM_NAME[HM_CHF[k].m].n)} → ${esc(HM_CHF[k].full)}</b><span>${esc(HM_CHF[k].d)}</span></div></div>`).join(''), 'tut-voies');
   } }
 
+
 (() => {
-/* ================================================================ version 145 · les dessins du niveau 5 (prototypes de la planche) */
+/* ================================================================ version 145-147 · les dessins du niveau 5 (prototypes de la planche) */
 
 /* ---- hm10.js (planche du 18/11) ---- */
 /* ===== niveau 5 : prototypes (planche 18/11). Tout est dessiné avec le pinceau du jeu, par-dessus la tour de niveau 4 de la forme. ===== */
@@ -30160,6 +30161,8 @@ const MAT = {
 };
 VX.HP = { cerf: [['#f2fbff', '#9fdcf2', '#4f9ec4'], ['#ffffff', '#f2fbff', '#dfeef5']], oursA: [['#ffd84a', '#ff6a2e', '#a8321e'], ['#fff1c9', '#ffd84a', '#ff9a2e']], corbV: [['#d9f5b8', '#7fc06c', '#2f6a2a'], ['#e8ffd0', '#b8f09c', '#7fc06c']], renT: [['#fff3cf', '#ffd84a', '#b8862e'], ['#ffffff', '#fff3cf', '#ffe28a']] };
 VX.house = (h) => { MAT.ice = VX.HP[h][0]; MAT.white = VX.HP[h][1]; };
+VX.own = (c0, c1) => { MAT.own = [c0, c1, c1]; MAT.ownD = [c1, c1, '#1b1612']; };
+MAT.own = ['#7192b6', '#4a6688', '#4a6688']; MAT.ownD = ['#4a6688', '#4a6688', '#1b1612']; MAT.skin = ['#f2c9a0', '#d9a679', '#b07d55']; MAT.hood = ['#4a4038', '#2e2722', '#1b1612']; MAT.red = ['#ff6a5a', '#d9322b', '#8a1e1a'];
 VX.model = () => ({ v: new Map() });
 const key = (s, t, z) => s + ',' + t + ',' + z;
 VX.set = (m, s, t, z, mat) => m.v.set(key(Math.round(s), Math.round(t), Math.round(z)), mat);
@@ -30276,6 +30279,33 @@ VX.build = {
     if (st.loaded) VX.spike(p, [10, 0, 7]);
     return [m, p, R];
   },
+};
+// ARCHER · PLUIE DE FLÈCHES : un râtelier de bois incliné vers le ciel, quatre flèches à pointe de la Maison ; il tourne vers la cible
+VX.build.pluie = (st) => {
+  const m = VX.model();
+  VX.cyl(m, [0, 0, 0], [0, 0, 1], 3.5, 'wood');
+  VX.box(m, -1, 0, 0, 0, 2, 6, 'wood');
+  const ca = .6, sa = .8;
+  for (let u = 0; u <= 6; u++) for (let t = -6; t <= 6; t++) { const edge = t === -6 || t === 6 || u === 0 || u === 6; if (!edge && u % 3) continue; VX.set(m, -1 + u * ca, t, 6 + u * sa, 'wood'); }
+  for (let k = 0; k < 4; k++) { if (st.left !== undefined && k >= st.left) continue; const t = -4.5 + k * 3, s0 = -0.5 + 2 * ca, z0 = 7 + 2 * sa;
+    VX.line(m, [s0, Math.round(t), z0], [s0 + 9 * ca, Math.round(t), z0 + 9 * sa], 'wood');
+    for (let j = 0; j < 3; j++) VX.set(m, s0 + (9.6 + j * .7) * ca, Math.round(t), z0 + (9.6 + j * .7) * sa, j === 2 ? 'white' : 'ice');
+    VX.set(m, s0 + 9.4 * ca, Math.round(t) - 1, z0 + 9.4 * sa, 'ice'); VX.set(m, s0 + 9.4 * ca, Math.round(t) + 1, z0 + 9.4 * sa, 'ice');
+    VX.set(m, s0, Math.round(t) - 1, z0, 'str'); VX.set(m, s0, Math.round(t) + 1, z0, 'str'); }
+  return m;
+};
+// ARCHER · TIREUR D'ÉLITE : un tireur encapuchonné, à la couleur du joueur, un arc très long, une lunette à œil rouge ; il tourne vers la cible
+VX.build.elite = (st) => {
+  const m = VX.model(), R = st.rec || 0;
+  VX.cyl(m, [0, 0, 0], [0, 0, 1], 3.5, 'wood');
+  VX.cyl(m, [-1, 0, 2], [-1, 0, 10], (u) => 3 - u * 1, (u, d) => d > .78 ? 'ownD' : 'own');
+  VX.sph(m, [-1, 0, 12.5], 2.6, (d, s, t, z) => s > 0 && Math.abs(t) < 1.6 && z < 13 ? 'skin' : 'hood');
+  VX.set(m, 1.6, -1, 12.5, 'dark'); VX.set(m, 1.6, 1, 12.5, 'dark');
+  for (let z = 1; z <= 23; z++) { const off = Math.round(Math.sin((z - 1) / 22 * Math.PI) * 3); VX.set(m, 4 + off - R, -2, z, 'wood'); VX.set(m, 4 + off - R, -3, z, 'wood'); }
+  VX.line(m, [4 - R, -2, 1], [4 - R, -2, 23], 'str');
+  VX.line(m, [-1 - R, -2, 10], [11 - R, -2, 10], 'wood'); VX.set(m, 12 - R, -2, 10, 'white'); VX.set(m, 12 - R, -1, 10, 'ice'); VX.set(m, 12 - R, -3, 10, 'ice');
+  VX.cyl(m, [-2 - R, 1, 14], [6 - R, 1, 14], 1.4, 'iron'); VX.sph(m, [7 - R, 1, 14], 1.2, 'red'); VX.set(m, 7 - R, 1, 15, 'white');
+  return m;
 };
 VX.spike = (m, c) => {
   VX.sph(m, c, 2.7, (d) => d < .5 ? 'white' : 'ice');
@@ -30561,7 +30591,7 @@ HA.cell = (form, t, W, Hh, still) => {
   P = prev; return c;
 };
 
-/* ================================================================ version 145 · le niveau 5 (Patrick, 18/11, 19 h 12 : « Très bien, je valide, tu peux publier »)
+/* ================================================================ version 145-146 · le niveau 5 (Patrick, 18/11, 19 h 12 : « Très bien, je valide, tu peux publier »)
    Planche « Domus TD · À valider », tours 14 à 25. Line Towers avec une Maison seulement.
    - Une tour de niveau 4 prend l'une de deux formes du niveau 5 (t.f5) ; elle garde t.lvl = 4, donc tout le reste du jeu la voit au niveau 4,
      et ce module ajoute ce que fait la forme (tir, effet, dessin). Rien de neuf ne voyage sauf 16 codes de tour (TCODES « type:5:forme »).
@@ -30594,6 +30624,7 @@ const F5_MAISON = { cerf: ['blizzard', 'cristal'], ours: ['grand', 'rage'], grif
 const f5Name = (f, b) => f === 'feu' ? (F5_OBUS[hmMaison(b)] || 'Obus') : F5[f].n;
 function f5Offer(b, t) {
   if (!b || !b.jt || !hmMaison(b) || !t || t.lvl !== 4 || t.f5) return null;
+  if (b.grid.filter(u => u && u.f5).length >= (G.quick ? HM5.maxQ : HM5.max)) return null;
   if (t.type === 'arrow' && t.evo === 'double') return ['pluie', 'elite'];
   if (t.type === 'ballista') return ['lourde', 'repet'];
   if (t.type === 'cannon' && t.evo === 'mortar') return ['pilon', 'feu'];
@@ -30601,7 +30632,7 @@ function f5Offer(b, t) {
   if (t.type === 'frost') return F5_MAISON[hmMaison(b)] || null;
   return null;
 }
-const HM5 = { zones: [], beams: [], chains: [], fx: [], cT: null, vc: new Map() };
+const HM5 = { zones: [], beams: [], chains: [], fx: [], cT: null, vc: new Map(), max: 3, maxQ: 3, mul: 0.85 };
 window.HM5 = HM5;
 
 /* ---------------------------------------------------------------- the codes of the towers: 16 more, one character each */
@@ -30634,6 +30665,12 @@ tdecode = function (ch) { const i = TCH5.indexOf(ch); if (i < 0 || i >= TCODES.l
       if (c.length) { const t = c[(Math.random() * c.length) | 0], off = f5Offer(me, t); if (upgrade(k, t, off[Math.random() < 0.5 ? 0 : 1]) === '') return true; } }
     return base.apply(this, arguments); }; }
 
+/* ---------------------------------------------------------------- what each form is good against (version 146 : la partie longue se joue sur les choix) */
+const F5T = { fly: 'les volants', big: 'les gros et les boss', arm: 'les cuirassés', fast: 'les rapides', small: 'les petits et les nuées' };
+const F5C = { pluie: ['fly', 1.8], elite: ['big', 1.8], lourde: ['arm', 1.8], repet: ['fast', 1.7], pilon: ['small', 1.7], feu: ['small', 1.5], royal: ['big', 1.8], fend: ['small', 1.7],
+  blizzard: ['fast', 1.7], cristal: ['arm', 1.8], grand: ['small', 1.6], grandc: ['small', 1.5], peste: ['big', 1.6], machoires: ['big', 1.8] };
+const f5Trait = (cr, w) => w === 'fly' ? !!cr.fly : w === 'big' ? (cr.max >= 600 || !!(S[cr.kind] && S[cr.kind].boss)) : w === 'arm' ? cr.armor > 0 : w === 'fast' ? cr.speed >= 1.4 : w === 'small' ? (cr.max < 90 || (S[cr.kind] && (S[cr.kind].count || 1) > 1)) : false;
+const f5Good = f => F5C[f] ? 'Fort contre ' + F5T[F5C[f][0]] + '.' : f === 'rage' ? 'Fort quand tes tours sont serrées autour de lui.' : f === 'tresor' ? 'Pour l’or plutôt que pour les dégâts.' : '';
 /* ---------------------------------------------------------------- what each form does */
 const F5S = {
   pluie: o => { o.dmg *= 1.25; o.range += 0.3; },
@@ -30651,7 +30688,7 @@ const F5S = {
   peste: o => { o.dmg *= 1.6; },
 };
 { const base = stat; stat = function (t, b) { const o = base.apply(this, arguments); if (!t) return o;
-    if (t.f5 && F5S[t.f5]) F5S[t.f5](o, t, b);
+    if (t.f5 && F5S[t.f5]) { F5S[t.f5](o, t, b); o.dmg *= HM5.mul; }
     if (b && b._rage && t.type !== 'wall' && t.f5 !== 'rage' && b._rage.has(idx(t.c, t.r))) { o.rate *= 0.72; o.dmg *= 1.15; }
     return o; }; }
 { const base = launch; launch = function (b, t, st, target, real, x, y) {
@@ -30671,7 +30708,7 @@ const F5S = {
     if (f === 'fend') { if (p.real) for (const cr of b.creeps) { if (cr.dead || cr.y < 0) continue; const d = Math.hypot(cr.x - x, cr.y - y); if (d > r && d < 1.6) damage(b, cr, dmg * 0.45, p.src); } HM5.fx.push({ k: b.k, kind: 'shards', x, y, t0: G.t, t1: G.t + 0.45, h: HMH[hmMaison(b)] || 'cerf' }); }
     if (f === 'feu') HM5.zones.push({ k: b.k, x, y, r: 1, t0: G.t, t1: G.t + 3, dps: dmg * 0.5, src: p.src, h: HMH[hmMaison(b)] || 'cerf', tk: 0 });
 }; }
-{ const base = damage; damage = function (b, cr, dmg, src) { const r = base.apply(this, arguments); if (src && src.f5 === 'lourde' && !cr.dead) slow(cr, 0.5, 1.2); return r; }; }
+{ const base = damage; damage = function (b, cr, dmg, src) { if (src && src.f5 && F5C[src.f5] && cr && f5Trait(cr, F5C[src.f5][0])) { const a = Array.from(arguments); a[2] = dmg * F5C[src.f5][1]; const r = base.apply(this, a); if (src.f5 === 'lourde' && !cr.dead) slow(cr, 0.5, 1.2); return r; } const r = base.apply(this, arguments); if (src && src.f5 === 'lourde' && !cr.dead) slow(cr, 0.5, 1.2); return r; }; }
 // the Ours: the Grand Tambour (wider, stronger, longer) and the Tambours de rage (their beat drives the towers around)
 { const base = HM_V.oursA.hstep; HM_V.oursA.hstep = function (b, t, chef) { if (!t.f5 || chef) return base.apply(this, arguments);
     const R = hmR().drum, big = t.f5 === 'grand'; t.cd = 1; if (t.hmT > G.t) return;
@@ -30716,10 +30753,11 @@ const F5S = {
     try { const t = selTower(), me = G && G.b[G.me]; if (!t || t.type === 'wall' || !me) return res; const p = $('pop');
       if (t.f5) { const b = p.querySelector('.ttl b'); if (b) b.textContent = f5Name(t.f5, me) + ' · niv. 5';
         p.querySelectorAll('.evo-h,.info,.evos,.pact.chef').forEach(n => n.remove());
-        const acts = p.querySelector('.acts'); if (acts) acts.insertAdjacentHTML('beforebegin', `<div class="evo-h">Niveau 5</div><div class="info">${esc(F5[t.f5].d)}</div>`);
+        const acts = p.querySelector('.acts'); if (acts) acts.insertAdjacentHTML('beforebegin', `<div class="evo-h">Niveau 5</div><div class="info">${esc(F5[t.f5].d)} <b>${esc(f5Good(t.f5))}</b></div>`);
         placePop(); return res; }
-      const off = f5Offer(me, t); if (!off) return res;
-      const cost = upCost(t), btn = f => `<button class="evo jt-form" type="button" data-act="u" data-evo="${f}" data-cost="${cost}"><b>${esc(f5Name(f, me))}</b><span>${esc(F5[f].d)}</span><em>${cost}</em></button>`;
+      const off = f5Offer(me, t);
+      if (!off) { const cap = G.quick ? HM5.maxQ : HM5.max; if (me.jt && hmMaison(me) && t.lvl === 4 && !t.f5 && me.grid.filter(u => u && u.f5).length >= cap) { const acts = p.querySelector('.acts'); if (acts) acts.insertAdjacentHTML('beforebegin', `<div class="info">Niveau 5 : tu as déjà tes ${cap} tours d’exception.</div>`); placePop(); } return res; }
+      const cost = upCost(t), btn = f => `<button class="evo jt-form" type="button" data-act="u" data-evo="${f}" data-cost="${cost}"><b>${esc(f5Name(f, me))}</b><span>${esc(F5[f].d)} <i>${esc(f5Good(f))}</i></span><em>${cost}</em></button>`;
       const acts = p.querySelector('.acts'); if (acts) acts.insertAdjacentHTML('beforebegin', `<div class="evo-h">Niveau 5 : choisis sa forme</div><div class="evos">${off.map(btn).join('')}</div>`);
       placePop(); } catch (e) {}
     return res; }; }
@@ -30737,20 +30775,22 @@ H7.draw = (x, fn, px, py) => { const [c, cx] = F5SC, prev = P; cx.setTransform(1
 const ICS = { cerf: ['#f2fbff', '#9fdcf2', '#4f9ec4'], oursA: ['#ffd84a', '#ff6a2e', '#a8321e'], corbV: ['#d9f5b8', '#7fc06c', '#2f6a2a'], renT: ['#fff3cf', '#ffd84a', '#b8862e'] };
 const setIC = h => { const c = ICS[h] || ICS.cerf; IC[0] = c[0]; IC[1] = c[1]; IC[2] = c[2]; };
 // the weapons in volume: one picture per form, House, direction and moment, kept
-const F5V = { lourde: 'ballista', repet: 'ballista', pilon: 'cannon', feu: 'cannon', royal: 'cannon', fend: 'cannon' };
+const F5V = { pluie: 'arrow', elite: 'arrow', lourde: 'ballista', repet: 'ballista', pilon: 'cannon', feu: 'cannon', royal: 'cannon', fend: 'cannon' };
 const F5MZ = { lourde: [24, 7], repet: [20, 7], pilon: [6, 15], feu: [4, 16], royal: [17, 7], fend: [11, 7] };
 function f5State(f, ph) {
+  if (f === 'pluie') return { left: ph >= 0 && ph < 0.9 ? 0 : 4 };
+  if (f === 'elite') return { rec: ph >= 0 && ph < 0.1 ? 2 : ph < 0.2 ? 1 : 0 };
   if (f === 'lourde') return { loaded: !(ph >= 0 && ph < 0.9) };
   if (f === 'repet') { const k = Math.floor(ph / 0.14), q = ph - Math.max(0, k) * 0.14; return { shooting: k >= 0 && k < 3 && q < 0.07, left: ph > 0.9 || ph < 0 ? 3 : Math.max(0, 3 - (k + 1)) }; }
   if (f === 'pilon') return { kick: [0, 1, 2].map(i => { const q = ph - i * 0.16; return q >= 0 && q < 0.1; }), loaded: [0, 1, 2].map(i => !(ph - i * 0.16 >= 0 && ph < 1.1)) };
   if (f === 'feu') return { kick: ph >= 0 && ph < 0.12, loaded: !(ph >= 0 && ph < 1.1) };
   return { rec: ph >= 0 && ph < 0.1 ? 3 : ph < 0.2 ? 2 : ph < 0.3 ? 1 : 0, loaded: !(ph >= 0 && ph < 1) };
 }
-function f5Vox(f, h, dir, ph) {
-  const st = f5State(f, ph), key = f + h + dir + JSON.stringify(st);
+function f5Vox(f, h, dir, ph, own) {
+  const st = f5State(f, ph), key = f + h + dir + (f === 'elite' ? own : '') + JSON.stringify(st);
   let c = HM5.vc.get(key); if (c) return c;
   if (HM5.vc.size > 900) HM5.vc.clear();
-  VX.house(h); const bm = VX.build[f](st), parts = Array.isArray(bm) ? [[VX.bake(bm[0])], [VX.bake(bm[1]), [-bm[2], 0, 0]]] : [[VX.bake(bm)]];
+  VX.house(h); if (f === 'elite') VX.own(PCOL[own] || PCOL[0], PDARK[own] || PDARK[0]); const bm = VX.build[f](st), parts = Array.isArray(bm) ? [[VX.bake(bm[0])], [VX.bake(bm[1]), [-bm[2], 0, 0]]] : [[VX.bake(bm)]];
   const [cv, cx] = mkCanvas(80, 80);
   if (F5V[f] === 'ballista') { cx.fillStyle = '#8a5a2e'; cx.fillRect(35, 53, 10, 4); cx.fillStyle = '#c08a4e'; cx.fillRect(35, 53, 10, 1); }
   VX.draw(cx, parts, dir / 16 * Math.PI * 2, 40, 54);
@@ -30760,10 +30800,8 @@ function f5Vox(f, h, dir, ph) {
     const t = HM5.cT; if (!t || !t.f5 || !F5[t.f5]) return base.apply(this, arguments);
     const f = t.f5, px = X + tx, py = Y + ty, ph = typeof kick === 'number' ? kick : 9, a = t.ang ?? 1.57;
     try {
-      if (F5V[f]) { const dir = ((Math.round(a / (Math.PI * 2) * 16) % 16) + 16) % 16; x.drawImage(f5Vox(f, h, dir, ph), Math.round(px) - 40, Math.round(py) - 2 - 54); return; }
-      if (f === 'elite') { const c = pcol(HM5.cB ? HM5.cB.k : 0); H5.top.elite(px, py, H5EL[h] || H5EL.cerf, [PCOL[own] || PCOL[c], PDARK[own] || PDARK[c]], a, ph < 0.16); return; }
+      if (F5V[f]) { const dir = ((Math.round(a / (Math.PI * 2) * 16) % 16) + 16) % 16; x.drawImage(f5Vox(f, h, dir, ph, own), Math.round(px) - 40, Math.round(py) - 2 - 54); return; }
       setIC(h);
-      if (f === 'pluie') { H7.draw(x, () => H7.pluie(ph < 1 ? ph : 5), px, py); return; }
       if (f === 'blizzard' || f === 'cristal') { H7.draw(x, () => H7[f](ph < 1 ? ph : -1), px, py); return; }
       if (HA[f]) { H7.draw(x, () => HA[f](ph < 2.2 ? ph : -1), px, py + (f === 'machoires' || f === 'tresor' ? 9 : 0)); return; }
     } catch (e) {}
@@ -30796,7 +30834,60 @@ function f5Vox(f, h, dir, ph) {
   for (const t of b.grid) { if (!t || t.f5 !== 'blizzard') continue; const cx = X(t.c + 0.5), cy = Y(t.r + 0.5), R = (stat(t, b).range + 0.8) * CS;
     items.push({ y: cy - 20, fx: x => { const a0 = x.globalAlpha; x.globalAlpha = 0.6; for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2 + G.t * 0.8; if (i % 3) pp(x, cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.5, i % 2 ? '#ffffff' : '#bfe6f2'); } x.globalAlpha = a0; } }); }
 }; }
-/* ================================================================ /version 145 */
+
+/* ================================================================ version 146 · le chef-d'œuvre à part (Patrick, 18/11, 20 h 01 : « je suis d'accord avec ta proposition pour le chef-d'œuvre »)
+   Quand la tour de Maison atteint le niveau 4, le chef-d'œuvre de la Maison s'ouvre dans Construire : on le pose sur un mur ou une case libre,
+   une fois par partie. La tour de Maison reste, et peut monter au niveau 5. Plus de « Couronner ». */
+jtChefAvail = function (b) { if (!b || !b.jt || !b.grid || jtChefBuiltType(b)) return []; const mk = hmMaison(b); if (!mk) return []; return b.grid.some(t => t && t.type === 'frost' && t.lvl >= 4) ? [HMCT[mk]] : []; };
+{ const base = upgrade; upgrade = function (k, t, evo) { if (evo === 'crown' && hmMaison(G.b[k])) return 'x'; return base.apply(this, arguments); }; }
+jtBotChef = function (k) { const b = G.b[k]; if (!b || !b.bot || !b.jt) return false; const av = jtChefAvail(b); if (!av.length || b.gold < CHF_COST + 10) return false;
+  const walls = b.grid.filter(t => t && t.type === 'wall'); if (walls.length) return !!convert(k, walls[(Math.random() * walls.length) | 0], av[0]);
+  // no wall left: the free cell beside the route that sees the most of it, the passage kept open
+  const route = new Set(spawnsOf().flatMap(sp => pathCells(b, sp))), spots = [];
+  for (let i = 0; i < COLS * ROWS; i++) { if (route.has(i) || b.grid[i]) continue; const c = i % COLS, r = (i / COLS) | 0; let n = 0; for (const j of route) { const dc = j % COLS - c, dr = ((j / COLS) | 0) - r; if (dc * dc + dr * dr <= 5) n++; } if (n) spots.push([n + Math.random() * 0.5, c, r]); }
+  spots.sort((a, c) => c[0] - a[0]);
+  for (const [, c, r] of spots.slice(0, 8)) if (!buildReason(b, c, r)) return build(k, av[0], c, r) === '';
+  return false; };
+{ const base = jtChefWatch; jtChefWatch = function () { const me = G.b[G.me]; if (!me || !me.jt || !hmMaison(me)) return base.apply(this, arguments);
+    if (G.spec || !me.alive || me.jt.chefSeen) return; if (jtChefAvail(me).length) { me.jt.chefSeen = 1; sfx('evolve'); toast('Ta tour de Maison est au niveau 4 : ton chef-d’œuvre t’attend dans Construire', 'gold'); } }; }
+// the House tower's panel: no « Couronner » any more; a word and a button that picks the masterpiece in Construire
+{ const base = openPop; openPop = function (c, r) { const res = base.apply(this, arguments);
+    try { const t = selTower(), me = G && G.b[G.me]; if (!t || t.type !== 'frost' || !me || !hmMaison(me)) return res; const p = $('pop');
+      p.querySelectorAll('.pact.chef').forEach(n => n.remove());
+      const av = jtChefAvail(me); if (av.length) { const cc = CHF[chfKey(av[0])], acts = p.querySelector('.acts');
+        p.querySelectorAll('.info').forEach(n => { if (n.textContent.indexOf(cc.full) >= 0) n.remove(); });
+        if (acts) acts.insertAdjacentHTML('afterbegin', `<button class="pact chef" type="button" data-chefgo="${av[0]}" data-cost="${CHF_COST}">${esc(cc.n)}<em>${CHF_COST}</em></button>`);
+        if (acts) acts.insertAdjacentHTML('beforebegin', `<div class="info"><b>${esc(cc.full)}</b> · ${esc(cc.d)} Touche-le puis pose-le sur un mur ou une case libre.</div>`); }
+      placePop(); } catch (e) {}
+    return res; }; }
+$('pop').addEventListener('click', e => { const bt = e.target.closest('[data-chefgo]'); if (!bt || !G) return; e.stopPropagation(); const type = bt.dataset.chefgo;
+  closePop(); G.chefPrev = G.tool; setMode('build'); G.tool = type; renderItems(); sfx('click'); jtChefPicked(type); }, true);
+
+/* ================================================================ version 146 · les renforts d'élite (partie longue : l'attaque pèse en fin de partie)
+   Dès 8 min (partie longue seulement), trois renforts à acheter dans Envoyer : chacun donne 35 % de vie en plus à toutes les créatures
+   que tu envoies ensuite. Ils voyagent comme les ateliers (b.tech), rien de neuf sur le réseau. */
+const ELT = [{ k: 'elite1', bit: 64, cost: 250 }, { k: 'elite2', bit: 128, cost: 500 }, { k: 'elite3', bit: 256, cost: 1000 }];
+const ELT_T = 480;
+ELT.forEach((e, i) => { TECH[e.k] = { n: 'Renfort d’élite ' + ['I', 'II', 'III'][i], cost: e.cost, bit: e.bit, tag: 'élite', d: `Tes créatures envoyées ont ${35 * (i + 1)} % de vie en plus` }; });
+const eltLvl = b => b ? ELT.filter(e => b.tech & e.bit).length : 0;
+const eltOpen = () => G && !G.quick && G.t >= ELT_T;
+{ const base = buyTech; buyTech = function (k, key) { const i = ELT.findIndex(e => e.k === key); if (i < 0) return base.apply(this, arguments);
+    const b = G.b[k]; if (!b || !b.jt || !eltOpen()) return 'x'; if (eltLvl(b) !== i) return 'x'; return base.apply(this, arguments); }; }
+{ const base = spawnCreep; spawnCreep = function (b, it) { const cr = base.apply(this, arguments);
+    if (cr && it && it.from >= 0 && !it.wave) { const L = eltLvl(G.b[it.from]); if (L) { cr.hp *= 1 + 0.35 * L; cr.max = cr.hp; } }
+    return cr; }; }
+{ const base = jtSendItems; jtSendItems = function () { const html = base.apply(this, arguments), me = G && G.b[G.me]; if (!me || !me.jt || G.quick) return html;
+    const L = eltLvl(me);
+    if (L >= 3) return html + `<div class="item snd tech done"><span class="tag">élite</span><span class="nm">Renforts</span><span class="ct">+105 %</span></div>`;
+    const e = ELT[L], tc = TECH[e.k];
+    if (!eltOpen()) return html + `<div class="item snd tech locked"><span class="tag">élite</span><span class="nm">Renfort d’élite</span><span class="ct">dès ${Math.round(ELT_T / 60)} min</span></div>`;
+    return html + `<button class="item snd tech" type="button" data-tech="${e.k}" aria-pressed="${G.techPick === e.k}"><span class="tag">élite</span><span class="nm">${tc.n.replace('Renfort d’élite', 'Élite')}</span><span class="ct">${tc.cost}</span></button>`; }; }
+{ let was = null; setInterval(() => { try { if (!G || !G.running) return; const o = eltOpen(); if (o !== was) { was = o; if (G.mode === 'send') renderItems(); } } catch (e) {} }, 1000); }
+// the bots: once the defence is up, the gold that sleeps buys the reinforcements
+{ const base = aiThink; aiThink = function (k) { const me = G.b[k];
+    if (me && me.jt && eltOpen() && me.alive) { const L = eltLvl(me); if (L < 3 && me.gold >= ELT[L].cost * 1.4 && Math.random() < 0.5 && buyTech(k, ELT[L].k) === '') return; }
+    return base.apply(this, arguments); }; }
+/* ================================================================ /version 146 */
 
 })();
 
