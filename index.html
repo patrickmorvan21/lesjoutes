@@ -5612,7 +5612,7 @@ function crossbowSprite(dir, lvl, kick) {
 const TOWER_BODY = { arrow: arrowBody, cannon: cannonBody, frost: frostBody, tesla: teslaBody, ballista: ballistaBody, bombard: bombardBody };
 function towerSprite(type, lvl, evo, k) {
   const own = [PCOL[k] || NEUTRAL[0], PDARK[k] || NEUTRAL[1]];
-  return sprGet(`t${type}${lvl}${evo}${k}`, () => bakeStruct((x, y) => HX.bodies[evo] ? HX.bodies[evo](x, y, lvl, evo, own, type) : (TOWER_BODY[type] || frostBody)(x, y, lvl, evo, own)));
+  return sprGet(`t${type}${lvl}${evo}${k}`, () => bakeStruct((x, y) => HX.bodies[evo.split('#')[0]] ? HX.bodies[evo.split('#')[0]](x, y, lvl, evo, own, type, +(evo.split('#')[1] || 0)) : (TOWER_BODY[type] || frostBody)(x, y, lvl, evo, own)));
 }
 // where the moving part sits on each tower (relative to the cell origin)
 function towerTopAt(type, lvl, evo) {
@@ -5956,6 +5956,8 @@ HX.step = (b, dt, real) => {
 
 /* ===== HM: the base towers stay; each House's matter creeps over them, level after level (planche 17/11, 3rd round) ===== */
 const HM = {};
+// version 142: the variants. HM.cur = the tower's variant (0..3, from its place) while its body or its top is drawn; HM.curW = the wall's (0..5)
+HM.cur = 0; HM.curW = 0; HM.vr = t => Math.floor(phash(t.c, t.r, 97) * 4); HM.wv = (c, r) => Math.floor(phash(c, r, 61) * 6);
 const HM_F = [0, .22, .48, .8, 1.08], HM_FW = [0, .3, .6, .95];
 const hmCrown = (type, lvl) => { const H = towerH(type, lvl, ''); return type === 'arrow' ? 23 - H - 3 : type === 'cannon' ? 23 - H - 5 : 23 - H - 1; };
 const hmLum = v => v[0] * .3 + v[1] * .59 + v[2] * .11;
@@ -5995,18 +5997,18 @@ const HM_V = {
     shot: { a: '#cbe8f0', b: '#ffffff', ball: ['.www.', 'wwwww', 'wwwcw', 'wwccw', '.ccc.'], bp: { w: '#ffffff', c: '#a5d0de' }, trail: '#e6f5f9' },
     deco(x, y, lvl, type, R) {
       const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2 + 1;
-      for (const [px, py] of R.edges) if (phash(px, py, 77) < .16 + lvl * .07) { const L = 1 + Math.floor(phash(px, py, 78) * (1 + lvl)); for (let j = 1; j <= L; j++) P.px(px, py + j, j === L ? '#ffffff' : j === 1 ? '#cbe8f0' : '#a5d0de'); }
+      for (const [px, py] of R.edges) if (phash(px, py, 77 + HM.cur * 5) < .16 + lvl * .07) { const L = 1 + Math.floor(phash(px, py, 78) * (1 + lvl)); for (let j = 1; j <= L; j++) P.px(px, py + j, j === L ? '#ffffff' : j === 1 ? '#cbe8f0' : '#a5d0de'); }
       const rx = 7 + lvl * 2.6, ry = 2 + lvl * .6;
-      for (let i = 0; i < 48; i++) { const a = i / 48 * 6.283, px = Math.round(cx + Math.cos(a) * rx * (.7 + .3 * phash(i, lvl, 3))), py = Math.round(base - 1 + Math.sin(a) * ry); if (Math.abs(px - cx) >= w && phash(i, lvl, 4) < .7) P.px(px, py, phash(i, 5, 5) < .3 ? '#ffffff' : '#d6eef4'); }
-      for (let i = 0; i < lvl * 5; i++) { const px = Math.round(cx + (phash(i, 9, lvl) - .5) * rx * 1.8), py = Math.round(base - 1 + (phash(i, 10, lvl) - .5) * ry * 1.6); if (Math.abs(px - cx) >= w) P.px(px, py, '#eef9fc'); }
-      if (lvl >= 3) for (const [dx, h] of [[-w - 3, 4 + lvl], [w + 2, 3 + lvl]]) { P.vl(cx + dx + 1, base - h, h, '#a5d0de'); P.vl(cx + dx, base - h + 2, h - 2, '#6f9fb3'); P.vl(cx + dx + 2, base - h + 1, h - 1, '#eef9fc'); P.px(cx + dx + 1, base - h - 1, '#ffffff'); }
-      if (lvl >= 4) for (const dx of [-6, 0, 6]) { const h = dx ? 3 : 5; P.vl(cx + dx, y + R.top - h, h, '#cbe8f0'); P.vl(cx + dx + 1, y + R.top - h + 1, h - 1, '#8fc3d6'); P.px(cx + dx, y + R.top - h - 1, '#ffffff'); }
+      for (let i = 0; i < 48; i++) { const a = i / 48 * 6.283, px = Math.round(cx + Math.cos(a) * rx * (.7 + .3 * phash(i, lvl + HM.cur * 9, 3))), py = Math.round(base - 1 + Math.sin(a) * ry); if (Math.abs(px - cx) >= w && phash(i, lvl + HM.cur * 9, 4) < .7) P.px(px, py, phash(i, 5, 5) < .3 ? '#ffffff' : '#d6eef4'); }
+      for (let i = 0; i < lvl * 5; i++) { const px = Math.round(cx + (phash(i, 9 + HM.cur, lvl) - .5) * rx * 1.8), py = Math.round(base - 1 + (phash(i, 10 + HM.cur, lvl) - .5) * ry * 1.6); if (Math.abs(px - cx) >= w) P.px(px, py, '#eef9fc'); }
+      if (lvl >= 3) for (const [dx, h] of [[[-w - 3, 4 + lvl], [w + 2, 3 + lvl]], [[-w - 3, 3 + lvl], [w + 2, 4 + lvl], [w + 5, 2 + lvl]], [[-w - 3, 5 + lvl], [-w - 6, 2 + lvl], [w + 2, 3 + lvl]], [[-w - 4, 3 + lvl], [w + 2, 5 + lvl]]][HM.cur]) { P.vl(cx + dx + 1, base - h, h, '#a5d0de'); P.vl(cx + dx, base - h + 2, h - 2, '#6f9fb3'); P.vl(cx + dx + 2, base - h + 1, h - 1, '#eef9fc'); P.px(cx + dx + 1, base - h - 1, '#ffffff'); }
+      if (lvl >= 4) for (const [dx, h] of [[[-6, 3], [0, 5], [6, 3]], [[-7, 4], [-2, 3], [3, 5], [7, 3]], [[-5, 3], [1, 6], [6, 4]], [[-6, 5], [-1, 3], [4, 4], [8, 3]]][HM.cur]) { P.vl(cx + dx, y + R.top - h, h, '#cbe8f0'); P.vl(cx + dx + 1, y + R.top - h + 1, h - 1, '#8fc3d6'); P.px(cx + dx, y + R.top - h - 1, '#ffffff'); }
     },
     wall(x, y, m, L, Rr, U, own, R) {
       const top = U ? y - 9 : y + 4;
-      for (let i = 0; i < 24; i++) if (phash(x + i, m, 81) < .25 + m * .15) { const L2 = 1 + Math.floor(phash(x + i, m, 82) * (m + 1)); for (let j = 1; j <= L2; j++) P.px(x + i, y + 15 + j, j === L2 ? '#ffffff' : '#a5d0de'); }
-      if (m >= 2) for (let i = 1; i < 23; i++) { P.px(x + i, top - (phash(x + i, 3, 83) < .35 ? 1 : 0), '#f4fbfc'); if (phash(x + i, 4, 84) < .5) P.px(x + i, top, '#ffffff'); }
-      if (m >= 3) for (const dx of [5, 17]) { P.vl(x + dx, y + 19, 4, '#a5d0de'); P.px(x + dx, y + 18, '#ffffff'); P.px(x + dx + 1, y + 21, '#6f9fb3'); }
+      for (let i = 0; i < 24; i++) if (phash(x + i, m + HM.curW * 3, 81) < .25 + m * .15) { const L2 = 1 + Math.floor(phash(x + i, m + HM.curW * 3, 82) * (m + 1)); for (let j = 1; j <= L2; j++) P.px(x + i, y + 15 + j, j === L2 ? '#ffffff' : '#a5d0de'); }
+      if (m >= 2) for (let i = 1; i < 23; i++) { P.px(x + i, top - (phash(x + i, 3 + HM.curW, 83) < .35 ? 1 : 0), '#f4fbfc'); if (phash(x + i, 4 + HM.curW, 84) < .5) P.px(x + i, top, '#ffffff'); }
+      if (m >= 3) for (const dx of [[5, 17], [3, 11, 20], [8, 15], [6, 13, 19], [4, 18], [10, 16]][HM.curW]) { P.vl(x + dx, y + 19, 4, '#a5d0de'); P.px(x + dx, y + 18, '#ffffff'); P.px(x + dx + 1, y + 21, '#6f9fb3'); }
     },
     live(lvl, type, X, Y, topL, id) {
       if (lvl < 3) return; const n = lvl >= 4 ? 7 : 3, t = G.t;
@@ -6143,6 +6145,15 @@ const hmPelt = (x, y, w, hd) => { for (let i = 0; i < w; i++) { const L = 3 + ((
 const hmFeather = (x, y, dir) => { P.px(x, y, '#22232b'); P.px(x + dir, y - 1, '#22232b'); P.px(x + dir, y - 2, '#3a3c48'); P.px(x + 2 * dir, y - 3, '#22232b'); };
 const hmRune = (x, y, n, c) => { const R = [['c.c', '.c.', 'c.c'], ['ccc', 'c..', 'cc.'], ['.c.', 'ccc', '.c.'], ['c..', 'cc.', 'c.c']][n % 4]; P.spr(R, { c }, x, y); };
 const hmMist = (X, Y, n, id, rx, y0, a) => { const c = P.x, a0 = c.globalAlpha, t = G.t; c.globalAlpha = a; for (let i = 0; i < n; i++) { const ang = t * .35 + i * 2.39 + phash(i, id, 9) * 6, mx = X + 12 + Math.cos(ang) * rx * (.5 + .5 * phash(i, id, 7)), my = Y + y0 + Math.sin(ang) * 2.5 - (i % 3); P.rect(Math.round(mx) - 2, Math.round(my), 5, 1, '#c9c3dc'); P.rect(Math.round(mx) - 1, Math.round(my) - 1, 3, 1, '#ddd8ea'); } c.globalAlpha = a0; };
+// the bones of the Ours (version 142): a few small shapes, placed differently on each tower
+const hmSkullS = (x, y) => P.spr(['.bbb.', 'bkbkb', 'bbbbb', '.b.b.'], { b: '#efe6cf', k: '#2a241f' }, x, y);
+const hmSkullT = (x, y) => P.spr(['bbb', 'kbk', '.b.'], { b: '#efe6cf', k: '#2a241f' }, x, y);
+const hmCrossB = (x, y) => P.spr(['bb.bb', '.bbb.', 'bb.bb'], { b: '#efe6cf' }, x, y);
+const hmFemur = (x, y) => { P.hl(x, y, 6, '#efe6cf'); P.px(x, y - 1, '#efe6cf'); P.px(x, y + 1, '#efe6cf'); P.px(x + 5, y - 1, '#efe6cf'); P.px(x + 5, y + 1, '#efe6cf'); };
+const hmTeeth = (x, y, n) => { for (let i = 0; i < (n || 4); i++) { P.px(x + i * 2, y, '#efe6cf'); P.px(x + i * 2, y + 1, i % 2 ? '#cbbf9f' : '#efe6cf'); } };
+const hmJaw = (x, y) => P.spr(['b.b.b.b', 'bbbbbbb', '.b...b.'], { b: '#efe6cf' }, x, y);
+const hmRibs = (x, y) => P.spr(['.b..b.', 'b.bb.b', 'b.bb.b'], { b: '#cbbf9f' }, x, y);
+const hmChainB = (x, y, n) => { P.vl(x, y, n, '#3b3e46'); P.spr(['b.b', '.b.', 'b.b'], { b: '#efe6cf' }, x - 1, y + n); };
 // the frost tower's object, one per House (instead of the same diamond everywhere)
 const HM_GIVRE = {
   drum: (k) => (lvl, kk) => bakeAt(30, 34, 15, 30, (cx, by) => { const o = PCOL[k] || NEUTRAL[0], o1 = PDARK[k] || NEUTRAL[1], d = kk ? 1 : 0, w = lvl >= 3 ? 11 : 9, x0 = cx - (w >> 1);
@@ -6161,13 +6172,26 @@ Object.assign(HM_V, {
   oursA: { n: 'A · Trophées et braises', ramp: null, passOpts: null, givre: 'drum',
     pal: { hm: '#6b4a2e', w2: '#8a6440' }, body: {},
     shot: { a: '#efe6cf', b: '#f2b45a', tip: '#3a2e22', ball: ['.ddd.', 'dbbbd', 'dbbbd', 'dbbbd', '.ddd.'], bp: { d: '#2a2c33', b: '#4a4e58' }, trail: '#f2b45a' },
-    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
-      hmBrazier(cx + w + 3, base);
-      if (lvl >= 3) { P.spr(['bbb', 'kbk', '.b.'], { b: '#efe6cf', k: '#2a241f' }, cx - 1, base - 12); hmBrazier(cx - w - 4, base); }
-      if (lvl >= 4) for (const d of [-1, 1]) { const x0 = cx + d * (w - 1), ty = y + R.top + 3; P.px(x0, ty, '#efe6cf'); P.px(x0 + d, ty - 1, '#efe6cf'); P.px(x0 + d, ty - 2, '#efe6cf'); P.px(x0 + 2 * d, ty - 3, '#efe6cf'); } },
-    wall(x, y, m) { if (m >= 2) hmBrazier(x + 18, y + 23); if (m >= 3) hmBrazier(x + 6, y + 23); },
-    live(lvl, type, X, Y, topL, id) { const w = towerW(type, lvl) / 2, t = G.t;
-      hmFlame(X + 12 + w + 3, Y + 20, t, false); if (lvl >= 3) hmFlame(X + 12 - w - 4, Y + 20, t + .3, false);
+    deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2, vr = HM.cur, fl = vr & 1 ? -1 : 1;
+      hmBrazier(cx + fl * (w + 3), base);
+      if (lvl >= 3) hmBrazier(cx - fl * (w + 4), base);
+      // the bones: more of them, in other places on each tower (above the door, on the faces, along the top), one more per level
+      const top = y + R.top, on = n => lvl >= n, ORN = [
+        [[hmSkullS, cx - 2, base - 13], [hmFemur, cx - w + 1, top + 4], [hmTeeth, cx - w + 2, top + 2, w - 1], [hmCrossB, cx + w - 6, base - 9]],
+        [[hmCrossB, cx - 2, base - 12], [hmSkullT, cx + w - 5, top + 5], [hmJaw, cx - w + 1, base - 9], [hmRibs, cx - 3, top + 3]],
+        [[hmJaw, cx - 3, base - 12], [hmFemur, cx + w - 6, top + 5], [hmSkullT, cx - w + 1, base - 9], [hmTeeth, cx - w + 2, top + 2, w - 1]],
+        [[hmSkullS, cx - 2, base - 13], [hmChainB, cx + w - 2, top + 4, 7], [hmCrossB, cx - w + 1, top + 4], [hmFemur, cx - 3, base - 8]]][vr];
+      ORN.forEach(([fn, ox, oy, a3], i) => { if (on(i + 1)) fn(ox, oy, a3); });
+      if (lvl >= 4) for (const d of [-1, 1]) { const x0 = cx + d * (w - 1), ty = y + R.top + 3;
+        if (vr < 2) { P.px(x0, ty, '#efe6cf'); P.px(x0 + d, ty - 1, '#efe6cf'); P.px(x0 + d, ty - 2, '#efe6cf'); P.px(x0 + 2 * d, ty - 3, '#efe6cf'); }
+        else { P.vl(x0 + d, ty - 4, 4, '#efe6cf'); P.px(x0 + d, ty - 5, '#ffffff'); P.px(x0, ty - 1, '#cbbf9f'); } } },
+    wall(x, y, m) { const hv = HM.curW, BR = [[18, 6], [5, 17], [12, 20], [8, 16], [20, 9], [14, 4]][hv], BN = [[hmSkullT, 11, 16], [hmCrossB, 10, 16], [hmFemur, 5, 17], [hmJaw, 11, 16], [hmTeeth, 9, 17, 4], [hmSkullT, 8, 16]][hv];
+      if (m >= 2) { hmBrazier(x + BR[0], y + 23); BN[0](x + BN[1], y + BN[2], BN[3]); }
+      if (m >= 3) hmBrazier(x + BR[1], y + 23); },
+    wallLive(x, y, m, hv, c, r) { const BR = [[18, 6], [5, 17], [12, 20], [8, 16], [20, 9], [14, 4]][hv], t = G.t;
+      if (m >= 2) hmFlame(x + BR[0], y + 20, t + c * .3, false); if (m >= 3) hmFlame(x + BR[1], y + 20, t + .4 + r * .3, false); },
+    live(lvl, type, X, Y, topL, id) { const w = towerW(type, lvl) / 2, t = G.t, fl = HM.cur & 1 ? -1 : 1;
+      hmFlame(X + 12 + fl * (w + 3), Y + 20, t, false); if (lvl >= 3) hmFlame(X + 12 - fl * (w + 4), Y + 20, t + .3, false);
       if (lvl >= 2) hmEmbers(X, Y, [0, 0, 2, 4, 7][lvl], id, type === 'cannon' ? 10 : 14, topL + 2, 16); } },
   oursB: { n: 'B · Peau d’ours et feu', ramp: null, passOpts: null, givre: 'drum',
     pal: { hm: '#6b4a2e', w2: '#8a6440' }, body: {},
@@ -6355,17 +6379,24 @@ const hmRenBase = {
   chefStep(b, t) { if (!(t.hmT2 > G.t)) { t.hmT2 = G.t + 6; const cr = b.creeps.filter(c => !c.dead && c.y >= 0 && c.from >= 0 && !c.fly && !(S[c.kind] && S[c.kind].boss)).sort((a, c) => c.prog - a.prog)[0]; if (cr) { t.kick = G.t; b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: .9, t: .5, ttl: .5, color: C.gold, fill: true }); for (let i = 0; i < 10; i++) { const a = Math.random() * 6.28; b.parts.push({ x: cr.x, y: cr.y, vx: Math.cos(a) * 2.2, vy: Math.sin(a) * 2.2 - 1, t: .5, ttl: .5, color: C.gold, size: .06 }); } G.floats.push({ k: b.k, x: cr.x, y: cr.y - .5, txt: 'RENVOYÉ', color: C.gold, t: 1.1, ttl: 1.1 }); cr.dead = true; cr.hxGone = true; } } },
 };
 const hmCoinStack = (x, by, n) => { for (let j = 0; j < n; j++) { P.hl(x, by - 1 - j, 3, j % 2 ? '#b8893a' : '#d5a64c'); P.px(x + 1, by - 1 - j, j === n - 1 ? '#fff6d8' : '#f6dc8a'); } };
-const hmLoot = (x, y, lvl, type, R) => { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2;
-  hmGoldPile(cx + w + 1, base, lvl >= 3 ? 9 : lvl >= 2 ? 7 : 5); hmCoin(cx + w + 9, base - 1);
-  if (lvl >= 2) { hmGoldPile(cx - w - 6, base, lvl >= 4 ? 7 : 5); hmCoin(cx - w - 8, base - 1); }
-  if (lvl >= 3) { hmCoinStack(cx + w + 9, base - 1, 3); hmCoinStack(cx - w - 9, base, 2); }
-  if (lvl >= 4) { hmCoinStack(cx + w + 5, base - 4, 3); hmCoin(cx - w - 2, base - 1); hmCoin(cx + w + 12, base - 1); } };
+const hmLoot = (x, y, lvl, type, R) => { const cx = x + 12, base = y + 23, w = towerW(type, lvl) / 2, vr = HM.cur, f = vr & 1 ? -1 : 1, X = (dx, wd) => f > 0 ? cx + dx : cx - dx - (wd || 0);
+  if (vr < 2) {
+    hmGoldPile(X(w + 1, lvl >= 3 ? 9 : lvl >= 2 ? 7 : 5), base, lvl >= 3 ? 9 : lvl >= 2 ? 7 : 5); hmCoin(X(w + 9), base - 1);
+    if (lvl >= 2) { hmGoldPile(X(-w - 6, lvl >= 4 ? 7 : 5), base, lvl >= 4 ? 7 : 5); hmCoin(X(-w - 8), base - 1); }
+    if (lvl >= 3) { hmCoinStack(X(w + 9, 3), base - 1, 3); hmCoinStack(X(-w - 9, 3), base, 2); }
+    if (lvl >= 4) { hmCoinStack(X(w + 5, 3), base - 4, 3); hmCoin(X(-w - 2), base - 1); hmCoin(X(w + 12), base - 1); } return; }
+  // the other two: one big heap on a side with a trail of coins (2), or tall stacks on both sides (3)
+  if (vr === 2) { const big = 5 + lvl * 2; hmGoldPile(cx - w - big + 1, base, big); if (lvl >= 2) hmGoldPile(cx + w + 2, base, 5);
+    for (let i = 0; i < 1 + lvl * 2; i++) hmCoin(cx + w + 4 + Math.floor(phash(i, 5, 301) * 14), base - 1 - Math.floor(phash(i, 6, 302) * 2)); if (lvl >= 3) hmCoinStack(cx - w - big - 3, base, 3); return; }
+  hmCoinStack(cx + w + 2, base, 1 + lvl); hmCoinStack(cx - w - 5, base, Math.max(1, lvl - 1)); if (lvl >= 2) hmGoldPile(cx + w + 7, base, 5); if (lvl >= 3) hmGoldPile(cx - w - 12, base, 5);
+  for (let i = 0; i < lvl * 2; i++) hmCoin(cx + (phash(i, 7, 303) < .5 ? -1 : 1) * (w + 3 + Math.floor(phash(i, 8, 304) * 12)), base - 1); };
 HM.lootSpots = (type, lvl) => { const w = towerW(type, lvl) / 2, s = [[w + 4, -2], [w + 2, -1], [w + 6, -3]]; if (lvl >= 2) s.push([-w - 4, -2], [-w - 6, -1]); if (lvl >= 3) s.push([w + 10, -4], [-w - 8, -2]); if (lvl >= 4) s.push([w + 6, -7], [w + 3, -4]); return s; };
 HM_V.renT = Object.assign({}, hmRenBase, { n: 'Le butin',
   deco: hmLoot,
-  wall(x, y, m) { if (m >= 2) { hmCoin(x + 6, y + 22); hmCoin(x + 15, y + 22); } if (m >= 3) hmGoldPile(x + 9, y + 23, 5); },
+  wall(x, y, m) { const hv = HM.curW, CP = [[6, 15], [4, 12], [9, 18], [5, 17], [8, 14], [7, 19]][hv], PL = [[9, 5], [5, 11], [12, 4], [14, 8], [7, 13], [10, 5]][hv];
+    if (m >= 2) { hmCoin(x + CP[0], y + 22); hmCoin(x + CP[1], y + 22 - (hv & 1)); } if (m >= 3) hmGoldPile(x + PL[0], y + 23, 3 + (hv % 3) * 2); if (m >= 3 && hv >= 3) hmCoinStack(x + PL[1] + 6, y + 23, 2); },
   live(lvl, type, X, Y, topL, id) { const t = G.t, sp = HM.lootSpots(type, lvl), n = Math.min(lvl, 4);
-    for (let i = 0; i < n; i++) { const cyc = t * .55 + phash(i, id, 41), kq = Math.floor(cyc), u = (cyc - kq) / .25; if (u >= 1) continue; const [dx, dy] = sp[Math.floor(phash(i, kq, 42) * sp.length)], gx = X + 12 + dx, gy = Y + 23 + dy - 1; P.px(gx, gy, '#ffffff'); if (u < .5) { P.px(gx - 1, gy, '#fff6d8'); P.px(gx + 1, gy, '#fff6d8'); P.px(gx, gy - 1, '#fff6d8'); P.px(gx, gy + 1, '#fff6d8'); } } } });
+    for (let i = 0; i < n; i++) { const cyc = t * .55 + phash(i, id, 41), kq = Math.floor(cyc), u = (cyc - kq) / .25; if (u >= 1) continue; const [dx0, dy] = sp[Math.floor(phash(i, kq, 42) * sp.length)], dx = dx0 * (HM.cur & 1 ? -1 : 1), gx = X + 12 + dx, gy = Y + 23 + dy - 1; P.px(gx, gy, '#ffffff'); if (u < .5) { P.px(gx - 1, gy, '#fff6d8'); P.px(gx + 1, gy, '#fff6d8'); P.px(gx, gy - 1, '#fff6d8'); P.px(gx, gy + 1, '#fff6d8'); } } } });
 
 /* registration of the new variants and of the masterpieces happens in the loop below; here: the masterpieces' own pieces */
 HM.chefs = ['cerf', 'oursA', 'corbN', 'corbF', 'renT'];
@@ -6461,21 +6492,32 @@ const hmPotIsoTop = (ctx, lvl, ang, kick, k, X, Y, tx, ty, id, gold) => {
 };
 
 /* the Corbeau's matter: a green venom that seeps from under the crown and drips down the stone */
-HM.drips = (type, lvl) => { const w = towerW(type, lvl) / 2, y0 = 23 - towerH(type, lvl, '') + 7 + 4;
-  const all = [[-w + 2, 0, [0, 3, 4, 6, 9][lvl]], [w - 3, 1, [0, 0, 3, 5, 7][lvl]], [-w + 5, 1, [0, 0, 0, 4, 5][lvl]], [w - 1, 0, [0, 0, 0, 0, 12][lvl]]];
-  return all.slice(0, Math.min(4, lvl)).map(([dx, dy, L]) => [Math.round(dx), y0 + dy, L]); };
+HM.drips = (type, lvl) => { const w = towerW(type, lvl) / 2, y0 = 23 - towerH(type, lvl, '') + 7 + 4, vr = HM.cur, nMax = Math.min(4, lvl);
+  if (!vr) { const all = [[-w + 2, 0, [0, 3, 4, 6, 9][lvl]], [w - 3, 1, [0, 0, 3, 5, 7][lvl]], [-w + 5, 1, [0, 0, 0, 4, 5][lvl]], [w - 1, 0, [0, 0, 0, 0, 12][lvl]]]; return all.slice(0, nMax).map(([dx, dy, L]) => [Math.round(dx), y0 + dy, L]); }
+  // the other three variants: the drips seep from other places, longer or shorter, one fewer for the third
+  const out = [], want = Math.max(1, nMax - (vr === 2 ? 1 : 0));
+  for (let a = 0; a < 20 && out.length < want; a++) { const dx = Math.round((phash(a, vr, 201) * 2 - 1) * (w - 2)); if (out.some(q => Math.abs(q[0] - dx) < 3)) continue;
+    out.push([dx, y0 + Math.floor(phash(a, vr, 202) * 3), 2 + Math.floor(phash(a, vr, 203) * (1 + lvl * 1.8))]); }
+  return out; };
+// the walls: where the venom seeps depends on the wall (6 looks), and the drops fall on every one of them
+HM.wdrips = m => { const hv = HM.curW, P0 = [[7, 17, 12], [5, 13, 20], [9, 19, 3], [4, 11, 17], [8, 15, 21], [6, 12, 19]][hv], L0 = [[2, 4, 3], [3, 2, 4], [2, 5, 2], [4, 3, 2], [2, 3, 5], [3, 4, 2]][hv];
+  return P0.slice(0, m >= 3 ? 3 : m >= 2 ? 1 : 0).map((px, i) => [px, 16, L0[i]]); };
 const hmDrip = (x, y, L) => { P.px(x, y - 1, '#4f8a47'); for (let j = 0; j < L; j++) P.px(x, y + j, j === 0 ? '#7fc06c' : '#5f9a55'); P.px(x, y + L, '#7fc06c'); P.px(x + 1, y + L, '#4f8a47'); P.px(x, y + L + 1, '#4f8a47'); };
 HM_V.corbV = Object.assign({}, hmCorbBase, { n: 'Le venin', htop: hmPotIsoTop, pal: {},
   deco(x, y, lvl, type, R) { const cx = x + 12, base = y + 23, d = HM.drips(type, lvl);
     for (const [dx, y0, L] of d) { hmDrip(cx + dx, y + y0, L); P.px(cx + dx - 1, y + y0 - 1, '#5f9a55'); }
     if (lvl >= 3) { const [dx] = d[0]; P.ell(cx + dx, base, 2, 1, '#4f8a47'); P.hl(cx + dx - 1, base - 1, 2, '#7fc06c'); }
-    if (lvl >= 4) { const [dx] = d[3]; P.ell(cx + dx + 1, base, 3, 1, '#4f8a47'); P.hl(cx + dx, base - 1, 3, '#5f9a55'); P.px(cx + dx + 1, base - 1, '#a8e090'); } },
-  wall(x, y, m) { if (m >= 2) hmDrip(x + 7, y + 16, 2); if (m >= 3) { hmDrip(x + 17, y + 16, 4); P.hl(x + 6, y + 15, 3, '#5f9a55'); P.hl(x + 16, y + 15, 2, '#5f9a55'); } },
+    if (lvl >= 4) { const [dx] = d[d.length - 1]; P.ell(cx + dx + 1, base, 3, 1, '#4f8a47'); P.hl(cx + dx, base - 1, 3, '#5f9a55'); P.px(cx + dx + 1, base - 1, '#a8e090'); } },
+  wall(x, y, m) { const d = HM.wdrips(m); for (const [px, py, L] of d) hmDrip(x + px, y + py, L); if (m >= 3) for (const [px] of d.slice(0, 2)) P.hl(x + px - 1, y + 15, 3, '#5f9a55'); },
+  wallLive(x, y, m, hv, c, r) { const t = G.t, w0 = HM.curW; HM.curW = hv; try { HM.wdrips(m).forEach(([px, py, L], i) => { const per = 2 + phash(i, c * 7 + r, 77) * 2, p = ((t + phash(i, c + r * 5, 78) * per) % per) / per, gx = x + px, gy = y + py + L;
+      if (p < .6) { const g = p / .6; if (g > .2) P.px(gx, gy + 2, '#7fc06c'); if (g > .6) P.px(gx, gy + 2, '#a8e090'); }
+      else { const v = (p - .6) / .4, fy = gy + 2 + v * v * (y + 22 - gy - 2); if (fy < y + 22) P.px(gx, Math.round(fy), '#7fc06c'); else { P.px(gx - 1, y + 22, '#a8e090'); P.px(gx + 1, y + 22, '#a8e090'); } } }); } finally { HM.curW = w0; } },
   live(lvl, type, X, Y, topL, id, house) { if (!house) hmCorbBase.live(lvl, type, X, Y, topL, id);
-    if (lvl < 2) return; const t = G.t, cx = X + 12, base = Y + 23;
-    HM.drips(type, lvl).forEach(([dx, y0, L], i) => { const per = 1.5 + phash(i, id, 75), u = ((t + phash(i, id, 76) * 3) % per) / per, gx = cx + dx, gy = Y + y0 + L;
-      if (u < .45) { if (u > .25) P.px(gx, gy + 2, '#7fc06c'); return; }
-      const v = (u - .45) / .55, fy = gy + 2 + v * v * (base - gy - 2); if (fy < base - 1) { P.px(gx, Math.round(fy), '#7fc06c'); P.px(gx, Math.round(fy) - 1, '#5f9a55'); } else if (v < 1) { P.px(gx - 1, base - 1, '#a8e090'); P.px(gx + 1, base - 1, '#a8e090'); } }); } });
+    const t = G.t, cx = X + 12, base = Y + 23;
+    // every drip swells, then falls, at its own pace (before: only from level 2, and a drop was seen only half of the time)
+    HM.drips(type, lvl).forEach(([dx, y0, L], i) => { const per = 1.7 + phash(i, id, 75) * 1.8, p = ((t + phash(i, id, 76) * per) % per) / per, gx = cx + dx, gy = Y + y0 + L;
+      if (p < .62) { const g = p / .62; if (g > .15) P.px(gx, gy + 2, '#7fc06c'); if (g > .8) P.px(gx, gy + 3, '#a8e090'); return; }
+      const v = (p - .62) / .38, fy = gy + 2 + v * v * (base - gy - 2); if (fy < base - 1) { P.px(gx, Math.round(fy), '#7fc06c'); P.px(gx, Math.round(fy) - 1, '#5f9a55'); } else if (v < 1) { P.px(gx - 1, base - 1, '#a8e090'); P.px(gx + 1, base - 1, '#a8e090'); } }); } });
 
 /* LE RENARD: a thrown trap stays on the path; it catches up to 3 creatures one after the other (each held, each drops 2 gold), then closes for good; it is gone after 10 s */
 HM_V.renT.hstep = function (b, t, chef) { t.cd = 1; if (t.hmT > G.t) return; if (HX.traps.length + HM.fly.length >= 3) return;
@@ -6506,23 +6548,23 @@ HM_V.trophee.passOpts = null;
 HM.house = b => { for (const t of b.grid) if (t && t.evo && t.evo.startsWith('hm_')) return t.evo.slice(3); return null; };
 for (const h in HM_V) {
   const V = HM_V[h], po = V.passOpts !== undefined ? V.passOpts : { ramp: V.ramp, patch: V.patch, plates: V.plates, seed: h.length * 7 + 1 };
-  HX.bodies['hm_' + h] = (x, y, lvl, e, own, type) => {
+  HX.bodies['hm_' + h] = (x, y, lvl, e, own, type, vr) => { const cur0 = HM.cur; HM.cur = vr | 0; try {
     const house = type === 'frost' && V.htype, bt = house ? V.htype : type;
     const g0 = GLW.length; hmOver(V.givreSpr && type === 'frost' ? Object.assign({ c0: K.s3, c1: K.s4, c2: K.s5, fr: '#000000' }, V.body) : V.body || {}, () => (TOWER_BODY[bt] || frostBody)(x, y, lvl, HM.form || '', own));
     if (V.givreSpr && type === 'frost') GLW.length = g0;
     if (h !== 'cerf') for (let i = g0; i < GLW.length; i++) { GLW[i].a *= .35; GLW[i].r *= .6; }
-    const top = hmCrown(bt, lvl), R = po ? hmPass(x, y, po.patch !== undefined ? HM_F[lvl] * 1.15 : HM_F[lvl], Object.assign({ top }, po, po.patch !== undefined ? { patch: po.patch - .05 * lvl } : {})) : hmPass(x, y, 0, { top, ramp: ['#000', '#000', '#000', '#000', '#000'], minRank: 9 });
+    const top = hmCrown(bt, lvl), R = po ? hmPass(x, y, po.patch !== undefined ? HM_F[lvl] * 1.15 : HM_F[lvl], Object.assign({ top }, po, po.patch !== undefined ? { patch: po.patch - .05 * lvl } : {}, HM.cur ? { seed: (po.seed || 1) + HM.cur * 17 } : {})) : hmPass(x, y, 0, { top, ramp: ['#000', '#000', '#000', '#000', '#000'], minRank: 9 });
     V.deco(x, y, lvl, bt, R, own);
     if (house && V.hdeco) V.hdeco(x, y, lvl, R, own, false);
-  };
+  } finally { HM.cur = cur0; } };
   HX.at['hm_' + h] = (type, lvl) => towerTopAt(type === 'frost' && V.htype ? V.htype : type, lvl, '');
-  HX.tops['hm_' + h] = (x, b, t, s, tx, ty, kick) => HM.top(x, h, t.type, t.lvl, t.ang ?? 1.57, kick, pcol(b.k), s.x, s.y, s.tw ? s.tw.oy : -20, t.id, tx, ty);
+  HX.tops['hm_' + h] = (x, b, t, s, tx, ty, kick) => HM.top(x, h, t.type, t.lvl, t.ang ?? 1.57, kick, pcol(b.k), s.x, s.y, s.tw ? s.tw.oy : -20, t.id, tx, ty, false, HM.vr(t));
   HX.shots['hm_' + h] = (x, b, p, px, py) => HM.shot(x, h, p, px, py);
 }
-HM.wallSprite = (h, m, L, R, U, v, k) => {
+HM.wallSprite = (h, m, L, R, U, v, k, hv) => { hv = hv | 0;
   if (!h || m <= 0) return wallSprite(L, R, U, v, k);
   const V = HM_V[h], own = [PCOL[k] || NEUTRAL[0], PDARK[k] || NEUTRAL[1]], po = V.passOpts !== undefined ? V.passOpts : { ramp: V.ramp, patch: V.patch, plates: V.plates, seed: h.length * 7 + 1 };
-  return sprGet(`hmw${h}${m}${+L}${+R}${+U}${v}${k}`, () => bakeStruct((x, y) => { drawWall(x, y, L, R, U, v, own); const Rw = po ? hmPass(x, y, HM_FW[m], po) : null; V.wall(x, y, m, L, R, U, own, Rw); }));
+  return sprGet(`hmw${h}${m}${+L}${+R}${+U}${v}${k}h${hv}`, () => bakeStruct((x, y) => { const w0 = HM.curW; HM.curW = hv; try { drawWall(x, y, L, R, U, v, own); const Rw = po ? hmPass(x, y, HM_FW[m], hv ? Object.assign({}, po, { seed: (po.seed || 1) + hv * 13 }) : po) : null; V.wall(x, y, m, L, R, U, own, Rw); } finally { HM.curW = w0; } }));
 };
 HM.wallAt = (b, c, r, L, R, U, v, k) => {
   const h = HM.house(b); if (!h) return wallSprite(L, R, U, v, k);
@@ -6530,7 +6572,8 @@ HM.wallAt = (b, c, r, L, R, U, v, k) => {
   for (let i = 0; i < b.grid.length; i++) { const t = b.grid[i]; if (!t || t.type === 'wall' || (t.evo !== 'hm_' + h && t.evo !== 'hmc_' + h)) continue; const d = Math.abs(i % COLS - c) + Math.abs(((i / COLS) | 0) - r); const L = t.evo === 'hmc_' + h ? 4 : t.lvl; m = Math.max(m, d === 0 ? L : L - d); }
   return HM.wallSprite(h, Math.min(3, m), L, R, U, v, k);
 };
-HM.top = (ctx, h, type, lvl, ang, kick, k, X, Y, topL, id, tx, ty, chef) => {
+HM.top = (...a) => { const c0 = HM.cur; HM.cur = a[14] | 0; try { return HM.top0(...a); } finally { HM.cur = c0; } };
+HM.top0 = (ctx, h, type, lvl, ang, kick, k, X, Y, topL, id, tx, ty, chef) => {
   const V = HM_V[h], s0 = SPR_T; SPR_T = s0 + '|hm' + h;
   try { hmOver(Object.assign({}, V.pal, V.crystal || {}), () => {
     if (type === 'frost' && V.htop) V.htop(ctx, lvl, ang, kick, k, X, Y, tx, ty, id, !!chef);
@@ -6572,13 +6615,13 @@ for (const h of (HM.chefs || [])) {
 }
 for (const h in HM_V) if (HM_V[h].flask) { HX.stats['hm_' + h] = (t, o) => { if (t.type === 'frost') { o.range = 2.6 + .2 * t.lvl; o.rate = 1.6; o.slowDur = 0; } }; HX.hits['hm_' + h] = (b, p, cr) => { if (p.type === 'frost') HM_V[h].hit(b, p, cr, false); }; }
 /* a tower between two walls, as in the game, on a canvas of its own (for the planche's strips) */
-HM.portrait = (h, type, lvl, ang, kk, k = 0, chef = false) => {
+HM.portrait = (h, type, lvl, ang, kk, k = 0, chef = false, vr = 0) => {
   const W = 96, Hh = 84, [c, x] = mkCanvas(W, Hh), prev = P; P = mkPen(x);
   const ax = 36, ay = 56, own = pcol(k), L4 = chef ? 4 : lvl, ms = h ? [Math.max(0, L4 - 1), Math.min(3, L4), Math.max(0, L4 - 1)] : [0, 0, 0];
-  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, ms[i], L, R, false, i, own), wx, ay));
-  const evo = h ? (chef ? 'hmc_' : 'hm_') + h : '', tw = towerSprite(type, lvl, evo, own); blit(x, tw, ax, ay);
+  [[ax - 24, false, true], [ax, true, true], [ax + 24, true, false]].forEach(([wx, L, R], i) => blit(x, HM.wallSprite(h, ms[i], L, R, false, i, own, (vr * 2 + i) % 6), wx, ay));
+  const evo = h ? (chef ? 'hmc_' : 'hm_') + h : '', tw = towerSprite(type, lvl, evo + (h && !chef && vr ? '#' + vr : ''), own); blit(x, tw, ax, ay);
   const [tx, ty] = towerTopAt(type, lvl, evo);
-  if (h) HM.top(x, h, type, lvl, ang, kk ? 0 : 9, own, ax, ay, tw.oy, 7, tx, ty, chef);
+  if (h) HM.top(x, h, type, lvl, ang, kk ? 0 : 9, own, ax, ay, tw.oy, 7, tx, ty, chef, vr);
   else blit(x, topSprite(type, lvl, '', own, ang, kk), ax + tx, ay + ty);
   P = prev; return c;
 };
@@ -7776,7 +7819,7 @@ function rebuildLane(b, A) {
     const c = i % COLS, r = (i / COLS) | 0, [x, y] = acell(c, r);
     const up = r > 0 && b.grid[idx(c, r - 1)];
     const w = HM.wallAt(b, c, r, hasS(b, c - 1, r), hasS(b, c + 1, r), !!(up && up.type === 'wall'), (c * 7 + r * 3) % 3, pcol(b.k));
-    const tw = t.type === 'wall' ? null : towerSprite(t.type, t.lvl, hmEv(b, t), pcol(b.k));
+    const tw = t.type === 'wall' ? null : towerSprite(t.type, t.lvl, hmEv(b, t) + HM.vs(b, t), pcol(b.k));
     for (const s of [w, tw]) if (s) {
       for (let j = 0; j < s.stamp.length; j += 2) { const px = x + s.stamp[j], py = y + s.stamp[j + 1]; if (px >= 0 && py >= 0 && px < AW && py < AH) mask[py * AW + px] = 1; }
       for (const g of s.glows) glows.push(Object.assign({}, g, { x: g.x + x, y: g.y + y }));
@@ -28819,7 +28862,7 @@ function hmEv(b, t) {
 function hmForm(h, f) {
   const key = 'hm_' + h + '~' + f;
   if (!HX.bodies[key]) {
-    HX.bodies[key] = (x, y, lvl, e, own, type) => { const f0 = HM.form; HM.form = f; try { HX.bodies['hm_' + h](x, y, lvl, e, own, type); } finally { HM.form = f0; } };
+    HX.bodies[key] = (x, y, lvl, e, own, type, vr) => { const f0 = HM.form; HM.form = f; try { HX.bodies['hm_' + h](x, y, lvl, e, own, type, vr); } finally { HM.form = f0; } };
     HX.at[key] = (type, lvl) => towerTopAt(type, lvl, f);
     HX.tops[key] = (x, b, t, s, tx, ty, kick) => { const f0 = HM.form; HM.form = f; try { HX.tops['hm_' + h](x, b, t, s, tx, ty, kick); } finally { HM.form = f0; } };
     HX.shots[key] = HX.shots['hm_' + h];
@@ -28978,17 +29021,25 @@ HM.step = (b, dt, real) => {
 };
 HX.step = (b, dt, real) => HM.step(b, dt, real);
 // the matter on the walls: the closest House tower's level, minus the distance (a masterpiece counts as 4)
-HM.wallAt = (b, c, r, L, R, U, v, k) => {
-  const mk = hmMaison(b); if (!mk) return wallSprite(L, R, U, v, k);
-  let m = 0;
+HM.wallM = (b, c, r) => { let m = 0;
   for (let i = 0; i < b.grid.length; i++) { const t = b.grid[i]; if (!t || t.type === 'wall') continue; const ev = hmEv(b, t); if (!ev.startsWith('hm')) continue;
     const d = Math.abs(i % COLS - c) + Math.abs(((i / COLS) | 0) - r), L4 = ev.startsWith('hmx_') ? 4 : t.lvl; m = Math.max(m, d === 0 ? L4 : L4 - d); }
-  return HM.wallSprite(HMH[mk], Math.min(3, m), L, R, U, v, k);
+  return Math.min(3, m); };
+HM.wallAt = (b, c, r, L, R, U, v, k) => {
+  const mk = hmMaison(b); if (!mk) return wallSprite(L, R, U, v, k);
+  return HM.wallSprite(HMH[mk], HM.wallM(b, c, r), L, R, U, v, k, HM.wv(c, r));
 };
+// the variant of a tower, in the sprite's name: '' for the first one (the picture that was)
+HM.vs = (b, t) => { const e = hmEv(b, t); if (!e.startsWith('hm_')) return ''; const v = HM.vr(t); return v ? '#' + v : ''; };
 // the picture of traps, flying traps and puddles, on every board that is drawn
 { const prev = window.__jtDrawHook; window.__jtDrawHook = function (o) {
   if (prev) prev(o);
   const { b, items, P, acell } = o;
+  // the walls' own movement (the venom's drops, the flames): drawn over the wall, at the wall's own look
+  { const mk = hmMaison(b), V = mk && HM_V[HMH[mk]];
+    if (V && V.wallLive) { const sig = laneSig(b); if (b._hmWs !== sig) { b._hmWs = sig; b._hmWm = [];
+        for (let i = 0; i < b.grid.length; i++) { const t = b.grid[i]; if (t && t.type === 'wall') { const c = i % COLS, r = (i / COLS) | 0, m = HM.wallM(b, c, r); if (m >= 2) b._hmWm.push([c, r, m, HM.wv(c, r)]); } } }
+      for (const [c, r, m, hv] of b._hmWm) { const [wx, wy] = acell(c, r); items.push({ y: wy + 23.5, fx: () => V.wallLive(wx, wy, m, hv, c, r) }); } } }
   for (const tr of HX.traps) { if (tr.k !== b.k) continue; const [cx, cy] = acell(tr.c, tr.r), shut = tr.shut > G.t;
     items.push({ y: cy + 6, fx: () => { const X = cx + 12, Y = cy + 14;
       if (shut) { P.hl(X - 3, Y, 7, K.i1); P.spr(['.i.i.i.', 'iIiIiIi'], { i: K.i1, I: K.i2 }, X - 3, Y - 2); }
