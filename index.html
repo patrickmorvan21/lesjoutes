@@ -5357,7 +5357,9 @@ function makeDesert(T, obj) {
   // the dunes: a lit flank facing the upper left, a shaded one behind each crest
   raster((x, y) => {
     if (!M[y * AW + x]) return null;
-    const u = (y + x * .45 + vnoise(x / 34, y / 30, 381) * 30) / 17, f = u - Math.floor(u);
+    // v150b: the dunes go on into the next terrain: a slope that comes back to the same stripe after one picture's width, a noise that loops
+    const q = x / AW, nz = vnoise(x / 34, y / 30, 381) * (1 - q) + vnoise((x - AW) / 34, y / 30, 381) * q;
+    const u = (y + x * (7 * 17 / AW) + nz * 30) / 17, f = u - Math.floor(u);
     let col = f < .06 ? K.f2 : f < .5 ? K.f1 : f < .58 ? K.f0 : K.fd;
     if (f >= .58 && phash(x, y, 383) < .04) col = K.fe;
     return col;
@@ -5379,7 +5381,7 @@ function makeDesert(T, obj) {
   T.walk = { y: 24, door: AW + 14, gate: gx, folk: 'camel' };
   // palms around the oasis and among the dunes
   const R = prng(377);
-  for (const [x, y] of [[14, oy0 + 6], [44, oy0 + 10], [AW - 16, oy0 + 7], [AW - 46, oy0 + 12], [8, 120], [AW - 8, 200], [10, 270], [AW - 10, 90]]) {
+  for (const [x, y] of [[16, oy0 + 6], [44, oy0 + 10], [AW - 18, oy0 + 7], [AW - 46, oy0 + 12], [18, 120], [AW - 18, 200], [18, 270], [AW - 18, 90]]) {
     const h = 20 + ((R() * 9) | 0), s = x * 13 + y; obj(y, () => palm(x, y, h, s), () => palm(x, y, h, s, 1));
   }
   // sandstone blocks and a ruined arch where the waves come out
