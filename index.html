@@ -18335,10 +18335,10 @@ var LOT1 = { tutoHome: false, low: false, lastMin: false, quitT: 0, quitTimer: 0
 const lot1Defaults = (() => { try { return !navigator.webdriver || localStorage.getItem('ddl-defaults-test') === '1'; } catch (e) { return false; } })();
 try {
   if (lot1Defaults) {
-    if (localStorage.getItem('ddl-quick') === null) TBX.quick = true;
+    if (localStorage.getItem('ddl-def153') !== '1') { localStorage.setItem('ddl-def153', '1'); if (localStorage.getItem('ddl-diff') === 'hard') localStorage.setItem('ddl-diff', 'normal'); localStorage.setItem('ddl-quick', '0'); TBX.quick = false; }
     const d = localStorage.getItem('ddl-diff');
     if (d === 'easy' || d === 'normal' || d === 'hard') diffKey = d;
-    else if (!localStorage.getItem('ddl-won1')) diffKey = 'easy';
+    else diffKey = 'normal';
   }
 } catch (e) {}
 VIB_P.low = [80, 60, 80];
@@ -30324,15 +30324,17 @@ VX.build.pluie = (st) => {
 };
 // ARCHER · TIREUR D'ÉLITE : un tireur encapuchonné, à la couleur du joueur, un arc très long, une lunette à œil rouge ; il tourne vers la cible
 VX.build.elite = (st) => {
+  // le Tireur d'élite, sans tireur : un grand arc de précision monté sur une crosse, une lunette, la flèche encochée ; la matière de la Maison au bout de l'arc et à la pointe
   const m = VX.model(), R = st.rec || 0;
   VX.cyl(m, [0, 0, 0], [0, 0, 1], 3.5, 'wood');
-  VX.cyl(m, [-1, 0, 2], [-1, 0, 10], (u) => 3 - u * 1, (u, d) => d > .78 ? 'ownD' : 'own');
-  VX.sph(m, [-1, 0, 12.5], 2.6, (d, s, t, z) => s > 0 && Math.abs(t) < 1.6 && z < 13 ? 'skin' : 'hood');
-  VX.set(m, 1.6, -1, 12.5, 'dark'); VX.set(m, 1.6, 1, 12.5, 'dark');
-  for (let z = 1; z <= 23; z++) { const off = Math.round(Math.sin((z - 1) / 22 * Math.PI) * 3); VX.set(m, 4 + off - R, -2, z, 'wood'); VX.set(m, 4 + off - R, -3, z, 'wood'); }
-  VX.line(m, [4 - R, -2, 1], [4 - R, -2, 23], 'str');
-  VX.line(m, [-1 - R, -2, 10], [11 - R, -2, 10], 'wood'); VX.set(m, 12 - R, -2, 10, 'white'); VX.set(m, 12 - R, -1, 10, 'ice'); VX.set(m, 12 - R, -3, 10, 'ice');
-  VX.cyl(m, [-2 - R, 1, 14], [6 - R, 1, 14], 1.4, 'iron'); VX.sph(m, [7 - R, 1, 14], 1.2, 'red'); VX.set(m, 7 - R, 1, 15, 'white');
+  VX.box(m, -1, 0, 0, 0, 2, 6, 'iron');
+  VX.box(m, -7 - R, 5 - R, -1, 0, 7, 8, (s, t, z) => z === 8 ? 'wood' : (s < -5 - R ? 'wood' : 'wood'));
+  VX.box(m, -8 - R, -7 - R, -1, 0, 5, 8, 'wood');
+  for (let z = -8; z <= 8; z++) { const off = Math.round((1 - (z * z) / 64) * 2.5); const mat = Math.abs(z) >= 7 ? 'ice' : 'wood'; VX.set(m, 4 + off - R, -1, 8 + z, mat); VX.set(m, 4 + off - R, 0, 8 + z, mat); }
+  const nock = st.loaded === false ? 3 : -4;
+  VX.line(m, [4 - R, -1, 0], [nock - R, -1, 8], 'str'); VX.line(m, [4 - R, -1, 16], [nock - R, -1, 8], 'str');
+  if (st.loaded !== false) { VX.line(m, [nock - R, -1, 9], [11 - R, -1, 9], 'wood'); VX.set(m, 12 - R, -1, 9, 'ice'); VX.set(m, 13 - R, -1, 9, 'white'); VX.set(m, 11 - R, -2, 9, 'ice'); VX.set(m, 11 - R, 0, 9, 'ice'); }
+  VX.cyl(m, [-3 - R, 0, 11], [5 - R, 0, 11], 1.2, 'iron'); VX.box(m, -1 - R, 1 - R, 0, 0, 9, 10, 'iron'); VX.sph(m, [6 - R, 0, 11], 1.1, 'red');
   return m;
 };
 VX.spike = (m, c) => {
@@ -30807,7 +30809,7 @@ const F5V = { pluie: 'arrow', elite: 'arrow', lourde: 'ballista', repet: 'ballis
 const F5MZ = { lourde: [24, 7], repet: [20, 7], pilon: [6, 15], feu: [4, 16], royal: [17, 7], fend: [11, 7] };
 function f5State(f, ph) {
   if (f === 'pluie') return { left: ph >= 0 && ph < 0.9 ? 0 : 4 };
-  if (f === 'elite') return { rec: ph >= 0 && ph < 0.1 ? 2 : ph < 0.2 ? 1 : 0 };
+  if (f === 'elite') return { rec: ph >= 0 && ph < 0.1 ? 2 : ph < 0.2 ? 1 : 0, loaded: !(ph >= 0 && ph < 0.7) };
   if (f === 'lourde') return { loaded: !(ph >= 0 && ph < 0.9) };
   if (f === 'repet') { const k = Math.floor(ph / 0.14), q = ph - Math.max(0, k) * 0.14; return { shooting: k >= 0 && k < 3 && q < 0.07, left: ph > 0.9 || ph < 0 ? 3 : Math.max(0, 3 - (k + 1)) }; }
   if (f === 'pilon') return { kick: [0, 1, 2].map(i => { const q = ph - i * 0.16; return q >= 0 && q < 0.1; }), loaded: [0, 1, 2].map(i => !(ph - i * 0.16 >= 0 && ph < 1.1)) };
@@ -30828,7 +30830,7 @@ function f5Vox(f, h, dir, ph, own) {
     const t = HM5.cT; if (!t || !t.f5 || !F5[t.f5]) return base.apply(this, arguments);
     const f = t.f5, px = X + tx, py = Y + ty, ph = typeof kick === 'number' ? kick : 9, a = t.ang ?? 1.57;
     try {
-      if (F5V[f]) { const dir = ((Math.round(a / (Math.PI * 2) * 16) % 16) + 16) % 16; x.drawImage(f5Vox(f, h, dir, ph, own), Math.round(px) - 40, Math.round(py) - 2 - 54); return; }
+      if (F5V[f]) { const dir = ((Math.round(a / (Math.PI * 2) * 16) % 16) + 16) % 16; if (f === 'elite') { t._vxp = [Math.round(px), Math.round(py) - 2, dir]; t._own = own; } x.drawImage(f5Vox(f, h, dir, ph, own), Math.round(px) - 40, Math.round(py) - 2 - 54); return; }
       setIC(h);
       if (f === 'blizzard' || f === 'cristal') { H7.draw(x, () => H7[f](ph < 1 ? ph : -1), px, py); return; }
       if (HA[f]) { H7.draw(x, () => HA[f](ph < 2.2 ? ph : -1), px, py + (f === 'machoires' || f === 'tresor' ? 9 : 0)); return; }
@@ -31171,6 +31173,24 @@ function paSync(force) {
   { const base = newGame; newGame = function () { const r = base.apply(this, arguments); try { chfPrice(); } catch (e) {} return r; }; }
   { const base = jtApplySnap; jtApplySnap = function () { const r = base.apply(this, arguments); try { chfPrice(); } catch (e) {} return r; }; } }
 /* ================================================================ /version 148 */
+/* ===== version 153 · le Tireur d'élite vise : un laser à la couleur du joueur pendant la seconde avant le tir ===== */
+{ const prev = window.__jtDrawHook; window.__jtDrawHook = function (o) {
+  if (prev) prev(o);
+  const { b, items } = o; if (!b || !b.grid) return;
+  for (const t of b.grid) { if (!t || t.f5 !== 'elite' || !t._vxp) continue;
+    let st; try { st = stat(t, b); } catch (e) { continue; }
+    const lead = Math.min(0.9, st.rate * 0.6); if (!(t.cd > 0 && t.cd < lead)) continue;
+    const list = inRange(b, t.c + 0.5, t.r + 0.5, st.range); if (!list.length) continue;
+    const tg = list.reduce((p, c) => (c.hp > p.hp ? c : p), list[0]);
+    t.ang = Math.atan2(tg.y - t.r - 0.5, tg.x - t.c - 0.5);
+    const [lx, ly] = VX.scr(t._vxp[2] / 16 * Math.PI * 2, 6, 0, 11, t._vxp[0], t._vxp[1]);
+    const cx = AX0 + tg.x * CS, cy = AY0 + tg.y * CS - 5, col = PCOL[t._own] || PCOL[0], hi = (() => { const n = parseInt(col.slice(1), 16), m = v => Math.round(v + (255 - v) * 0.45); return 'rgb(' + m(n >> 16 & 255) + ',' + m(n >> 8 & 255) + ',' + m(n & 255) + ')'; })(), k = 1 - t.cd / lead;
+    items.push({ y: 1e6, fx: x => { const a0 = x.globalAlpha, n = Math.ceil(Math.hypot(cx - lx, cy - ly)); x.fillStyle = col;
+      for (let i = 0; i <= n; i++) { if (i % 6 === 5 && k < 0.6) continue; const qx = Math.round(lx + (cx - lx) * i / n), qy = Math.round(ly + (cy - ly) * i / n); x.fillStyle = col; x.globalAlpha = 0.6; x.fillRect(qx, qy + 1, 1, 1); x.fillStyle = hi; x.globalAlpha = 0.85 + k * 0.15; x.fillRect(qx, qy, 1, 1); }
+      x.globalAlpha = 1; x.fillStyle = hi; const r = 5 - Math.round(k * 2); for (let i = 0; i < 12; i++) { const an = i / 12 * Math.PI * 2; x.fillRect(Math.round(cx + Math.cos(an) * r), Math.round(cy + Math.sin(an) * r), 1, 1); } x.fillStyle = '#ffffff'; x.fillRect(Math.round(cx), Math.round(cy), 1, 1); x.globalAlpha = a0; } });
+  }
+}; }
+/* ================================================================ /version 153 */
 
 useTerrain(TERKEY);
 demo();
