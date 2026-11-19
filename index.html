@@ -18723,7 +18723,7 @@ const l2LineTower = me => l2LineCells().some(([c, r]) => { const t = me.grid[idx
     const was = t && t.lvl, r = base.apply(this, arguments);
     if (!r && G && !G.quiet && k === G.me && t && t.lvl === 4 && was === 3 && !isChef(t.type)) {
       let seen = false; try { seen = localStorage.getItem('ddl-tip-chef') === '1'; localStorage.setItem('ddl-tip-chef', '1'); } catch (e) {}
-      if (!seen) { const hk = G.b[k] && G.b[k].jt && ({ cerf: 1, ours: 1, griffon: 1, renard: 1 })[G.b[k].jt.maison], html = hk ? (t.type === 'frost' ? 'Niveau 4 ! Ta tour de Maison est au sommet : <b>ton chef-d’œuvre</b> t’attend dans Construire, pose-le sur un mur.' : 'Niveau 4 ! Monte ta tour de Maison au niveau 4 : <b>ton chef-d’œuvre</b> s’ouvrira dans Construire.') : 'Niveau 4 ! Quand deux familles (l’Arc, les Arcanes, la Poudre) ont chacune une tour au sommet, <b>un chef-d’œuvre</b> s’ouvre dans Construire.';
+      if (!seen) { const hk = G.b[k] && G.b[k].jt && ({ cerf: 1, ours: 1, griffon: 1, renard: 1 })[G.b[k].jt.maison], html = hk ? (t.type === 'frost' ? 'Niveau 4 ! Ta tour de Maison est au sommet : <b>ton chef-d’œuvre</b> t’attend dans Construire, touche sa case dorée, puis un mur en or ou une case libre.' : 'Niveau 4 ! Monte ta tour de Maison au niveau 4 : <b>ton chef-d’œuvre</b> s’ouvrira dans Construire.') : 'Niveau 4 ! Quand deux familles (l’Arc, les Arcanes, la Poudre) ont chacune une tour au sommet, <b>un chef-d’œuvre</b> s’ouvre dans Construire.';
         if (!fouRare(html, { force: true, dur: 6000 })) toast(hk ? 'Niveau 4 : ton chef-d’œuvre t’attend dans Construire' : 'Niveau 4 : deux familles au sommet ouvrent un chef-d’œuvre dans Construire', 'gold'); }
     }
     return r;
@@ -30916,6 +30916,251 @@ const eltOpen = () => G && !G.quick && G.t >= ELT_T;
     if (me && me.jt && eltOpen() && me.alive) { const L = eltLvl(me); if (L < 3 && me.gold >= ELT[L].cost * 1.4 && Math.random() < 0.5 && buyTech(k, ELT[L].k) === '') return; }
     return base.apply(this, arguments); }; }
 /* ================================================================ /version 146 */
+
+/* ================================================================ version 152 · la fiche claire et la case du chef-d'œuvre (Patrick, 19/11, 15 h 52 : « Claire, la A. Je trouve les chefs-d'œuvre pas à pas très bien »)
+   Planche 30 v2.
+   - La fiche d'une tour se pose en bas, au-dessus de Construire : la tour détourée, son rang en barres, Dégâts / Portée / Éliminées en mots,
+     une phrase, les formes du niveau suivant en cartes (dessin, nom, à quoi elle sert, prix), « Vendre » et « Détails ».
+   - Le chef-d'œuvre sort des fiches : il a sa case dorée dans Construire, juste après la tour de Maison (fermée tant qu'elle n'est pas au niveau 4,
+     « Nouveau » quand il s'ouvre, « posé » une fois bâti). Choisi, sa carte s'ouvre et tes murs s'entourent d'or ;
+     on touche un mur ou une case libre, on voit le chef-d'œuvre en transparence, puis « Poser ici ». */
+const PA = { open: false, chefNew: '', aim: null, key: '' };
+const paMine = () => G && G.b && G.b[G.me];
+const paHouseChef = b => { const mk = hmMaison(b); return mk ? HMCT[mk] : ''; };
+// the tower cut out of the board, as it stands (or with another level-5 form), on nothing
+function paPic(t, f5, scale) {
+  try {
+    const me = paMine(), A = laneArt(me), s = (A.structs || []).find(s => s.t === t); if (!s) return '';
+    const t2 = f5 ? Object.assign({}, t, { f5 }) : t, w = HM.wallAt(me, t.c, t.r, false, false, false, 0, pcol(me.k));
+    const cv = document.createElement('canvas'); cv.width = 48; cv.height = 72; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
+    const q = G.quiet; G.quiet = 1;
+    try { drawStruct(x, me, Object.assign({}, s, { t: t2, x: 12, y: 36, w })); } finally { G.quiet = q; }
+    const d = x.getImageData(0, 0, 48, 72).data; let x0 = 48, y0 = 72, x1 = -1, y1 = -1;
+    for (let y = 0; y < 72; y++) for (let i = 0; i < 48; i++) if (d[(y * 48 + i) * 4 + 3] > 8) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return '';
+    const w2 = x1 - x0 + 1, h2 = y1 - y0 + 1, o = document.createElement('canvas'); o.width = w2; o.height = h2; o.getContext('2d').drawImage(cv, x0, y0, w2, h2, 0, 0, w2, h2);
+    return `<img class="pa-pic" alt="" src="${o.toDataURL()}" style="width:${w2 * scale}px;height:${h2 * scale}px">`;
+  } catch (e) { return ''; }
+}
+const paTxt = el => (el ? el.textContent : '').replace(/\s+/g, ' ').trim();
+// the panel, redrawn from what the older panels put in it (their buttons keep their data-act / data-evo / data-cost)
+function paBuild() {
+  const p = $('pop'), t = selTower(), me = paMine();
+  p.classList.remove('pa');
+  if (!t || !me) return;
+  p.querySelectorAll('.pact.chef,[data-chefgo]').forEach(n => n.remove());
+  p.querySelectorAll('.info').forEach(n => { if (/chef-d.œuvre|Couronner/i.test(n.textContent) && !isChef(t.type)) n.remove(); });
+  if (t.type === 'wall') return;
+  const ttl = p.querySelector('.ttl b'), parts = paTxt(ttl).split(' · ').filter(s => !/^niv\.\s*\d/.test(s));
+  const name = parts.join(' · ') || T[t.type].n, chef = isChef(t.type), house = !!hmMaison(me);
+  const lvl = t.f5 ? 5 : t.lvl, of = house ? 5 : 4;
+  const st = stat(t, me), kills = auth() ? String(t.kills | 0) : '–';
+  const infos = [...p.querySelectorAll('.info')].map(paTxt).filter(Boolean);
+  const mk = hmMaison(me), role = chef ? CHF[chfKey(t.type)].d : (t.type === 'frost' && mk && !t.f5) ? HM_NAME[mk].d : (infos[0] || TOWER_INFO[t.type] || '');
+  const more = infos.filter(s => s !== role);
+  const keep = p.querySelector('.cs-pop');
+  // the choices: the forms (level 3 or level 5) as cards, else one big button
+  const evs = p.querySelector('.evos'), evoEl = evs && evs.previousElementSibling && evs.previousElementSibling.classList.contains('evo-h') ? evs.previousElementSibling : null;
+  const evoH = paTxt(evoEl), cards = [...p.querySelectorAll('.evos .evo')].map(b => {
+    const ev = b.dataset.evo || '', f5 = !!(typeof F5 !== 'undefined' && F5[ev]), ico = b.querySelector('.ico,img,svg');
+    const pic = f5 ? paPic(t, ev, 1.5) : ico ? ico.outerHTML : '';
+    const bn = paTxt(b.querySelector('b')), sp = b.querySelector('span'), good = sp && sp.querySelector('i') ? paTxt(sp.querySelector('i')) : '';
+    const desc = sp ? paTxt(sp).replace(good, '').trim() : '';
+    if (desc && good) more.push(bn + ' : ' + desc);
+    return `<button class="pa-card" type="button" data-act="${b.dataset.act || 'u'}" data-evo="${esc(ev)}" data-cost="${b.dataset.cost || 0}"><span class="pa-cp">${pic}</span><b>${esc(bn)}</b><span class="pa-why">${esc(good || desc)}</span><em>${b.dataset.cost || ''}</em></button>`;
+  });
+  const acts = [...p.querySelectorAll('.acts .pact')], up = acts.find(b => b.dataset.act === 'u'), sell = acts.find(b => b.classList.contains('sell'));
+  const others = acts.filter(b => b !== up && b !== sell);
+  const upBtn = up && !cards.length ? `<button class="pa-up" type="button" data-act="u" data-evo="${esc(up.dataset.evo || '')}" data-cost="${up.dataset.cost || 0}"><span>Niveau ${t.lvl + 1}</span><em>${up.dataset.cost || ''}</em></button>` : '';
+  const sellBtn = sell ? `<button class="pa-sell" type="button" data-act="x">Vendre <em>+${sellValue(t)}</em></button>` : '<span></span>';
+  const pips = chef ? `<span class="pa-tag">Chef-d’œuvre</span>` : `<span class="pa-pips">${Array.from({ length: of }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</span>`;
+  const head = `<div class="pa-hd">${paPic(t, '', 1.5)}<div class="pa-tt"><b>${esc(name)}</b>${pips}</div><button class="pa-x" type="button" aria-label="Fermer">×</button></div>`;
+  const stats = `<div class="pa-st"><span><em>Dégâts</em><b>${Math.round(st.dmg)}</b></span><span><em>Portée</em><b>${st.range.toFixed(1).replace('.', ',')} cases</b></span><span><em>Éliminées</em><b>${kills}</b></span></div>`;
+  const choice = cards.length ? `<p class="pa-lab">${esc(evoH || 'Choisis sa forme')}</p><div class="pa-two">${cards.join('')}</div>` : upBtn;
+  const det = more.length ? `<div class="pa-det" hidden>${more.map(s => `<p>${esc(s)}</p>`).join('')}</div>` : '';
+  p.innerHTML = head + stats + (role ? `<p class="pa-role">${esc(role)}</p>` : '') + choice + det +
+    `<div class="pa-row">${sellBtn}${others.map(b => b.outerHTML).join('')}${more.length ? '<button class="pa-more" type="button">Détails</button>' : ''}</div>`;
+  if (keep) p.querySelector('.pa-hd').after(keep);
+  p.classList.add('pa');
+}
+{ const base = openPop; openPop = function (c, r) {
+    const res = base.apply(this, arguments);
+    try { paBuild(); placePop(); paNudge(); } catch (e) { console.warn(e); }
+    return res; }; }
+// docked above the bar; the camera moves a little if the tower would sit under it
+{ const base = placePop; placePop = function () {
+    const p = $('pop'); if (!p.classList.contains('pa') || !G || !G.sel) return base.apply(this, arguments);
+    const w = Math.min(W - 20, 420), dock = $('dock').getBoundingClientRect().top;
+    p.style.width = w + 'px'; p.style.left = Math.round((W - w) / 2) + 'px'; p.style.top = Math.round(dock - p.offsetHeight - 8) + 'px'; }; }
+function paNudge() {
+  const p = $('pop'); if (!p.classList.contains('pa') || !G.sel) return;
+  const me = paMine(), [, y] = w2s(me.ox + G.sel.c + 0.5, me.oy + G.sel.r + 1), top = p.getBoundingClientRect().top - 12;
+  if (y > top) goCam({ x: cam.x, y: cam.y + (y - top) / cam.z, z: cam.z });
+}
+$('pop').addEventListener('click', e => {
+  if (e.target.closest('.pa-x')) { e.stopPropagation(); closePop(); return; }
+  const m = e.target.closest('.pa-more'); if (m) { e.stopPropagation(); const d = $('pop').querySelector('.pa-det'); if (d) { d.hidden = !d.hidden; m.textContent = d.hidden ? 'Détails' : 'Moins'; placePop(); } }
+}, true);
+
+/* ---------------------------------------------------------------- the masterpiece's golden case in Construire */
+{ const base = jtChefButtons; jtChefButtons = function (me) { return hmMaison(me) ? '' : base.apply(this, arguments); }; }
+function paChefSlot(me) {
+  const type = paHouseChef(me); if (!type || !me.jt || G.spec) return '';
+  const c = CHF[chfKey(type)], built = jtChefBuiltType(me), av = jtChefAvail(me).includes(type);
+  const ic = ICON[type] || jtChefIcon(type);
+  if (built) return `<button class="item pa-chef used" type="button" data-chefdone="1">${ic}<span class="nm">${esc(c.n)}</span><span class="pa-s2">posé</span></button>`;
+  if (av) return `<button class="item pa-chef${PA.chefNew === type ? ' glow' : ''}" type="button" data-tool="${type}" aria-pressed="${G.tool === type}">${PA.chefNew === type ? '<span class="pa-new">Nouveau</span>' : ''}${ic}<span class="nm">${esc(c.n)}</span><span class="ct">${CHF_COST}</span></button>`;
+  return `<button class="item pa-chef lockd" type="button" data-cheflock="1">${ic}<span class="nm">${esc(c.n)}</span><span class="pa-s2">niv. 4</span></button>`;
+}
+{ const base = renderItems; renderItems = function () {
+    const r = base.apply(this, arguments);
+    try {
+      const me = paMine(), items = $('items'); if (!me || G.mode !== 'build' || items.classList.contains('ghost')) return r;
+      const html = paChefSlot(me); if (!html) return r;
+      const after = items.querySelector('[data-tool="frost"]');
+      if (after) after.insertAdjacentHTML('afterend', html); else items.insertAdjacentHTML('beforeend', html);
+      const n = items.children.length; items.classList.toggle('scroll', n > 5); items.classList.toggle('pa5', n === 5);
+    } catch (e) { console.warn(e); }
+    return r; }; }
+$('items').addEventListener('click', e => {
+  if (!G) return;
+  if (e.target.closest('[data-cheflock]')) { e.stopPropagation(); sfx('click'); const me = paMine(), type = paHouseChef(me), mk = hmMaison(me);
+    toast(`${HM_NAME[mk].n} au niveau 4 : ${CHF[chfKey(type)].full} se débloque ici`, 'gold'); return; }
+  if (e.target.closest('[data-chefdone]')) { e.stopPropagation(); sfx('click'); const me = paMine(), t = me.grid.find(t => t && isChef(t.type)); if (t) openPop(t.c, t.r); return; }
+}, true);
+// picked: the card says what it does; the walls glow; no more toast
+jtChefPicked = function (type) {
+  const me = paMine(); if (!hmMaison(me)) { const c = CHF[chfKey(type)]; toast(`${c.full} · ${c.d} Touche un mur ou une case libre pour bâtir ce chef-d’œuvre (${CHF_COST} or).`, 'gold'); return; }
+  if (PA.chefNew) { PA.chefNew = ''; }
+  PA.aim = null; renderItems(); paSync(true);
+};
+// unlocked: a golden note, and the case says « Nouveau »
+{ const base = jtChefWatch; jtChefWatch = function () {
+    const me = paMine(); if (!me || !me.jt || !hmMaison(me)) return base.apply(this, arguments);
+    if (G.spec || !me.alive || me.jt.chefSeen) return;
+    const av = jtChefAvail(me); if (!av.length) return;
+    me.jt.chefSeen = 1; PA.chefNew = av[0]; sfx('evolve');
+    toast(`Chef-d’œuvre débloqué : ${CHF[chfKey(av[0])].full} t’attend dans Construire`, 'gold');
+    renderItems(); }; }
+{ const base = newGame; newGame = function () { PA.chefNew = ''; PA.aim = null; return base.apply(this, arguments); }; }
+
+const paPicking = () => { const me = paMine(); return !!(me && G.running && me.alive && !G.spec && G.mode === 'build' && G.tool && isChef(G.tool) && hmMaison(me) && jtChefAvail(me).includes(G.tool)); };
+const paSpot = (me, c, r) => { const t = me.grid[idx(c, r)]; return t ? (t.type === 'wall' ? 'wall' : '') : (!buildReason(me, c, r) ? 'free' : ''); };
+// with the masterpiece picked, a tap on a wall or a free cell shows it there; « Poser ici » (or the same cell again) builds it
+{ const base = onTap; onTap = function (sx, sy) {
+    if (!paPicking()) return base.apply(this, arguments);
+    const me = paMine(), [wx, wy] = s2w(sx, sy), c = Math.floor(wx - me.ox), r = Math.floor(wy - me.oy);
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) { PA.aim = null; paSync(true); return base.apply(this, arguments); }
+    const spot = paSpot(me, c, r);
+    if (!spot) { sfx('error'); G.bad = { c, r, t: 0.4 }; toast(me.grid[idx(c, r)] ? 'Pose-le sur un mur ou une case libre' : buildReason(me, c, r), 'bad'); return; }
+    if (PA.aim && PA.aim.c === c && PA.aim.r === r) { paPlace(); return; }
+    closePop(); PA.aim = { c, r }; sfx('click'); paSync(true);
+  }; }
+function paPlace() {
+  const me = paMine(), a = PA.aim, type = G.tool; if (!a || !paPicking()) return;
+  const spot = paSpot(me, a.c, a.r);
+  const err = spot === 'wall' ? act(['v', a.c, a.r, type]) : spot === 'free' ? act(['b', type, a.c, a.r]) : 'x';
+  if (err) { sfx('error'); if (err !== 'x') toast(err, 'bad'); return; }
+  PA.aim = null; paSync(true);
+}
+// the card above the bar, and the « Poser ici » bubble over the cell
+{ const d = document.createElement('div'); d.id = 'paCard'; d.className = 'pa-card-chef'; d.hidden = true; document.body.appendChild(d);
+  const o = document.createElement('button'); o.id = 'paOk'; o.type = 'button'; o.className = 'pa-ok'; o.hidden = true; document.body.appendChild(o);
+  o.addEventListener('click', e => { e.stopPropagation(); paPlace(); });
+  d.addEventListener('click', e => { if (!e.target.closest('.pa-cx')) return; e.stopPropagation(); G.tool = G.chefPrev && T[G.chefPrev] && !isChef(G.chefPrev) ? G.chefPrev : 'arrow'; PA.aim = null; renderItems(); paSync(true); }); }
+function paSync(force) {
+  const card = $('paCard'), ok = $('paOk'); if (!card) return;
+  const on = !!G && paPicking(), me = on ? paMine() : null;
+  if (!on) { if (!card.hidden) card.hidden = true; if (!ok.hidden) ok.hidden = true; PA.aim = null; PA.key = ''; return; }
+  if (PA.aim && !paSpot(me, PA.aim.c, PA.aim.r)) PA.aim = null;
+  const type = G.tool, c = CHF[chfKey(type)], key = type + '|' + (PA.aim ? PA.aim.c + ',' + PA.aim.r : '') + '|' + CHF_COST;
+  if (force || key !== PA.key) {
+    PA.key = key;
+    const walls = me.grid.some(t => t && t.type === 'wall');
+    card.innerHTML = `${ICON[type] || jtChefIcon(type)}<div class="pa-cb"><span class="pa-k">Chef-d’œuvre de la Maison</span><b>${esc(c.full)}</b><span class="pa-d">${esc(c.d)}</span><span class="pa-go">${walls ? 'Touche un mur en or, ou une case libre' : 'Touche une case libre pour le poser'}</span></div><span class="pa-pr">${CHF_COST}</span><button class="pa-cx" type="button" aria-label="Fermer">×</button>`;
+    ok.innerHTML = `Poser ici <em>${CHF_COST}</em>`;
+  }
+  card.hidden = !!PA.aim; ok.hidden = !PA.aim;
+  const dock = $('dock').getBoundingClientRect().top;
+  if (!card.hidden) { const w = Math.min(W - 20, 420); card.style.width = w + 'px'; card.style.left = Math.round((W - w) / 2) + 'px'; card.style.top = Math.round(dock - card.offsetHeight - 8) + 'px'; }
+  if (!ok.hidden) { const [x, y] = w2s(me.ox + PA.aim.c + 0.5, me.oy + PA.aim.r - 1.4); ok.disabled = me.gold < CHF_COST;
+    ok.style.left = Math.round(Math.max(10, Math.min(W - 10 - ok.offsetWidth, x - ok.offsetWidth / 2))) + 'px'; ok.style.top = Math.round(Math.max(view.top + 4, y - ok.offsetHeight)) + 'px'; }
+}
+{ const base = updateUI; updateUI = function () { const r = base.apply(this, arguments); try { paSync(false); } catch (e) {} return r; }; }
+// on the board: the walls ringed with gold, and the masterpiece seen through on the chosen cell
+{ const base = jtTop; jtTop = function (x, b, A) {
+    const r = base.apply(this, arguments);
+    try {
+      if (b.k !== G.me || !paPicking()) return r;
+      const pulse = 0.55 + 0.45 * Math.sin(G.t * 5);
+      for (const t of b.grid) if (t && t.type === 'wall' && !(PA.aim && PA.aim.c === t.c && PA.aim.r === t.r)) {
+        const [cx, cy] = acell(t.c, t.r); x.globalAlpha = PA.aim ? 0.3 : pulse; x.fillStyle = K.ua;
+        x.fillRect(cx - 1, cy - 1, 26, 1); x.fillRect(cx - 1, cy + 24, 26, 1); x.fillRect(cx - 1, cy, 1, 24); x.fillRect(cx + 24, cy, 1, 24);
+      }
+      if (PA.aim) {
+        const [cx, cy] = acell(PA.aim.c, PA.aim.r); x.globalAlpha = 1; x.fillStyle = K.ua;
+        x.fillRect(cx - 2, cy - 2, 28, 2); x.fillRect(cx - 2, cy + 24, 28, 2); x.fillRect(cx - 2, cy, 2, 24); x.fillRect(cx + 24, cy, 2, 24);
+        x.globalAlpha = 0.65; blit(x, wallSprite(false, false, false, 0, pcol(b.k)), cx, cy); blit(x, towerSprite(G.tool, 1, hmEv(b, { type: G.tool }), pcol(b.k)), cx, cy);
+      }
+      x.globalAlpha = 1;
+    } catch (e) { x.globalAlpha = 1; }
+    return r; }; }
+{ const s = document.createElement('style'); s.id = 'pa152'; s.textContent = `
+.pop.pa{gap:0;padding:12px;width:auto;max-width:none;box-shadow:0 0 0 2px #2e4148,0 10px 30px rgba(0,0,0,.5);background:#1f2c33}
+.pa-hd{display:flex;align-items:flex-end;gap:10px}
+.pa-pic{display:block;image-rendering:pixelated;flex:none}
+.pa-tt{flex:1;min-width:0;padding-bottom:2px}
+.pa-tt b{display:block;font:700 19px/1.05 var(--f);color:var(--ink)}
+.pa-pips{display:flex;gap:3px;margin-top:6px}.pa-pips i{width:16px;height:5px;background:#34474f}.pa-pips i.on{background:var(--gold)}
+.pa-tag{display:inline-block;margin-top:5px;font:700 11px/1 var(--f);letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.pa-x{align-self:flex-start;border:0;background:none;color:var(--muted);font:400 26px/1 var(--ft);padding:0 2px;cursor:pointer}
+.pa-st{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.pa-st span{background:#26363d;padding:6px 8px 5px;min-width:0}
+.pa-st em{display:block;font:700 10.5px/1 var(--f);font-style:normal;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.pa-st b{display:block;font:400 22px/1 var(--fb);color:var(--ink);margin-top:3px;white-space:nowrap}
+.pa-role{margin:9px 0 0;font:500 15px/1.35 var(--f);color:#c4cfd1}
+.pa-lab{margin:12px 0 7px;font:700 12px/1 var(--f);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.pa-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pa-card{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;border:0;background:#26363d;color:var(--ink);padding:9px 6px 8px;box-shadow:inset 0 0 0 2px #b39a5a;cursor:pointer;min-width:0}
+.pa-card:disabled{opacity:.45;cursor:not-allowed}
+.pa-cp{display:flex;align-items:flex-end;justify-content:center;min-height:56px}
+.pa-cp .ico{width:calc(var(--w) * 1.6px);height:calc(var(--h) * 1.6px);image-rendering:pixelated}
+.pa-card b{font:700 15px/1.1 var(--f)}
+.pa-why{font:500 12.5px/1.15 var(--f);color:#9fd8c6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pa-card em,.pa-up em,.pa-ok em,.pa-pr{font-style:normal;font:400 22px/1 var(--fb);color:#f4d97f}
+.pa-card em::before,.pa-up em::before,.pa-ok em::before,.pa-pr::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:currentColor;margin-right:5px;vertical-align:2px}
+.pa-up{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:12px;border:0;background:var(--gold);color:#1b2b34;font:700 16px/1 var(--f);padding:12px 14px;box-shadow:inset 0 -3px 0 #b39a5a;cursor:pointer}
+.pa-up em{color:#1b2b34}.pa-up:disabled{opacity:.45;cursor:not-allowed}
+.pa-det{margin-top:8px;background:#26363d;padding:4px 10px}.pa-det p{margin:6px 0;font:500 13.5px/1.35 var(--f);color:#c4cfd1}
+.pa-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
+.pa-row .pact{flex:none}
+.pa-sell,.pa-more{border:0;background:none;color:var(--muted);font:600 14px/1 var(--f);padding:6px 2px;cursor:pointer}
+.pa-sell em{font-style:normal;color:#f4d97f;font-weight:700}
+.pa-more{text-decoration:underline;text-underline-offset:3px;margin-left:auto}
+.items.pa5{grid-template-columns:repeat(5,1fr)}
+.item.pa-chef{position:relative;background:#3a3322;box-shadow:inset 0 0 0 2px #b39a5a}
+.item.pa-chef .nm{color:#f4d97f}
+.item.pa-chef[aria-pressed="true"]{background:#4a3f24;box-shadow:inset 0 0 0 3px #f4d97f}
+.item.pa-chef.glow{box-shadow:inset 0 0 0 2px #f4d97f,0 0 14px 2px rgba(244,217,127,.55);animation:paGlow 1.2s steps(4) infinite alternate}
+@keyframes paGlow{to{box-shadow:inset 0 0 0 2px #f4d97f,0 0 4px 0 rgba(244,217,127,.25)}}
+.item.pa-chef.lockd{background:var(--panel2);box-shadow:inset 0 0 0 2px #4a4434}
+.item.pa-chef.lockd .ico{opacity:.35;filter:grayscale(1)}.item.pa-chef.lockd .nm{color:var(--muted)}
+.item.pa-chef.used{opacity:.6}
+.item.pa-chef .pa-s2{color:var(--muted);font:600 12px/1 var(--f);line-height:1}
+.item.pa-chef .ico{width:calc(var(--w) * var(--u) / 2);height:calc(var(--h) * var(--u) / 2)}
+.pa-new{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font:700 9.5px/1 var(--f);letter-spacing:.1em;text-transform:uppercase;background:#f4d97f;color:#1b2b34;padding:3px 5px;white-space:nowrap;z-index:1}
+.pa-card-chef{position:fixed;z-index:5;display:flex;align-items:center;gap:10px;background:#2a2a22;box-shadow:0 0 0 2px #b39a5a,0 10px 30px rgba(0,0,0,.5);padding:10px 12px;box-sizing:border-box}
+.pa-card-chef .ico{flex:none}
+.pa-cb{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pa-k{font:700 10.5px/1 var(--f);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.pa-cb b{font:400 24px/1 var(--ft);color:#f4d97f}
+.pa-d{font:500 13px/1.25 var(--f);color:#c4cfd1}
+.pa-go{font:700 13px/1.2 var(--f);color:#9fd8c6;margin-top:2px}
+.pa-cx{align-self:flex-start;border:0;background:none;color:var(--muted);font:400 24px/1 var(--ft);cursor:pointer;padding:0}
+.pa-ok{position:fixed;z-index:5;border:0;background:var(--gold);color:#1b2b34;font:700 15px/1 var(--f);padding:9px 12px;box-shadow:inset 0 -3px 0 #b39a5a,0 6px 16px rgba(0,0,0,.5);white-space:nowrap;cursor:pointer}
+.pa-ok em{color:#1b2b34;font-size:20px;margin-left:4px}.pa-ok:disabled{opacity:.5}
+`; document.head.appendChild(s); }
+/* ================================================================ /version 152 */
 
 })();
 
