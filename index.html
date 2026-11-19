@@ -27695,6 +27695,30 @@ function jgFrame() {
   fgDecSt = function (game, s) { return game === 'jongle' ? { n: parseInt(s[0], 36) || 0, catches: parseInt(s.slice(1, 3), 36) || 0, lost: parseInt(s[3], 36) || 0 } : bd.apply(this, arguments); };
 }
 /* ================================================================ /version 146 */
+/* version 149 (19/11): the relic « Cœur de givre » follows the House. Patrick, 19/11, 14 h 54: « dans les récompenses… tu as le Givre qui est
+   encore en récompense. Maintenant, avec les nouvelles tours, il faudrait que les bonus puissent s'adapter. » The Givre is the Cerf's
+   tower only: the relic (same key, same place on the network) becomes the House tower's own: its name, its words and its icon by the
+   House of the board; for all, the House tower and its chef-d'œuvre do 25 % more damage (the Cerf's Givre also slows 1 s longer, as before). */
+const RELIC_HOUSE = {
+  cerf: ['Cœur de givre', 'Ton Givre et son chef-d’œuvre font 25 % de dégâts en plus, et le Givre ralentit plus longtemps'],
+  ours: ['Peau de tambour', 'Ton Tambour et son chef-d’œuvre font 25 % de dégâts en plus'],
+  griffon: ['Fiel de corbeau', 'Ton Chaudron et son chef-d’œuvre font 25 % de dégâts en plus'],
+  renard: ['Mâchoires d’acier', 'Ton Terrier et son chef-d’œuvre font 25 % de dégâts en plus'],
+};
+const relicHouse = () => { const b = G && G.b && G.b[G.me]; const h = (b && b.jt && b.jt.maison) || myMaison; return RELIC_HOUSE[h] ? h : 'cerf'; };
+Object.defineProperty(RELICS.givre, 'n', { get: () => RELIC_HOUSE[relicHouse()][0], configurable: true });
+Object.defineProperty(RELICS.givre, 'd', { get: () => RELIC_HOUSE[relicHouse()][1], configurable: true });
+Object.assign(JT_IC, {
+  givre_ours: [['............', '..aaaaaaaa..', '.abbbbbbbba.', '.acccccccca.', '.adcdcdcdca.', '.acdcdcdcda.', '.adcdcdcdca.', '.acccccccca.', '..aaaaaaaa..'], { a: '#5a4436', b: '#ece6d6', c: '#b5655b', d: '#e6c35a' }],
+  givre_griffon: [['...d....d...', '....d..d....', '.aaaaaaaaaa.', '.abbbbbbbba.', 'aacccccccaa.', '.acccccccca.', '.acccccccca.', '..aaaaaaaa..', '..e......e..'], { a: '#2e2a30', b: '#7fb070', c: '#4a4550', d: '#a6d08f', e: '#2e2a30' }],
+  givre_renard: [['............', '.a.a.a.a.a..', '.aaaaaaaaa..', '.b.......b..', '.b.......b..', '.bbbbbbbbb..', '..c.....c...', '.cccccccc...'], { a: '#e8ecef', b: '#8a8f96', c: '#5a5a62' }],
+});
+{ const base = jtIcon; jtIcon = function (key, scale) { if (key === 'givre') { const h = relicHouse(); if (h !== 'cerf') key = 'givre_' + h; } return base.call(this, key, scale); }; }
+{ const base = stat; stat = function (t, b) {
+    const o = base.apply(this, arguments);
+    if (b && b.jt && b.jt.relics && b.jt.relics.givre && t && (t.type === 'frost' || hmChef(t))) o.dmg *= 1.25;
+    return o;
+}; }
 /* version 111 (11/11): anonymous statistics — a random id at each opening (never the profile's), time spent, games, tables */
 (function v111() {
   const ST = { sid: '', q: [], cur: null, t0: Date.now(), last: Date.now(), src: '', inNet: false, mute: false };
