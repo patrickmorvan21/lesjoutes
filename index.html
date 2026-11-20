@@ -2513,7 +2513,7 @@ html body #defiBtn.df-card>.cr113{display:none!important}
         <div class="sh-grp" id="diffRow"><span class="cp">Niveau des bots</span>
           <div class="tb-seg" id="diffChoice" style="grid-template-columns:repeat(3,minmax(0,1fr))"><button class="sg" type="button" data-d="easy" aria-pressed="false">Facile</button><button class="sg" type="button" data-d="normal" aria-pressed="true">Normal</button><button class="sg" type="button" data-d="hard" aria-pressed="false">Difficile</button></div>
         </div>
-        <div class="sh-grp" id="gateRow"><span class="cp">Difficulté</span>
+        <div class="sh-grp" id="gateRow"><span class="cp">Entrées</span>
           <div class="tb-seg" id="gateChoice" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button class="sg" type="button" data-g="1" aria-pressed="true">1 entrée</button><button class="sg" type="button" data-g="2" aria-pressed="false">2 entrées</button></div>
         </div>
         <div class="sh-grp" id="quickRow"><span class="cp">Durée</span>
@@ -8196,7 +8196,7 @@ function render() {
   for (const b of G.b) {
     if (b.k === G.me && home && G.running) continue;
     const [x, y] = w2s(b.ox + COLS / 2, b.oy - AMT / CS + 0.55);
-    if (x < -150 || x > W + 150 || y < -40 || y > H + 40) continue;
+    if (x < -150 || x > W + 150 || y < -40 || y > H + 40) continue; if (isHome() && b.k !== G.me) continue;
     const col = b.alive ? (b.k === G.crown ? K.ua : pcol(b.k) === 3 ? '#a9a4af' : PCOL[pcol(b.k)]) : K.um;
     const label = `${b.k === G.crown && b.alive ? '♛ ' : ''}${b.name} ♥ ${b.alive ? Math.max(0, b.lives) : 0}${b.ghost && !b.alive ? ' · fantôme' : ''}`;
     blitScreen(txtSprite(label, col, { bold: true, plate: K.ui0 }), x * DPR, y * DPR, us);
@@ -31191,6 +31191,63 @@ function paSync(force) {
   }
 }; }
 /* ================================================================ /version 153 */
+/* ===== version 154 · moins d'interface : une seule voix (le Fou), une info à un seul endroit, rien ne s'ouvre sur le terrain sans qu'on l'ait demandé ===== */
+{ const css = document.createElement('style');
+  css.textContent = `.an-i{display:none!important}#buffs .buff.free{display:none!important}#rivals .who.v154h{display:none!important}
+.item .fx3{position:absolute;top:3px;right:3px;padding:1px 5px;border-radius:999px;background:#f2cf6b;color:#1b2a30;font:700 10px/1.3 inherit;letter-spacing:.02em}.item{position:relative}`;
+  document.head.appendChild(css); }
+// 4 et 5 · les messages d'information passent par le Fou, un à la fois ; les erreurs restent des messages courts
+{ const base = toast; toast = function (txt, cls = '') {
+    if (cls === 'bad' || !G || !G.running || G.ended) return base.apply(this, arguments);
+    try { if (fouSay(esc(String(txt)))) return; } catch (e) {}
+    return base.apply(this, arguments);
+  }; }
+{ const base = fouSay; fouSay = function (html, o = {}) {
+    if (!G) return base.apply(this, arguments);
+    if (G._fou154 !== G) { G._fou154 = G; G._fouSaid = new Set(); }
+    if (G._fouSaid.has(html)) return false;          // jamais deux fois le même conseil dans une partie
+    G._fouSaid.add(html);
+    const ok = base.call(this, html, Object.assign({ dur: 3000 }, o));
+    if (FOU.q.length > 1) FOU.q.splice(0, FOU.q.length - 1);   // un seul message en attente : le plus récent
+    return ok;
+  }; }
+// 9 · le chef-d'œuvre d'un autre : une phrase du Fou, plus de panneau sur le terrain
+{ const base = jtChefAnnounce; jtChefAnnounce = function (b, type) {
+    const before = AN.chef ? AN.chef.id : 0; const r = base.apply(this, arguments);
+    try { if (AN.chef && AN.chef.id !== before) { AN.chef.until = 0; const c = CHF[chfKey(type)], mine = b.k === G.me;
+      fouSay(mine ? `Ton chef-d’œuvre est posé : <b>${esc(c.full)}</b> !` : `<b>${esc(b.name)}</b> pose son chef-d’œuvre : ${esc(c.full)}`, { wink: mine }); } } catch (e) {}
+    return r;
+  }; }
+// 3 · en haut, un seul repère : qui t'attaque (tous reviennent quand on vise quelqu'un)
+{ const base = renderHud; renderHud = function () {
+    const r = base.apply(this, arguments);
+    try { const ak = prevAlive(G.me), picking = aimPicksPlayer();
+      document.querySelectorAll('#rivals .who').forEach(el => el.classList.toggle('v154h', !picking && +el.dataset.k !== ak)); } catch (e) {}
+    return r;
+  }; }
+// 7 · le point rouge des Sorts : seulement quand un nouveau sort est arrivé ; le Fou se tait quand une fiche est ouverte
+{ const base = updateUI; updateUI = function () {
+    const r = base.apply(this, arguments);
+    try { const me = G.b[G.me], dot = $('cardDot'), n = me.cards.length;
+      if (G.mode === 'cards' || G.mode === 'spell') G._cardSeen = n; else if ((G._cardSeen || 0) > n) G._cardSeen = n;
+      if (dot) dot.hidden = !(me.alive && n > (G._cardSeen || 0) && G.mode !== 'cards');
+      const pop = $('pop'); if (FOU.el) FOU.el.style.visibility = pop && !pop.hidden ? 'hidden' : '';
+    } catch (e) {}
+    return r;
+  }; }
+// 10 et 11 · tour offerte : un badge « ×3 » sur les cartes au lieu de « Offert » partout ; 14 · Envoyer : les envois de la vague en cours ; 15 · Sorts : seulement ceux qu'on peut lancer
+{ const base = renderItems; renderItems = function () {
+    const r = base.apply(this, arguments);
+    try { const me = G.b[G.me], items = $('items');
+      if (G.mode === 'build' && me && me.free > 0) items.querySelectorAll('.item .free').forEach(el => { el.textContent = '0'; const btn = el.closest('.item'); if (btn && !btn.querySelector('.fx3')) btn.insertAdjacentHTML('beforeend', `<span class="fx3">×${me.free}</span>`); });
+      if (G.mode === 'send' && typeof SEND_TIERS !== 'undefined') { const t = jtTier(), keep = new Set([].concat(SEND_TIERS[t] || [], SEND_TIERS[t - 1] || []));
+        items.querySelectorAll('[data-send]').forEach(el => { if (!keep.has(el.dataset.send) && !(typeof isHouseBoss === 'function' && isHouseBoss(el.dataset.send))) el.remove(); }); }
+      if (G.mode !== 'build' && G.mode !== 'send' && G.mode !== 'tech' && !items.classList.contains('ghost')) { items.querySelectorAll('.item.slot').forEach(el => el.remove()); if (items.querySelector('.item.spell')) items.querySelectorAll('.item.charge').forEach(el => el.remove()); }
+      items.classList.toggle('scroll', items.children.length > 4);
+    } catch (e) {}
+    return r;
+  }; }
+/* ================================================================ /version 154 */
 
 useTerrain(TERKEY);
 demo();
