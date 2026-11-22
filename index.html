@@ -3089,7 +3089,7 @@ function stat(t, b) {
 }
 const convertCost = type => T[type].cost - (T[type].tech === 'chef' ? 0 : T.wall.cost);
 var UPK = null; // Line Towers: the price of each level (version 141)
-const upCost = t => Math.round(T[t.type].cost * (UPK ? UPK[t.lvl] : 0.8 * t.lvl));
+var upCost = t => Math.round(T[t.type].cost * (UPK ? UPK[t.lvl] : 0.8 * t.lvl));
 const sellValue = t => Math.floor(t.spent * 0.6);
 function spentFor(type, lvl) { if (type === 'wall') return 4; let s = T[type].cost; for (let l = 1; l < lvl; l++) s += Math.round(T[type].cost * (UPK ? UPK[l] : 0.8 * l)); return s; }
 function build(k, type, c, r) {
@@ -3137,7 +3137,7 @@ function buyTech(k, key) {
 }
 function sell(k, t) { const b = G.b[k]; b.gold += sellValue(t); b.grid[idx(t.c, t.r)] = null; b.dist = bfs(b.grid); if (fxOn(k)) sfx('sell'); }
 function send(k, kind) {
-  const from = G.b[k], tk = nextAlive(k), s = S[kind];
+  const from = G.b[k], tk = nextAlive(k), s = S[kind]; if (!s) return false;
   if (tk < 0 || from.gold < s.cost || !(s.hb ? bossOpen(k, kind) : jtSendOpen(kind))) return false;
   from.gold -= s.cost; from.income += s.inc; if (s.hb) bossSentFx(k, kind); if (from.jt) from.jt.sent = (from.jt.sent || 0) + (s.count || 1);
   if (auth()) for (let i = 0; i < (s.count || 1); i++) G.b[tk].queue.push({ kind, from: k });
@@ -3207,7 +3207,7 @@ function act(a) {
 
 /* =============== AI =============== */
 const towersOf = b => b.grid.filter(Boolean);
-function pick(w) { const e = Object.entries(w).filter(([, v]) => v > 0); let r = Math.random() * e.reduce((s, [, v]) => s + v, 0); for (const [k, v] of e) if ((r -= v) <= 0) return k; return e[e.length - 1][0]; }
+function pick(w) { const e = Object.entries(w).filter(([, v]) => v > 0); let r = Math.random() * e.reduce((s, [, v]) => s + v, 0); for (const [k, v] of e) if ((r -= v) <= 0) return k; return e.length ? e[e.length - 1][0] : ''; }
 function aiBuild(k) {
   const me = G.b[k], all = towersOf(me), sh = all.filter(t => t.type !== 'wall'), walls = all.filter(t => t.type === 'wall');
   if (sh.length < 2) for (const [c, r] of AI_PRE) if (!me.grid[idx(c, r)]) return build(k, 'arrow', c, r) === '';
@@ -15848,7 +15848,7 @@ function bossBot(k) {
 // the tier open now: the same clock as the bestiaries (waves 1, 5, 9, 13, 17, 21)
 const jtTier = () => G ? Math.min(SEND_TIERS.length - 1, Math.floor(Math.max(0, G.wave - 1) / 4)) : 0;
 const jtTierWave = i => 1 + 4 * i;
-const jtSendOpen = k => (SEND_TIER[k] ?? 0) <= jtTier();
+var jtSendOpen = k => (SEND_TIER[k] ?? 0) <= jtTier() && !(G && G.t < (G.quick ? 45 : 90) && !G.spec);
 // the wave that opens a new tier, and what it opens (nothing for the first)
 function jtNewSends(w) { const i = Math.floor(Math.max(0, w - 1) / 4); return i > 0 && i < SEND_TIERS.length && w === jtTierWave(i) ? SEND_TIERS[i] : null; }
 // the bar of sends: what is open, then a lock for the next tier
@@ -30681,7 +30681,7 @@ function f5Offer(b, t) {
   return null;
 }
 const HM5 = { zones: [], beams: [], chains: [], fx: [], cT: null, vc: new Map(), max: 3, maxQ: 3, mul: 0.85 };
-window.HM5 = HM5;
+window.HM5 = HM5; window.f5Offer = f5Offer;
 
 /* ---------------------------------------------------------------- the codes of the towers: 16 more, one character each */
 const TCH5 = TCHARS + 'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜ';
@@ -31187,7 +31187,7 @@ function paSync(force) {
 /* ================================================================ version 148 · le prix du chef-d'œuvre selon la partie (Patrick, 18/11, 20 h 37)
    Mesuré sur des parties de robots : en partie rapide, à 250 or, le chef-d'œuvre n'arrivait souvent pas avant la fin ; en partie longue, à 250, il ne coûtait plus rien.
    Line Towers avec une Maison : 150 or en partie rapide (il arrive pour la dernière minute), 350 en partie longue (le prix d'une tour de niveau 5). */
-{ const chfPrice = () => { const hm = G && G.b && G.b.some(b => b && b.jt && hmMaison(b)); CHF_COST = hm ? (G.quick ? 150 : 350) : 250; for (const ty of CHF_TYPES) if (T[ty]) T[ty].cost = CHF_COST; };
+{ const chfPrice = () => { const hm = G && G.b && G.b.some(b => b && b.jt && hmMaison(b)); CHF_COST = hm ? (G.quick ? 150 : 250) : 250; for (const ty of CHF_TYPES) if (T[ty]) T[ty].cost = CHF_COST; };
   { const base = newGame; newGame = function () { const r = base.apply(this, arguments); try { chfPrice(); } catch (e) {} return r; }; }
   { const base = jtApplySnap; jtApplySnap = function () { const r = base.apply(this, arguments); try { chfPrice(); } catch (e) {} return r; }; } }
 /* ================================================================ /version 148 */
@@ -31266,6 +31266,19 @@ function paSync(force) {
     return r;
   }; }
 /* ================================================================ /version 154 */
+/* ===== version 156 · plus de blocage au niveau 5 (le prix monte), pas d'envois avant 1 min 30 ===== */
+HM5.max = 99; HM5.maxQ = 99;
+{ const base = upCost; upCost = function (t) { const c = base.apply(this, arguments);
+    try { if (t && t.lvl === 4 && !t.f5) { const b = G.b.find(q => q.grid && q.grid.includes(t)); if (b && window.f5Offer && window.f5Offer(b, t)) { const n = b.grid.filter(u => u && u.f5).length; return Math.round(c * [1, 1.5, 2, 3][Math.min(3, n)]); } } } catch (e) {}
+    return c; }; }
+const SEND_AT = () => (G && G.quick ? 45 : 90);
+{ const base = renderItems; renderItems = function () { const r = base.apply(this, arguments);
+    try { if (G.mode === 'send' && G.t < SEND_AT() && !$('items').classList.contains('ghost')) $('items').insertAdjacentHTML('afterbegin', `<div class="item snd lockhint v155w">${ICON.lock}<span class="nm">Dans ${Math.ceil(SEND_AT() - G.t)} s</span><span class="tag">premiers envois</span></div>`); } catch (e) {}
+    return r; }; }
+{ const base = updateUI; updateUI = function () { const r = base.apply(this, arguments);
+    try { const w = document.querySelector('#items .v155w .nm'); if (w) { if (G.t >= SEND_AT()) renderItems(); else { const v = 'Dans ' + Math.ceil(SEND_AT() - G.t) + ' s'; if (w.textContent !== v) w.textContent = v; } } } catch (e) {}
+    return r; }; }
+/* ================================================================ /version 156 */
 
 useTerrain(TERKEY);
 demo();
