@@ -23584,7 +23584,7 @@ fgText = function fgText4() {
   const g = FG[E.game], me = G.b[G.me], plays = fgIn(G.me), st = fgMine(), end = E.phase === 'end' && E.res;
   const mine = st || fgInit(E.game);
   // who plays: the Houses' chips (the cabbages each one has, a gold mark at the end of the race or the pole)
-  const val = k => { const s = fgStOf(E, k); return E.game === 'jongle' ? String(jgN(s)) : E.game === 'choux' || E.game === 'etend' ? String(s.score | 0) : s.fin >= 0 ? '<i></i>' : ''; };
+  const val = k => { const s = fgStOf(E, k); return E.game === 'jongle' ? String(s.pts | 0) : E.game === 'choux' || E.game === 'etend' ? String(s.score | 0) : s.fin >= 0 ? '<i></i>' : ''; };
   const who = $('jtPalWho'), wh = E.order.map(k => `<span class="pw${k === G.me ? ' on' : ''}">${palIcon(k)}<span>${palName(k)}</span><em class="fg-v">${val(k)}</em></span>`).join('');
   if (FGX.txt.who !== wh) { FGX.txt.who = wh; who.style.setProperty('--n', Math.min(4, E.order.length)); who.innerHTML = wh; }
   // what to do now
@@ -23618,7 +23618,7 @@ fgText = function fgText4() {
   const sub = w < 0 ? 'Personne ne gagne la relique cette fois'
     : E.game === 'course' ? (w === G.me ? 'Ton sanglier arrive le premier' : `Le sanglier de ${G.b[w].name} arrive le premier`)
     : E.game === 'choux' || E.game === 'etend' ? (w === G.me ? 'Tu as le plus de points' : `${G.b[w].name} a le plus de points`)
-    : E.game === 'jongle' ? (w === G.me ? 'Tu as le plus de balles en l’air' : `${G.b[w].name} a le plus de balles en l’air`)
+    : E.game === 'jongle' ? (w === G.me ? 'Tu as le plus de points' : `${G.b[w].name} a le plus de points`)
     : (fgStOf(E, w).fin >= 0 ? (w === G.me ? 'Tu es le premier en haut du mât' : `${G.b[w].name} est le premier en haut du mât`) : (w === G.me ? 'Tu es le plus haut sur le mât' : `${G.b[w].name} est le plus haut sur le mât`));
   setTxt('jtPalSub', sub);
   const key = [w, s2, E.sack, E.botRelic, (me && me.jt.relicPick || []).join(','), E.myPick || '', NET.mode].join('|');
@@ -27354,7 +27354,7 @@ const ficheFoot = nm => `<div class="am2-foot">${FI.del ? `<p class="fi-ask">Ret
    The rules are pure, from the seed (the throws, the flight of each toss) and the taps (each with its hand): the same on every page.
    The ranking: the most balls still in the air at the end, then the most catches. */
 FG.jongle = { c: 'g', n: 'Le jongleur', k: 'ENTRACTE · LE JONGLEUR', short: 'le jongleur', dur: 35,
-  d: 'Le plus de balles en l’air choisit une relique', say: '« Oyez ! Le jongleur ! Je t’envoie une balle… et une de plus toutes les cinq secondes ! »',
+  d: 'Le plus de points choisit une relique', say: '« Oyez ! Le jongleur ! Une balle rattrapée, un point ; au bon moment, deux ! Et une balle de plus toutes les cinq secondes ! »',
   cnt: '« Qui jongle encore ? »', cv: 'Tes mains, les balles, et le fou qui les lance' };
 FG_DEC.g = 'jongle';
 for (const g of ['course', 'mat']) { const i = FG_POOL.indexOf(g); if (i >= 0) FG_POOL.splice(i, 1); }
@@ -27363,6 +27363,10 @@ FG_SIDE.jongle = 1;
 const JGD = { WIN: 0.19, PER: 0.07, OFF: 0.04, LEAD: 1.3, FLY: 1.25, HOLD: 0.1, MAXB: 7, W: 176, H: 270 };
 const JG_BC = ['#e6c35a', '#b5655b', '#7192b6', '#6fa56c', '#c4809f', '#c78a4c', '#ece6d6'];
 const JG_HANDS = [[46, 214], [130, 214]];
+// version 158 (Patrick, 22/11 : « je sais pas comment ça marche en fait pour gagner… comment rendre ça plus équilibré et plus juste au niveau des points ? »):
+// des points, gagnés tout au long : une balle rattrapée +1, au moment parfait +2 ; une balle qui tombe −3 ; une tape dans le vide −1 (taper sans arrêt ne paie plus).
+// Plus on garde de balles, plus on en rattrape : celui qui laisse tomber au début n'a plus de quoi marquer.
+const JG_PTS = { ok: 1, per: 2, lost: 3, stray: 1 };
 function jgCond(seed) {
   const R = prng(seed + 23), throws = [], T = [];
   for (let k = 0; k < 7; k++) throws.push(k ? k * 5 : 0.4);
@@ -27384,23 +27388,23 @@ function jgRun(st, cond, T) {
     const tl = lb ? lb.ta + JGD.WIN : Infinity;
     if (Math.min(tt, tl) > T + 1e-9) break;
     if (tt <= tl) jgThrow(st, tt);
-    else { st.balls.splice(st.balls.indexOf(lb), 1); st.lost++; st.ev.push({ t: Math.round(tl * 100) / 100, s: lb.to ? 'r' : 'l', r: 'lost', c: lb.c }); }
+    else { st.balls.splice(st.balls.indexOf(lb), 1); st.lost++; st.pts = (st.pts | 0) - JG_PTS.lost; st.ev.push({ t: Math.round(tl * 100) / 100, s: lb.to ? 'r' : 'l', r: 'lost', c: lb.c }); }
   }
 }
 function jgTap(st, cond, tp) {
   const T = tp.t - JGD.OFF, h = tp.s === 'l' ? 0 : 1;
   jgRun(st, cond, T);
   let b = null, bd = 9; for (const x of st.balls) if (x.to === h && x.t0 <= T + 1e-9) { const d = Math.abs(T - x.ta); if (d < bd) { bd = d; b = x; } }
-  if (!b || bd > JGD.WIN + 1e-9) { st.ev.push({ t: tp.t, s: tp.s, r: 'stray' }); return; }
+  if (!b || bd > JGD.WIN + 1e-9) { st.pts = (st.pts | 0) - JG_PTS.stray; st.ev.push({ t: tp.t, s: tp.s, r: 'stray' }); return; }
   let F = cond.T[st.c % cond.T.length]; st.c++;
   const to = 1 - h, t0 = Math.round((T + JGD.HOLD) * 100) / 100;
   for (let i = 0; i < 30 && !jgFree(st, to, t0 + F); i++) F += 0.07;
   b.from = h; b.to = to; b.t0 = t0; b.ta = Math.round((t0 + F) * 100) / 100;
-  st.catches++;
+  st.catches++; st.pts = (st.pts | 0) + (bd <= JGD.PER ? JG_PTS.per : JG_PTS.ok);
   st.ev.push({ t: tp.t, s: tp.s, r: bd <= JGD.PER ? 'per' : 'ok', c: b.c });
 }
 { const base = fgCond; fgCond = function (game, seed) { return game === 'jongle' ? jgCond(seed) : base.apply(this, arguments); }; }
-{ const base = fgInit; fgInit = function (game) { return game === 'jongle' ? { t: 0, i: 0, balls: [], k: 0, c: 0, catches: 0, lost: 0, ev: [], h: 0 } : base.apply(this, arguments); }; }
+{ const base = fgInit; fgInit = function (game) { return game === 'jongle' ? { t: 0, i: 0, balls: [], k: 0, c: 0, catches: 0, lost: 0, pts: 0, ev: [], h: 0 } : base.apply(this, arguments); }; }
 { const base = fgAdvance; fgAdvance = function (game, cond, st, taps, tTo) {
     if (game !== 'jongle') return base.apply(this, arguments);
     tTo = Math.min(tTo, FG.jongle.dur);
@@ -27418,7 +27422,7 @@ function jgTap(st, cond, tp) {
 { const base = fgRank; fgRank = function (E) {
     if (E.game !== 'jongle') return base.apply(this, arguments);
     const R = E.order.map(k => ({ k, st: E.st[k] || fgInit('jongle') }));
-    R.sort((a, c) => (jgN(c.st) - jgN(a.st)) || ((c.st.catches | 0) - (a.st.catches | 0)) || ((a.st.lost | 0) - (c.st.lost | 0)) || (a.k - c.k));
+    R.sort((a, c) => ((c.st.pts | 0) - (a.st.pts | 0)) || (jgN(c.st) - jgN(a.st)) || ((a.st.lost | 0) - (c.st.lost | 0)) || (a.k - c.k));
     return R.map(r => ({ k: r.k }));
 }; }
 // the bots: they play the very rules, catching each ball by their level (a little less sure with each ball more)
@@ -27465,10 +27469,10 @@ function jgReset() { JG.anim = [null, null]; JG.fx = []; JG.miss = []; JG.evI = 
     if (!ev && st) { const T = tp.t - JGD.OFF; let b = null, bd = 9; for (const x of st.balls) if (x.to === h && x.t0 <= T + 1e-9) { const d = Math.abs(T - x.ta); if (d < bd) { bd = d; b = x; } } ev = b && bd <= JGD.WIN + 1e-9 ? { r: bd <= JGD.PER ? 'per' : 'ok', c: b.c } : { r: 'stray' }; }
     if (ev && (ev.r === 'ok' || ev.r === 'per')) {
       JG.anim[h] = { at: now, ok: true }; JG.fx.push({ h, at: now, c: JG_BC[ev.c] });
-      sfx('tick'); buzz('build'); if (ev.r === 'per') { etBell(); fgPopJg('Parfait', 'gold', h); }
+      sfx('tick'); buzz('build'); if (ev.r === 'per') { etBell(); fgPopJg('Parfait +2', 'gold', h); } else fgPopJg('+1', '', h);
     } else {
       JG.anim[h] = { at: now, ok: false };
-      if (now - JG.ft > 500) { JG.ft = now; const other = st && st.balls.some(b => b.to !== h && Math.abs(fgT(E) - JGD.OFF - b.ta) <= JGD.WIN); fgPopJg(other ? 'L’autre main !' : 'Trop tôt', other ? 'red' : '', h); }
+      if (now - JG.ft > 500) { JG.ft = now; const other = st && st.balls.some(b => b.to !== h && Math.abs(fgT(E) - JGD.OFF - b.ta) <= JGD.WIN); fgPopJg(other ? 'L’autre main ! −1' : 'Dans le vide −1', 'red', h); }
     }
 }; }
 
@@ -27584,7 +27588,7 @@ function jgDraw(x, E) {
   if (!plays) return;
   // my catches since the last frame: the rings
   if (JG.evI > st.ev.length) JG.evI = 0;
-  while (JG.evI < st.ev.length) { const ev = st.ev[JG.evI++]; if (ev.r === 'lost') { const h = ev.s === 'l' ? 0 : 1; JG.anim[h] = { at: now, lost: true }; JG.miss.push({ h, at: now, c: JG_BC[ev.c] }); if (G.entr && E.phase === 'play') { sfx('reel'); fgPopJg('Perdue', 'red', h); } } }
+  while (JG.evI < st.ev.length) { const ev = st.ev[JG.evI++]; if (ev.r === 'lost') { const h = ev.s === 'l' ? 0 : 1; JG.anim[h] = { at: now, lost: true }; JG.miss.push({ h, at: now, c: JG_BC[ev.c] }); if (G.entr && E.phase === 'play') { sfx('reel'); fgPopJg('Perdue −3', 'red', h); } } }
   for (const f of JG.fx) { const u = (now - f.at) / 500; if (u >= 1) continue; const [hx, hy] = JG_HANDS[f.h], r = 8 + u * 16; for (let i = 0; i < 24; i++) { const a = i / 24 * 6.283; P.px(hx + Math.cos(a) * r, hy - 6 + Math.sin(a) * r * 0.45, u < 0.5 ? f.c : tint(f.c, 0.5, '#ffffff')); } }
   JG.fx = JG.fx.filter(f => now - f.at < 500);
   const lit = [0, 1].map(h => st.balls.some(b => b.to === h && b.t0 <= t && Math.abs(t - JGD.OFF - b.ta) <= JGD.WIN));
@@ -27600,9 +27604,8 @@ function jgDraw(x, E) {
   }
   for (const m of JG.miss) { const u = (now - m.at) / 1000; if (u > 0.9) continue; jgBall(JG_HANDS[m.h][0] + u * 18, JG_HANDS[m.h][1] - 8 + u * u * 120, 4, m.c); }
   JG.miss = JG.miss.filter(m => now - m.at < 900);
-  // the two tracks: each ball slides to the ring of the hand where it will land
-  const RING = [[14, 252], [W - 15, 252]], SPAN = 66;
-  for (let h = 0; h < 2; h++) {
+  // (version 158: the two tracks at the bottom are gone, Patrick : « ça peut vachement aider le joueur… c'est beaucoup plus simple que de regarder l'animation »)
+  if (0) for (let h = 0; h < 2; h++) { const RING = [[14, 252], [W - 15, 252]], SPAN = 66;
     const [rx, ry] = RING[h], dir = h ? -1 : 1, on = lit[h];
     P.rect(h ? W / 2 + 2 : 4, ry - 4, W / 2 - 6, 9, '#3a3436'); P.hl(h ? W / 2 + 2 : 4, ry - 4, W / 2 - 6, '#4a4245');
     P.ell(rx, ry, 7, 7, on ? '#fff2b4' : '#e6c35a'); P.ell(rx, ry, 5, 5, on ? '#e6c35a' : '#2b2a2a');
@@ -27682,7 +27685,7 @@ function jgFrame() {
     const r = base.apply(this, arguments), E = G && G.entr;
     try {
       if (E && E.game === 'jongle' && E.phase === 'play' && fgIn(G.me)) {
-        const st = fgMine(), n = jgN(st), mh = `<span class="jt-k">À TOI · ${n} BALLE${n > 1 ? 'S' : ''} EN L’AIR</span><b>Tape la main où la balle arrive · une balle ratée est perdue</b>`;
+        const st = fgMine(), n = jgN(st), p = st.pts | 0, mh = `<span class="jt-k">À TOI · ${p} POINT${Math.abs(p) > 1 ? 'S' : ''} · ${n} BALLE${n > 1 ? 'S' : ''}</span><b>Rattrapée +1 · parfaite +2 · tombée −3</b>`;
         if (FGX.txt.msg !== mh) { FGX.txt.msg = mh; $('jtPalMsg').innerHTML = mh; }
       }
     } catch (e) { console.warn('fou:', e); }
@@ -27690,12 +27693,13 @@ function jgFrame() {
 }; }
 { const base = frVal; frVal = function (E, k) {
     if (E.game !== 'jongle') return base.apply(this, arguments);
-    const n = jgN(E.st[k]); return { big: String(n), unit: n > 1 ? 'BALLES' : 'BALLE' };
+    const p = (E.st[k] && E.st[k].pts) | 0; return { big: String(p), unit: Math.abs(p) > 1 ? 'POINTS' : 'POINT' };
 }; }
 // between friends: 5 characters a House: the balls in the air, the catches, the lost ones, a bit that flips at each catch
 { const be = fgEncSt, bd = fgDecSt;
-  fgEncSt = function (game, st) { return game === 'jongle' ? b36(Math.min(35, jgN(st)), 1) + b36(Math.min(1295, st.catches | 0), 2) + b36(Math.min(35, st.lost | 0), 1) + ((st.catches | 0) % 2) : be.apply(this, arguments); };
-  fgDecSt = function (game, s) { return game === 'jongle' ? { n: parseInt(s[0], 36) || 0, catches: parseInt(s.slice(1, 3), 36) || 0, lost: parseInt(s[3], 36) || 0 } : bd.apply(this, arguments); };
+  // (version 158: the points instead of the catches, from −600 to 695)
+  fgEncSt = function (game, st) { return game === 'jongle' ? b36(Math.min(35, jgN(st)), 1) + b36(Math.max(0, Math.min(1295, (st.pts | 0) + 600)), 2) + b36(Math.min(35, st.lost | 0), 1) + ((st.catches | 0) % 2) : be.apply(this, arguments); };
+  fgDecSt = function (game, s) { return game === 'jongle' ? { n: parseInt(s[0], 36) || 0, pts: (parseInt(s.slice(1, 3), 36) || 600) - 600, lost: parseInt(s[3], 36) || 0 } : bd.apply(this, arguments); };
 }
 /* ================================================================ /version 146 */
 /* version 149 (19/11): the relic « Cœur de givre » follows the House. Patrick, 19/11, 14 h 54: « dans les récompenses… tu as le Givre qui est
