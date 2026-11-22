@@ -31279,6 +31279,82 @@ const SEND_AT = () => (G && G.quick ? 45 : 90);
     try { const w = document.querySelector('#items .v155w .nm'); if (w) { if (G.t >= SEND_AT()) renderItems(); else { const v = 'Dans ' + Math.ceil(SEND_AT() - G.t) + ' s'; if (w.textContent !== v) w.textContent = v; } } } catch (e) {}
     return r; }; }
 /* ================================================================ /version 156 */
+/* ================================================================ version 157 · l'invitation arrive tout de suite (Patrick, 22/11 : « il y a une latence énorme… faut attendre environ 5 secondes… ou parfois il faut que la personne clique sur un autre écran »)
+   Avant : la table ouverte partait au serveur sous 1,5 s, mais l'ami ne redemandait au serveur que toutes les 20 s (ou en revenant sur la page).
+   Maintenant : chacun écoute sa propre adresse sur un relais (le même que les parties en ligne, deux relais pour être sûr).
+   Dès que le serveur a reçu « je suis à ma table », la page envoie un petit signal à ses amis ; l'ami qui le reçoit redemande aussitôt au serveur.
+   L'ami invité exprès (« Inviter à jouer ») reçoit en plus un mot s'il n'est pas sur l'accueil.
+   Filet : la place de chacun est regardée toutes les 0,4 s ; sur l'accueil, on redemande toutes les 8 s. */
+const AMQ = { links: {}, sub: '', again: false, sent: '', pubbed: '', at: 0, invTo: '', invAt: 0, seen: new Map() };
+const AMQ_T = 'la-grande-joute/ami1/';
+const AMQ_BI = [0, 2];
+function amqLink(bi) {
+  const key = 'a' + bi; if (AMQ.links[key] || !BROKERS[bi]) return;
+  const b = BROKERS[bi], L = { key, bi, client: null, on: false };
+  AMQ.links[key] = L; RKX.links[key] = L; // (the worker hands its events to RKX.links; L.up stays unset, so the records leave it alone)
+  const c = L.client = workerClient(key, b.url, Object.assign({ clientId: 'dda' + rid(11), clean: true, keepalive: 30, reconnectPeriod: 4000, connectTimeout: 7000, protocolVersion: 4, resubscribe: false, queueQoSZero: false }, b.opts || {}));
+  c.on('connect', () => { L.on = true; if (AMQ.sub) c.subscribe(AMQ_T + AMQ.sub); });
+  c.on('close', () => { L.on = false; });
+  c.on('message', (t, p) => amqMsg(t, p));
+}
+function amqStart() {
+  if (!WEB || typeof workerClient !== 'function' || !amiOnline() || !/^[A-Z2-9]{6}$/.test(AMI.code || '')) return;
+  if (AMQ.sub !== AMI.code) {
+    const old = AMQ.sub; AMQ.sub = AMI.code;
+    Object.values(AMQ.links).forEach(L => { if (!L.on) return; try { if (old) L.client.unsubscribe(AMQ_T + old); L.client.subscribe(AMQ_T + AMQ.sub); } catch (e) {} });
+  }
+  AMQ_BI.forEach(amqLink);
+}
+function amqSend(code, k) {
+  if (!AMQ.sub || !/^[A-Z2-9]{6}$/.test(code)) return;
+  const p = JSON.stringify({ v: 1, f: AMQ.sub, k, id: rid(8) });
+  Object.values(AMQ.links).forEach(L => { if (L.on) try { L.client.publish(AMQ_T + code, p, false); } catch (e) {} });
+}
+function amqMsg(t, p) {
+  let d; try { d = JSON.parse(p); } catch (e) { return; }
+  if (!d || d.v !== 1 || typeof d.id !== 'string' || d.f === AMQ.sub || !/^[A-Z2-9]{6}$/.test(d.f || '')) return;
+  const now = Date.now(); if (AMQ.seen.has(d.id)) return; AMQ.seen.set(d.id, now);
+  if (AMQ.seen.size > 60) for (const [k, at] of AMQ.seen) if (now - at > 60000) AMQ.seen.delete(k);
+  if (!AMI.amis.some(a => a.code === d.f)) { amiPollNow(); return; } // (a friend just added: the list comes back with him)
+  if (d.k === 'inv') { AMQ.invFrom = d.f; AMQ.invAt = now; }
+  amiPollNow();
+}
+function amiPollNow() { if (AMI.busy) AMQ.again = true; else amiPoll(); }
+// what the server is told; once it has it, the friends hear that something changed
+{ const base = amiMe; amiMe = function () { const o = base.apply(this, arguments); AMQ.sent = [o.st, o.m, o.room || '', o.rk || ''].join('|'); return o; }; }
+{ const base = amiRender; amiRender = function () {
+    const r = base.apply(this, arguments);
+    try {
+      amqStart();
+      if (AMI.at !== AMQ.at) { // a fresh answer from the server
+        AMQ.at = AMI.at;
+        if (!AMI.err && AMQ.sent && AMQ.sent !== AMQ.pubbed) {
+          AMQ.pubbed = AMQ.sent;
+          const st = AMQ.sent.split('|')[0], inv = st === 'table' && AMQ.invTo && Date.now() - AMQ.invAt < 120000 ? AMQ.invTo : '';
+          AMI.amis.filter(a => amiOn(a) || a.code === inv).forEach(a => amqSend(a.code, a.code === inv ? 'inv' : 'up'));
+          if (inv) AMQ.invTo = '';
+        }
+        // the friend who invited me exprès: a word if I am not looking at the home
+        if (AMQ.invFrom && Date.now() - AMQ.invAt < 30000) {
+          const a = AMI.amis.find(x => x.code === AMQ.invFrom && amiCanJoin(x));
+          if (a) { AMQ.invFrom = '';
+            const home = !$('startOv').hidden && $('startOv').dataset.view === 'home';
+            if (!home && NET.mode === 'solo' && !(G && G.running && !G.ended && !G.quiet)) toast(`${cleanName(a.n)} t’attend à sa table : reviens à l’accueil pour le rejoindre`, 'gold');
+          }
+        }
+      }
+      if (AMQ.again && !AMI.busy) { AMQ.again = false; setTimeout(amiPoll, 30); }
+    } catch (e) {}
+    return r; }; }
+{ const base = am2Play; am2Play = function () { AMQ.invTo = AM2.with || ''; AMQ.invAt = Date.now(); return base.apply(this, arguments); }; }
+// one's place, looked at every 0.4 s (was 1.5 s)
+setInterval(() => { if (!amiOnline()) return; const s = JSON.stringify(amiState()); if (s !== amiLast) { amiLast = s; amiPollNow(); } }, 400);
+// on the home, the server asked every 8 s, in case the relays are down
+setInterval(() => {
+  if (document.hidden || !amiOnline() || NET.mode !== 'solo' || (G && G.running && !G.ended && !G.quiet)) return;
+  if (!$('startOv').hidden && $('startOv').dataset.view === 'home') amiPoll();
+}, 8000);
+/* ================================================================ /version 157 */
 
 useTerrain(TERKEY);
 demo();
