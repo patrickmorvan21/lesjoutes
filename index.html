@@ -2983,7 +2983,7 @@ document.addEventListener('pointerdown', () => { if (!MUS.el || MUS.el.paused) m
 /* =============== state =============== */
 let G = null, uid = 1, soloN = 2, diffKey = 'normal', nick = 'Joueur', soloSeat = 0, myCol = 0, gatesPref = 1;
 try { if (localStorage.getItem('ddl-gates') === '2') gatesPref = 2; } catch (e) {}
-const spawnsOf = () => G && G.gates === 2 ? [SPAWN, SPAWN_B] : [SPAWN];
+const spawnsOf = (b) => G && (G.gates === 2 || (b && b.brech)) ? [SPAWN, G.gateB == null ? SPAWN_B : G.gateB] : [SPAWN];
 try { const c = parseInt(localStorage.getItem('ddl-col'), 10); if (c >= 0 && c < 8) myCol = c; } catch (e) {}
 try { nick = cleanName(localStorage.getItem('ddl-nick') || 'Joueur'); } catch (e) {}
 let hadNick = false; try { hadNick = !!localStorage.getItem('ddl-nick'); } catch (e) {}
@@ -3052,10 +3052,10 @@ function buildReason(b, c, r) {
   if (b.grid[i]) return 'Case déjà occupée';
   if (OBST[i]) return 'Le décor occupe cette case';
   if (b.ob && b.ob[i] && b.ob[i] !== OB_RUIN) return jtObWhy(b.ob[i]);
-  if (spawnsOf().includes(i) || i === EXIT) return "Les entrées et la sortie restent libres";
+  if (spawnsOf(b).includes(i) || i === EXIT) return "Les entrées et la sortie restent libres";
   for (const cr of b.creeps) if (!cr.fly && (cr.cell === i || cr.tgt === i)) return 'Une créature passe ici';
   const d = bfs(b.grid, i);
-  if (spawnsOf().some(sp => d[sp] < 0)) return 'Ça fermerait le passage';
+  if (spawnsOf(b).some(sp => d[sp] < 0)) return 'Ça fermerait le passage';
   for (const cr of b.creeps) if (!cr.fly && cr.tgt >= 0 && d[cr.tgt] < 0) return 'Des créatures seraient enfermées';
   return '';
 }
@@ -3216,7 +3216,7 @@ function aiBuild(k) {
   if (fresh) {
     // no wall left to convert: a free cell beside the route that keeps the passage open
     if (me.gold < T[fresh].cost) return false;
-    const route = new Set(spawnsOf().flatMap(sp => pathCells(me, sp))), spots = [];
+    const route = new Set(spawnsOf(me).flatMap(sp => pathCells(me, sp))), spots = [];
     for (let i = 0; i < COLS * ROWS; i++) { const c = i % COLS, r = (i / COLS) | 0; if (route.has(i) || !DIRS.some(([dc, dr]) => route.has(idx(c + dc, r + dr)) && c + dc >= 0 && c + dc < COLS)) continue; if (!buildReason(me, c, r)) spots.push([c, r]); }
     if (spots.length) { const [c, r] = spots[(Math.random() * spots.length) | 0]; return build(k, fresh, c, r) === ''; }
   }
@@ -3323,7 +3323,7 @@ function spawnCreep(b, it) {
   if (it.mod === 'rush') { hp *= 0.5; speed *= 1.4; }
   if (it.mod === 'cohorte') hp *= 1.5;
   // with two entrances, walkers take turns between the top gate and the side cave (flyers always come over the top)
-  const side = G.gates === 2 && !s.fly && (b.gateFlip = !b.gateFlip);
+  const side = (G.gates === 2 || b.brech) && !s.fly && (b.gateFlip = !b.gateFlip);
   const cr = { id: uid++, kind: it.kind, from: it.from, hp, max: hp, speed, lives: s.lives, bounty: bountyOf(it.kind), size: s.size, fly: !!s.fly,
     x: side ? -0.4 : 4.5 + (Math.random() - 0.5) * 0.2, y: side ? 4.5 + (Math.random() - 0.5) * 0.2 : -0.4, tgt: side ? SPAWN_B : SPAWN, cell: -1, dir: 0, prog: 0, slowUntil: 0, slowF: 1, stunUntil: 0, iceUntil: 0, brittleUntil: 0, poison: null, hitT: -1 };
   if (it.at) Object.assign(cr, it.at); if (s.hb) bossSpawn(b, cr);
@@ -7799,7 +7799,7 @@ function routeLine(b, from = SPAWN) {
   if (cells.length && cells[cells.length - 1] === EXIT) pts.push([gx, AH]);
   return pts;
 }
-const routeLines = b => spawnsOf().map(sp => routeLine(b, sp));
+const routeLines = b => spawnsOf(b).map(sp => routeLine(b, sp));
 const TRAILCV = mkCanvas(AW, AH, true);
 function trailMask(lines) {
   const [c, x] = TRAILCV; x.clearRect(0, 0, AW, AH);
@@ -7883,7 +7883,7 @@ function laneArt(b) {
     const [cv, x] = mkCanvas(AW, AH), [gcv, gx] = mkCanvas(AW, AH);
     A = b.art = { ter: TERKEY, cv, x, pen: mkPen(x), gcv, gx, sig: null, structs: [], marks: [] };
   }
-  const sig = laneSig(b) + '|' + spawnsOf().map(sp => (b.dist ? b.dist[sp] : -1) + ':' + pathCells(b, sp).length).join(',') + (b.jt ? '|' + jtLaneSig(b) : '');
+  const sig = laneSig(b) + '|' + spawnsOf(b).map(sp => (b.dist ? b.dist[sp] : -1) + ':' + pathCells(b, sp).length).join(',') + (b.jt ? '|' + jtLaneSig(b) : '');
   if (A.sig !== sig) { A.sig = sig; rebuildLane(b, A); }
   return A;
 }
@@ -8028,7 +8028,7 @@ function drawLaneArt(b) {
   }
   // the attacker's banner on the gate, the owner's banners at the exit
   const atk = prevAlive(b.k);
-  if (G.gates === 2) { const cy = AY0 + 4.5 * CS; blit(x, caveSprite(), AX0 - 12, cy); if (atk >= 0 && b.alive) { const ac = pcol(atk); blit(x, flagSprite(PCOL[ac], PDARK[ac], b.queue.length ? fmod(G.t * 6, 2) : 0), AX0 - 20, cy - 8); } }
+  if (G.gates === 2 || b.brech) { const cy = AY0 + ((G.gateB == null ? 4 : (G.gateB / COLS | 0)) + 0.5) * CS; blit(x, caveSprite(), G.gateB != null && G.gateB % COLS ? AX0 + COLS * CS - 12 : AX0 - 12, cy); if (atk >= 0 && b.alive) { const ac = pcol(atk); blit(x, flagSprite(PCOL[ac], PDARK[ac], b.queue.length ? fmod(G.t * 6, 2) : 0), AX0 - 20, cy - 8); } }
   if (atk >= 0 && b.alive) {
     const f = b.queue.length ? fmod(G.t * 6, 2) : 0;
     const ac = pcol(atk);
@@ -11731,13 +11731,13 @@ function jtPathOpen(b, extra) {
   const save = extra.map(i => b.ob[i]); extra.forEach(i => { b.ob[i] = OB_ROCK; });
   const d = bfs(b.grid);
   extra.forEach((i, n) => { b.ob[i] = save[n]; });
-  if (spawnsOf().some(sp => d[sp] < 0)) return false;
+  if (spawnsOf(b).some(sp => d[sp] < 0)) return false;
   for (const cr of b.creeps) if (!cr.fly && !cr.dead && cr.tgt >= 0 && cr.tgt < COLS * ROWS && d[cr.tgt] < 0) return false;
   return true;
 }
-const freeCell = (b, i) => i >= 0 && i < COLS * ROWS && !b.grid[i] && !OBST[i] && !b.ob[i] && !spawnsOf().includes(i) && i !== EXIT && (i / COLS | 0) > 0 && (i / COLS | 0) < ROWS - 1;
+const freeCell = (b, i) => i >= 0 && i < COLS * ROWS && !b.grid[i] && !OBST[i] && !b.ob[i] && !spawnsOf(b).includes(i) && i !== EXIT && (i / COLS | 0) > 0 && (i / COLS | 0) < ROWS - 1;
 function nearRoute(b) {
-  const route = new Set(spawnsOf().flatMap(sp => pathCells(b, sp))), near = new Set();
+  const route = new Set(spawnsOf(b).flatMap(sp => pathCells(b, sp))), near = new Set();
   for (const i of route) { near.add(i); const c = i % COLS, r = i / COLS | 0; for (const [dc, dr] of DIRS) { const nc = c + dc, nr = r + dr; if (nc >= 0 && nr >= 0 && nc < COLS && nr < ROWS) near.add(idx(nc, nr)); } }
   return { route, near };
 }
@@ -12090,7 +12090,7 @@ function jtBack(b, cr, sp) {
   if (cr.backTo < 0 || cr.backTo === undefined) {
     const i = cellOf(cr.x, cr.y), c = i % COLS, r = i / COLS | 0, here = b.dist[i];
     let best = -1, bd = -1;
-    for (const [dc, dr] of DIRS) { const nc = c + dc, nr = r + dr; if (nc < 0 || nr < 0 || nc >= COLS || nr >= ROWS) continue; const j = idx(nc, nr), v = b.dist[j]; if (v > here && v > bd && !spawnsOf().includes(j)) { bd = v; best = j; } }
+    for (const [dc, dr] of DIRS) { const nc = c + dc, nr = r + dr; if (nc < 0 || nr < 0 || nc >= COLS || nr >= ROWS) continue; const j = idx(nc, nr), v = b.dist[j]; if (v > here && v > bd && !spawnsOf(b).includes(j)) { bd = v; best = j; } }
     if (best < 0) return;
     cr.backTo = best;
   }
@@ -16251,7 +16251,7 @@ function jtBotChef(k) {
   const type = av[(Math.random() * av.length) | 0], walls = b.grid.filter(t => t && t.type === 'wall');
   if (walls.length) return convert(k, walls[(Math.random() * walls.length) | 0], type);
   // no wall left (they turn them all into towers): the free cell that sees the most of the route, the passage kept open
-  const route = new Set(spawnsOf().flatMap(sp => pathCells(b, sp))), R2 = T[type].range * T[type].range, spots = [];
+  const route = new Set(spawnsOf(b).flatMap(sp => pathCells(b, sp))), R2 = T[type].range * T[type].range, spots = [];
   for (let i = 0; i < COLS * ROWS; i++) {
     if (route.has(i) || b.grid[i]) continue;
     const c = i % COLS, r = (i / COLS) | 0;
@@ -18069,7 +18069,7 @@ function csEffAt(b, i) { const s = b && b.cs; return s && s.st === 2 && s.cell =
 function csBoardOf(t) { if (!G || !t) return null; const i = idx(t.c, t.r); for (const b of G.b) if (b.grid[i] === t) return b; return null; }
 function csEffT(t, b) { if (!t || t.type === 'wall' || !Number.isInteger(t.c)) return ''; b = b && b.grid[idx(t.c, t.r)] === t ? b : csBoardOf(t); return b ? csEffAt(b, idx(t.c, t.r)) : ''; }
 // a cell that can hold a square: in the grid, not the scenery, not an entrance or the exit (a tower could never stand there)
-function csCellOk(b, i) { return i >= 0 && i < COLS * ROWS && !OBST[i] && !(b.ob && b.ob[i] && b.ob[i] !== OB_RUIN) && !spawnsOf().includes(i) && i !== EXIT; }
+function csCellOk(b, i) { return i >= 0 && i < COLS * ROWS && !OBST[i] && !(b.ob && b.ob[i] && b.ob[i] !== OB_RUIN) && !spawnsOf(b).includes(i) && i !== EXIT; }
 { const base = stat; stat = function (t, b) {
     const o = base.apply(this, arguments), e = csEffT(t, b);
     if (e === 'f') o.dmg *= 1.3; else if (e === 'c') o.rate /= 1.3; else if (e === 'p') o.range += 1;
@@ -18692,7 +18692,7 @@ function l2CardPlace() {
 function l2LineRow() {
   const GD = G.guide; if (GD.lineR !== undefined) return GD.lineR;
   const me = G.b[G.me], em = me.jt && me.jt.em;
-  const free = (c, r) => { const i = idx(c, r); return !OBST[i] && !(me.ob && me.ob[i] && me.ob[i] !== OB_RUIN) && !spawnsOf().includes(i) && i !== EXIT && (!me.grid[i] || me.grid[i].type === 'wall'); };
+  const free = (c, r) => { const i = idx(c, r); return !OBST[i] && !(me.ob && me.ob[i] && me.ob[i] !== OB_RUIN) && !spawnsOf(me).includes(i) && i !== EXIT && (!me.grid[i] || me.grid[i].type === 'wall'); };
   let best = -1;
   for (const r of [8, 9, 5, 10, 4, 7, 6]) {
     if (em && Math.abs(em.r - r) < 2) continue;
@@ -29105,7 +29105,7 @@ var HS = (function () {
       newGame(seats, 0, 'normal', { gates: s.gates === 2 ? 2 : 1, guide });
       G.story = { i, id: s.id, guide, rl: START_LIVES, ml: START_LIVES, lvl: 1, evo: 0, said: {}, last: -99, hello: false };
       G.D = Object.assign({}, s.D);
-      if (s.rocks) for (const b of G.b) { for (const [c, r] of s.rocks) { const j = idx(c, r); if (!b.ob[j] && !b.grid[j] && j !== EXIT && !spawnsOf().includes(j)) b.ob[j] = OB_ROCK; } b.dist = bfs(b.grid); }
+      if (s.rocks) for (const b of G.b) { for (const [c, r] of s.rocks) { const j = idx(c, r); if (!b.ob[j] && !b.grid[j] && j !== EXIT && !spawnsOf(b).includes(j)) b.ob[j] = OB_ROCK; } b.dist = bfs(b.grid); }
       G.running = true; G.userCam = false; setDock(); layout(); Object.assign(cam, homeCam()); cam.goal = null;
       setMode('build'); showOv('startOv', false); showOv('endOv', false);
       if (guide) { try { localStorage.setItem('ddl-tuto', '1'); } catch (e) {} guideGo(0); }
@@ -30895,7 +30895,7 @@ jtChefAvail = function (b) { if (!b || !b.jt || !b.grid || jtChefBuiltType(b)) r
 jtBotChef = function (k) { const b = G.b[k]; if (!b || !b.bot || !b.jt) return false; const av = jtChefAvail(b); if (!av.length || b.gold < CHF_COST + 10) return false;
   const walls = b.grid.filter(t => t && t.type === 'wall'); if (walls.length) return !!convert(k, walls[(Math.random() * walls.length) | 0], av[0]);
   // no wall left: the free cell beside the route that sees the most of it, the passage kept open
-  const route = new Set(spawnsOf().flatMap(sp => pathCells(b, sp))), spots = [];
+  const route = new Set(spawnsOf(b).flatMap(sp => pathCells(b, sp))), spots = [];
   for (let i = 0; i < COLS * ROWS; i++) { if (route.has(i) || b.grid[i]) continue; const c = i % COLS, r = (i / COLS) | 0; let n = 0; for (const j of route) { const dc = j % COLS - c, dr = ((j / COLS) | 0) - r; if (dc * dc + dr * dr <= 5) n++; } if (n) spots.push([n + Math.random() * 0.5, c, r]); }
   spots.sort((a, c) => c[0] - a[0]);
   for (const [, c, r] of spots.slice(0, 8)) if (!buildReason(b, c, r)) return build(k, av[0], c, r) === '';
@@ -31359,6 +31359,586 @@ setInterval(() => {
   if (!$('startOv').hidden && $('startOv').dataset.view === 'home') amiPoll();
 }, 8000);
 /* ================================================================ /version 157 */
+/* ===== version 157 · chefs-d'œuvre rééquilibrés : la résistance (plus de blocage à la chaîne), l'Ours frappe, le Cerf fragilise, le Renard ruse ===== */
+// 1 · la résistance : après un étourdissement ou un gel, 3 s pendant lesquelles la créature ne peut plus être étourdie ni gelée ; jamais plus de 3 s de blocage d'affilée
+const RES157 = { after: 3, maxChain: 3 };
+{ const base = step; step = function (dt) {
+    const r = base.apply(this, arguments);
+    try { for (const b of G.b) { if (!b || !b.creeps) continue; for (const cr of b.creeps) { if (cr.dead) continue;
+      const cc = Math.max(cr.stunUntil || 0, cr.iceUntil || 0);
+      if (cc > G.t) {
+        if (cr._res > G.t && !(cr._cc > G.t)) { cr.stunUntil = Math.min(cr.stunUntil || 0, G.t); cr.iceUntil = Math.min(cr.iceUntil || 0, G.t); continue; }
+        if (!(cr._cc > G.t)) cr._cc0 = G.t;
+        const cap = cr._cc0 + RES157.maxChain; if (cc > cap) { if (cr.stunUntil > cap) cr.stunUntil = cap; if (cr.iceUntil > cap) cr.iceUntil = cap; }
+        cr._cc = Math.min(cc, cap);
+      } else if (cr._cc) { cr._cc = 0; cr._res = G.t + RES157.after; if (b.rings && b.rings.length < 60) b.rings.push({ x: cr.x, y: cr.y, r0: 0.15, r1: 0.55, t: 0.3, ttl: 0.3, color: '#ffffff' }); }
+    } } } catch (e) {}
+    return r; }; }
+// 2 · l'Ours (Ossuaire) : toutes les 10 s, une onde de choc retire 10 % de leur vie aux créatures (3 % aux boss), étourdit 0,6 s, repousse celles qui sont près de lui
+HM.R.chef.ours = 10; HM.R.chef.oursStun = 0.6; HM.R.drum.chefEvery = HM.R.drum.every;
+HM_V.oursA.chefStep = (b, t) => { if (t.hmT2 > G.t) return; t.hmT2 = G.t + hmPer(HM.R.chef.ours); t.kick = G.t;
+  b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .4, r1: 9, t: .8, ttl: .8, color: '#f2b45a', fill: true }); G.shake = Math.max(G.shake || 0, 3);
+  for (const cr of b.creeps.slice()) { if (cr.dead || cr.y < 0) continue; const near = Math.hypot(cr.x - t.c - .5, cr.y - t.r - .5) < 2.5;
+    damage(b, cr, cr.max * (cr.hb ? 0.03 : 0.10), t, true); if (cr.dead) continue;
+    if (!cr.noStun) cr.stunUntil = Math.max(cr.stunUntil || 0, G.t + HM.R.chef.oursStun); if (near) HX.push(b, cr, 2); }
+  G.floats.push({ k: b.k, x: t.c + .5, y: t.r - .9, txt: 'BOUM', color: '#f2b45a', t: 1, ttl: 1 }); };
+// 3 · le Cerf (Flèche de cristal) : toutes les 10 s, le gel dure 1,5 s, puis les créatures restent fragiles 4 s (+35 % de dégâts)
+HM.R.chef.cerf = 10; HM.R.chef.cerfFreeze = 1.5;
+HM_V.cerf.chefStep = (b, t) => { if (t.hmT > G.t) return; const d = HM.R.chef.cerfFreeze; t.hmT = G.t + hmPer(HM.R.chef.cerf); t.kick = G.t; b.rings.push({ x: t.c + .5, y: t.r + .5, r0: .4, r1: 9, t: .9, ttl: .9, color: '#DFF6FF', fill: true });
+  for (const cr of b.creeps) if (!cr.dead && cr.y >= 0) { if (!cr.noStun) { cr.stunUntil = Math.max(cr.stunUntil || 0, G.t + d); cr.iceUntil = G.t + d; } cr.brittleUntil = Math.max(cr.brittleUntil || 0, G.t + 4); }
+  G.floats.push({ k: b.k, x: t.c + .5, y: t.r - .9, txt: 'GEL', color: '#DFF6FF', t: 1, ttl: 1 }); };
+// 4 · le Renard (Tanière) : toutes les 16 s, la créature la plus avancée (jamais un boss) plongent dans le terrier et ressortent chez le voisin avec +50 % de vie ; tu touches leur prime
+HM.R.chef.ren = 16; HM.R.chef.renOne = false;
+HM_V.renT.chefStep = (b, t) => { if (t.hmT2 > G.t) return; const nk = nextAlive(b.k);
+  const list = b.creeps.filter(c => !c.dead && c.y >= 0 && !c.hb && (!HM.R.chef.renOne || (c.lives || 1) <= 1) && !(S[c.kind] && S[c.kind].boss)).sort((a, c) => c.prog - a.prog).slice(0, 1);
+  if (!list.length) { t.hmT2 = G.t + .5; return; } t.hmT2 = G.t + hmPer(HM.R.chef.ren); t.kick = G.t;
+  for (const cr of list) { b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: .9, t: .5, ttl: .5, color: C.gold, fill: true }); G.floats.push({ k: b.k, x: cr.x, y: cr.y - .5, txt: '+' + (cr.bounty | 0), color: C.gold, t: 1.1, ttl: 1.1 });
+    b.gold += cr.bounty | 0; cr.dead = true; cr.hxGone = true;
+    if (nk >= 0 && nk !== b.k && S[cr.kind]) { try { const n = spawnCreep(G.b[nk], { kind: cr.kind, from: b.k }); if (n) { n.max = n.hp = Math.max(n.hp, cr.max) * 1.5; } } catch (e) {} } } };
+HM_CHF.hours.d = CHF.hours.d = TOWER_INFO.ch_hours = 'Le Grand Tambour : toutes les 10 s, une onde de choc retire 10 % de leur vie à toutes tes créatures (3 % aux boss) et repousse celles qui sont près de lui.';
+HM_CHF.hcerf.d = CHF.hcerf.d = TOWER_INFO.ch_hcerf = 'Le Cœur de l’hiver : toutes les 10 s, tout ton terrain gèle 1,5 s, puis les créatures restent fragiles 4 s (+35 % de dégâts).';
+HM_CHF.hren.d = CHF.hren.d = TOWER_INFO.ch_hren = 'Toutes les 16 s, ta créature la plus avancée (jamais un boss) plonge dans le terrier et ressort chez ton voisin, plus forte. Tu touches sa prime.';
+HM_CHF.hren.foe = CHF.hren.foe = 'Sa tanière t’envoie des créatures plus fortes.';
+// 5 · le Corbeau (Arbre aux corbeaux) : son poison frappe plus fort et plus souvent (il ne pesait presque rien)
+HM.R.chaud.chefMul = 3.2; HM.R.chaud.chefRate = 0.8;
+
+/* ===== PLAN COMMUN (agents ÉQUILIBRE + VARIÉTÉ + JOUEUR, 22/11) — version de test, ne pas publier =====
+   Chaque idée a son interrupteur dans window.PLAN (à régler avant le chargement de la page). */
+window.PLAN = Object.assign({
+  maze: true,          // 1 · bots : constructeur qui utilise toute la grille (VARIÉTÉ)
+  styles: true,        // 1 · bots : caractères Harceleur / Rusé / Bâtisseur + vigilance + seuil de danger selon le chemin (JOUEUR)
+  towerFirst: true,    // 1 · bots : une tour avant deux murs pendant les 2 premières minutes
+  pickFirst: true,
+  pickFrom: 150,       // 1 · … seulement après 2 min 30 (avant, ils prennent ce qu'ils peuvent payer : sinon trop de morts au début)
+  chefRush: true,      // 1 · bots : ils montent leur tour de Maison au niveau 4 pour ouvrir leur chef-d'œuvre (sinon, avec 70 tours, ils n'y arrivent jamais)     // 1 · bots : ils choisissent la tour, puis attendent l'or (au lieu de prendre la moins chère qui passe)
+  grotte: true,        // 2 · la grotte s'ouvre (vague 11 en longue, 6 en rapide)
+  grotteShare: 3,     // 2 · un marcheur sur N arrive par la grotte
+  gateWave: 0,        // 2 · vague d'ouverture (0 = 11 en longue, gateWaveQ en rapide)
+  gateWaveQ: 8,        // 2 · vague d'ouverture en partie rapide
+  postGate: 1,        // 2 · points de vie des vagues après l'ouverture (1 = inchangé)
+  waveMul: 0.8,       // 2 · points de vie de toutes les vagues (réglage de durée : les nouveaux bots mettent beaucoup plus de pression)
+  noMapEv: true,       // 2 · plus d'éboulement / feu / korrigans
+  trapGold: 0.5,        // 3 · Renard : or par prise du Terrier (v157 : 2 ; 0,5 = 1 or toutes les 2 prises)
+  renChef: 'sortie',   // 3 · Renard : chef-d'œuvre « le terrier garde la sortie » (null = v157)
+  renEvery: 20,        // 3 · … une fois toutes les N s
+  renWin: 3,           // 3 · … pendant N s
+  renZone: 4,          // 3 · … « près de la sortie » = à N cases de la sortie ou moins
+  renPow: 'entree',    // 3 · Renard : pouvoir 'entree' (renvoyées à l'entrée) ou 'sortie' (avale la sortie 3 s) ou null (v157)
+  armure: 0.15,        // 4 · −15 % des dégâts des flèches par point d'armure (Baliste : moitié)
+  formes3: true,       // 4 · Baliste perce la moitié de l'armure, Tir double +50 % contre les volants
+  f5grow: 1.5,         // 5 · chaque forme du niveau 5 coûte ×1,5 de plus, sans plafond
+  resMin: 1.3,         // 5 · résistance seulement après 1,3 s de blocage
+  envoi: 'butin',      // 6 · 'butin' (V1, 40 % du prix d'envoi à qui tue), 'chemin' (V2, revenu versé à mi-chemin chez le voisin), null (V0)
+  noChef: false        // mesure seulement : les chefs-d'œuvre sont construits mais ne font rien
+}, window.PLAN || {});
+window.EQ = { butin: PLAN.envoi === 'butin' ? 0.4 : 0, trapGold: PLAN.trapGold, renAura: null, renChef: null, renPow: PLAN.renPow === 'entree' ? 'entree' : null,
+  armure: PLAN.armure || null, f5grow: PLAN.f5grow || null, resMin: PLAN.resMin || null, balHalf: !!PLAN.formes3 };
+window.VARS = { gW: PLAN.gateWave || 0, grotte: !!PLAN.grotte, maze: !!PLAN.maze, betes: false, adapt: false };
+
+/* ===== module de test ÉQUILIBRE (agent équilibre, 22/11) — ne pas publier tel quel =====
+   Réglages dans window.EQ (mettre une clé à null/false pour garder le jeu v157). */
+window.EQ = Object.assign({
+  butin: 0,          // 1 · part du prix d'un envoi rendue à celui qui tue la créature envoyée (0 = comme v157)
+  trapGold: null,    // Renard : or par prise du Terrier (v157 : 2)
+  renAura: null,     // Renard : 'butin' = son aura double le butin des envois tués près de lui au lieu de +1/+2 or par créature
+  renChef: null,     // Renard : 'gros' = la Tanière avale la créature la plus solide et la renvoie à son envoyeur
+  renEvery: 10,
+  renPow: null,      // Renard : 'entree' = la Ruse renvoie les créatures autour à l'entrée du labyrinthe
+  prix: null,        // 2 · prix des niveaux communs à toutes les tours : [_, niv2, niv3, niv4, niv5]
+  armure: null,      // 2 · armure en pourcentage contre les flèches (0.15 = 15 % par point d'armure) ; Canon, Baliste, Maison la percent
+  oursCap: null,     // 3 · plafond des dégâts de l'onde de l'Ossuaire, en part de la vie d'une créature de la vague en cours
+  f5: null,          // 4 · multiplicateurs des formes du niveau 5 { repet: 1.6, ... }
+  f5grow: null,      // 4 · prix de chaque nouvelle forme du niveau 5 : × f5grow puissance (nombre de formes déjà prises), sans plafond (v157 : ×1 ; 1,5 ; 2 ; 3 puis 3)
+  splash: null,      // 2 · multiplicateur de la zone d'explosion du Canon
+  resMin: null       // 5 · la résistance ne se déclenche qu'après un blocage d'au moins resMin secondes (v157 : après tout blocage)
+}, window.EQ || {});
+// 1 · le butin des envois
+{ const base = jtChefBounty; jtChefBounty = function (cr, src, b0) { let v = base.apply(this, arguments);
+    try { if (EQ.butin && cr && cr.from >= 0 && !cr.raised && S[cr.kind] && !S[cr.kind].hb) { const u = S[cr.kind].cost / (S[cr.kind].count || 1); v = Math.max(v, Math.round(u * EQ.butin)); } } catch (e) {}
+    return v; }; }
+// Renard · or du Terrier
+if (EQ.trapGold !== null) HM.R.trap.gold = EQ.trapGold;
+// Renard · aura
+if (EQ.renAura === 'butin') { const base = jtOnKill; jtOnKill = function (b, cr, src, bounty) {
+    const em = b.jt && b.jt.em; if (!em || em.k !== 'renard') return base.apply(this, arguments);
+    const g = b.gold; const r = base.apply(this, arguments); const near = emNear(em, cr.x, cr.y, 0.3);
+    if (near) { b.gold = g + (b.gold - g - (emHas(em, 'bourse') ? 2 : 1)); if (cr.from >= 0 && S[cr.kind] && !S[cr.kind].hb) { const x = bounty | 0; b.gold += x; if (fxOn(b.k)) G.floats.push({ k: b.k, x: cr.x + 0.3, y: cr.y - 0.6, txt: '+' + x, color: C.gold, t: 0.9, ttl: 0.9 }); } }
+    return r; }; }
+// Renard · Tanière
+if (EQ.renChef === 'gros') { HM_V.renT.chefStep = (b, t) => { if (t.hmT2 > G.t) return;
+    const list = b.creeps.filter(c => !c.dead && c.y >= 0 && !c.hb && !c._ren && !(S[c.kind] && S[c.kind].boss)).sort((a, c) => c.hp - a.hp);
+    if (!list.length) { t.hmT2 = G.t + .5; return; } t.hmT2 = G.t + hmPer(EQ.renEvery); t.kick = G.t; const cr = list[0];
+    const to = cr.from >= 0 && cr.from !== b.k && G.b[cr.from] && G.b[cr.from].alive ? cr.from : nextAlive(b.k);
+    b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: 1.1, t: .6, ttl: .6, color: C.gold, fill: true });
+    G.floats.push({ k: b.k, x: cr.x, y: cr.y - .5, txt: 'RENVOYÉ', color: C.gold, t: 1.1, ttl: 1.1 });
+    b.gold += cr.bounty | 0; cr.dead = true; cr.hxGone = true; EQ._renHp = (EQ._renHp || 0) + cr.hp; EQ._renN = (EQ._renN || 0) + 1;
+    if (to >= 0 && to !== b.k && S[cr.kind]) { try { const n = spawnCreep(G.b[to], { kind: cr.kind, from: b.k }); if (n) { n.max = Math.max(n.max, cr.max); n.hp = Math.max(1, cr.hp); n._ren = 1; } } catch (e) {} } };
+  HM_CHF.hren.d = CHF.hren.d = TOWER_INFO.ch_hren = 'Toutes les ' + EQ.renEvery + ' s, la Tanière avale la créature la plus solide de ton terrain (jamais un boss) et la renvoie à celui qui te l’a envoyée. Tu touches sa prime.'; }
+// Renard · Ruse
+if (EQ.renPow === 'entree') { const base = jtCast; jtCast = function (k) { const b = G.b[k], em = b && b.jt && b.jt.em;
+    if (!em || em.k !== 'renard' || !b.alive) return base.apply(this, arguments);
+    if (em.cd > 0) return 'Pas encore prêt';
+    const ex = em.c + 0.5, ey = em.r + 0.5, R = emR(em) + 0.8, near = b.creeps.filter(cr => !cr.dead && cr.y >= 0 && !cr.fly && !cr.hb && !(S[cr.kind] && S[cr.kind].boss) && Math.hypot(cr.x - ex, cr.y - ey) <= R);
+    if (!near.length) return 'Aucune créature autour';
+    for (const cr of near) { b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: .6, t: .4, ttl: .4, color: C.gold, fill: true }); Object.assign(cr, { x: 4.5 + (Math.random() - .5) * .2, y: -0.4, tgt: SPAWN, cell: -1, dir: 0, prog: 0, backT: 0 }); }
+    EQ._ruseN = (EQ._ruseN || 0) + near.length;
+    em.cd = emCd(em); em.castT = G.t; b.jt.fx.push({ k: 'cast', em: em.k, x: ex, y: ey, r: R, t: G.t });
+    if (fxOn(k)) { sfx('cast'); jtCry(em.k); G.shake = Math.max(G.shake, 4); }
+    return ''; }; }
+// 2 · prix des niveaux communs
+if (EQ.prix) { const base = upCost; upCost = function (t) { const c = base.apply(this, arguments);
+    try { if (t && !/^ch_/.test(t.type) && t.type !== 'wall' && T[t.type] && t.lvl < 4) return EQ.prix[t.lvl + 1];
+      if (t && t.lvl === 4 && !t.f5 && T[t.type]) return Math.round(c / (T[t.type].cost * UPK[4]) * EQ.prix[5]); } catch (e) {}
+    return c; };
+  formCost = type => EQ.prix[3];
+  spentFor = function (type, lvl) { if (type === 'wall') return 4; let s = T[type].cost; for (let l = 2; l <= Math.min(lvl, 4); l++) s += EQ.prix[l]; return s; }; }
+// 2 · l'armure compte
+if (EQ.armure) { const base = damage; damage = function (b, cr, d, src, soft) {
+    if (cr && cr.armor && !soft && src && (src.type === 'arrow')) { d = d * Math.max(0.2, 1 - EQ.armure * cr.armor) + cr.armor; }
+    else if (cr && cr.armor && !soft && src && src.type === 'ballista' && EQ.balHalf) { d = d * Math.max(0.2, 1 - EQ.armure * 0.5 * cr.armor) + cr.armor; }
+    else if (cr && cr.armor && !soft && src && Number.isInteger(src.c) && src.type !== 'arrow') d = d + Math.min(cr.armor, d);
+    return base.call(this, b, cr, d, src, soft); }; }
+// 3 · l'Ossuaire plafonné
+if (EQ.oursCap) { const f = HM_V.oursA.chefStep; HM_V.oursA.chefStep = function (b, t) { const sv = damage; damage = function (bb, cr, d, src, soft) { if (src === t) d = Math.min(d, EQ.oursCap * waveHp()); return sv.call(this, bb, cr, d, src, soft); };
+    try { return f.apply(this, arguments); } finally { damage = sv; } }; }
+// 4 · les formes du niveau 5
+if (EQ.f5) { const base = stat; stat = function (t, b) { const o = base.apply(this, arguments); if (t && t.f5 && EQ.f5[t.f5]) o.dmg *= EQ.f5[t.f5]; return o; }; }
+if (EQ.f5grow) { const base = upCost; upCost = function (t) { const c = base.apply(this, arguments);
+    try { if (t && t.lvl === 4 && !t.f5) { const b = G.b.find(q => q.grid && q.grid.includes(t)); if (b && window.f5Offer && window.f5Offer(b, t)) { const n = b.grid.filter(u => u && u.f5).length; return Math.round(c / [1, 1.5, 2, 3][Math.min(3, n)] * Math.pow(EQ.f5grow, n)); } } } catch (e) {}
+    return c; }; }
+if (EQ.splash) { const base = stat; stat = function (t, b) { const o = base.apply(this, arguments); if (t && t.type === 'cannon' && o.splash) o.splash *= EQ.splash; return o; }; }
+if (EQ.resMin) { const base = step; step = function (dt) { const r = base.apply(this, arguments);
+    try { for (const b of G.b) { if (!b || !b.creeps) continue; for (const cr of b.creeps) if (cr._res > G.t && cr._resChk !== cr._res) { cr._resChk = cr._res; if ((cr._res - RES157.after) - (cr._cc0 || 0) < EQ.resMin) cr._res = 0; } } } catch (e) {}
+    return r; }; }
+/* ===== /module ÉQUILIBRE ===== */
+
+/* ===== prototype VARIÉTÉ (agent variété, 22/11) : la grotte qui s'ouvre, les bêtes noires, des bots qui s'adaptent ===== */
+// Tout est derrière des drapeaux : window.VARS.grotte / .betes / .maze / .adapt (lus à chaque appel, donc réglables avant startSolo).
+const VARS = window.VARS = Object.assign({ grotte: false, betes: false, maze: false, adapt: false, adaptSeats: null, gW: 0, log: false }, window.VARS || {});
+const VLOG = window.VLOG = { leaks: [], gate: null };
+
+/* ------------------------------------------------------------ 1 · LA GROTTE : à la moitié de la partie, une deuxième entrée s'ouvre sur le côté */
+// la case de la grotte (gauche ou droite, rangée 3 à 9), tirée à chaque partie
+const varGateXY = () => { const g = G.gateB == null ? SPAWN_B : G.gateB; return [g % COLS, (g / COLS) | 0]; };
+function varGateWave() { return VARS.gW || (G.quick ? 6 : 11); }
+function varOpenGate() {
+  const cand = []; for (let r = 3; r <= 9; r++) { cand.push(idx(0, r)); cand.push(idx(COLS - 1, r)); }
+  // la case libre sur le plus de terrains (on ne casse rien si on peut l'éviter), au hasard parmi les meilleures
+  const score = i => G.b.filter(b => b.alive && !b.grid[i] && !(b.ob && obBlocks(b.ob[i]))).length;
+  const best = Math.max(...cand.map(score)), pool = cand.filter(i => score(i) === best);
+  G.gateB = pool[(Math.random() * pool.length) | 0]; G.gates = 2; G.varGateT = G.t; G.varRefundW = G.wave + 1;
+  for (const b of G.b) { if (!b.alive) continue; varCarve(b, G.gateB); b.dist = bfs(b.grid); }
+  VLOG.gate = { t: Math.round(G.t), cell: G.gateB };
+  if (!G.quiet) try { fouSay('La <b>grotte</b> s’est ouverte ! La moitié des marcheurs arrive maintenant par le côté. Pendant cette vague, ce que tu revends est remboursé en entier.', { dur: 5200 }); } catch (e) {}
+}
+// libère la case de la grotte et, si elle est enfermée, ouvre un couloir droit vers l'intérieur (tout est remboursé en entier)
+function varCarve(b, g) {
+  const gc = g % COLS, gr = (g / COLS) | 0, dc = gc === 0 ? 1 : -1; let c = gc;
+  const refund = i => { const t = b.grid[i]; if (!t) return; if (isChef(t.type)) return false; b.gold += t.spent || 0; b.grid[i] = null; return true; };
+  if (b.ob && obBlocks(b.ob[g])) b.ob[g] = 0;
+  refund(g);
+  for (let n = 0; n < COLS; n++) { const d = bfs(b.grid); if (d[idx(c, gr)] >= 0) return; c += dc; if (c < 0 || c >= COLS) return; const i = idx(c, gr); if (b.ob && obBlocks(b.ob[i])) b.ob[i] = 0; refund(i); }
+}
+// les marcheurs qui viennent de la grotte entrent par sa case (le jeu les plaçait toujours à gauche, rangée 4)
+{ const base = spawnCreep; spawnCreep = function (b, it) {
+    const cr = base.apply(this, arguments);
+    try { if (cr && G.gateB != null && cr.tgt === SPAWN_B && !(it && it.at)) { const [gc, gr] = varGateXY(); cr.tgt = G.gateB; cr.x = gc === 0 ? -0.4 : COLS + 0.4; cr.y = gr + 0.5 + (Math.random() - 0.5) * 0.2; } } catch (e) {}
+    return cr; }; }
+// pendant la vague qui suit l'ouverture, revendre rembourse tout
+{ const base = sell; sell = function (k, t) { const b = G.b[k], full = G.varRefundW && G.wave <= G.varRefundW && t && t.spent; const r = base.apply(this, arguments); if (full) b.gold += t.spent - Math.floor(t.spent * 0.6); return r; }; }
+{ const base = step; step = function (dt) {
+    const r = base.apply(this, arguments);
+    try { if (VARS.grotte && G.jt && G.running && !G.ended && !G.varGateDone) {
+        const w = varGateWave();
+        if (!G.varGateSaid && G.wave >= w - 1 && G.wave < w) { G.varGateSaid = true; if (!G.quiet) try { fouSay('Tu entends ? La paroi du côté se fissure… À la prochaine vague, une <b>grotte</b> va s’ouvrir.', { dur: 4200 }); } catch (e) {} }
+        if (G.wave >= w) { G.varGateDone = true; varOpenGate(); } } } catch (e) { VLOG.err = String(e); }
+    return r; }; }
+
+/* ------------------------------------------------------------ 2 · LES BÊTES NOIRES : un bestiaire du soir (2 traits sur 3), et chaque tour a une proie et une bête noire */
+const VTR = { blind: { n: 'blindées', say: 'les flèches rebondissent, les canons les brisent' }, vol: { n: 'volantes', say: 'elles passent au-dessus du labyrinthe, et les canons ne les touchent pas' }, rapide: { n: 'rapides', say: 'sans givre, elles filent' } };
+function varPair() { if (!G.varPair && VARS.pairIdx != null) { const P = [['blind', 'vol'], ['blind', 'rapide'], ['vol', 'rapide']]; G.varPair = P[VARS.pairIdx % 3].slice(); }
+  if (!G.varPair) { const all = ['blind', 'vol', 'rapide'], drop = (Math.random() * 3) | 0; G.varPair = all.filter((x, i) => i !== drop); if (Math.random() < 0.5) G.varPair.reverse(); } return G.varPair; }
+// le trait de la vague w : à partir de la vague 6 (4 en partie rapide), le motif A, B, normale, A, B, normale…
+function varTrait(w) {
+  if (!VARS.betes || !G || !G.jt) return '';
+  const start = G.quick ? 5 : 8; if (w < start) return '';
+  try { const e = progAt(w); if (e && e.k && EV[e.k] && EV[e.k].mod) return ''; } catch (err) {}
+  const p = varPair();
+  if (VARS.phase) { const m = Math.floor((w - start) / 3) % 3; return m === 2 ? '' : p[m]; }  // des saisons de 3 vagues : A A A, B B B, 3 normales…
+  const m = (w - start) % 3; return m === 2 ? '' : p[m];
+}
+window.varTrait = varTrait;
+{ const base = spawnCreep; spawnCreep = function (b, it) {
+    const cr = base.apply(this, arguments);
+    try { if (cr && it && it.wave && !it.at) { const tr = varTrait(G.wave);
+        if (VARS.sharp) { if (tr === 'blind') { cr.tr = tr; cr.hp *= 0.9; cr.max = cr.hp; } else if (tr === 'vol' && !cr.fly) { cr.fly = true; cr.hp *= 0.75; cr.max = cr.hp; if (cr.tgt !== SPAWN) { cr.x = 4.5; cr.y = -0.4; cr.tgt = SPAWN; } cr.tr = tr; } else if (tr === 'rapide') { cr.speed *= 1.7; cr.hp *= 0.75; cr.max = cr.hp; cr.tr = tr; } }
+        else if (tr === 'blind') { cr.armor = (cr.armor || 0) + 2 + Math.floor(G.wave / 4); cr.hp *= 0.85; cr.max = cr.hp; cr.tr = tr; }
+        else if (tr === 'vol' && !cr.fly && (G._vf = !G._vf)) { cr.fly = true; cr.hp *= 0.7; cr.max = cr.hp; if (cr.tgt !== SPAWN) { cr.x = 4.5; cr.y = -0.4; cr.tgt = SPAWN; } cr.tr = tr; }
+        else if (tr === 'rapide') { cr.speed *= 1.55; cr.hp *= 0.65; cr.max = cr.hp; cr.tr = tr; } }
+      if (VARS.betes && cr && it && !it.wave && it.kind === 'knight') cr.armor = Math.max(cr.armor || 0, 3 + Math.floor(G.t / 60));
+    } catch (err) {}
+    return cr; }; }
+// le Canon ne touche pas ce qui vole ; la Baliste perce la moitié de l'armure ; le Tir double frappe plus fort ce qui vole
+{ const base = damage; damage = function (b, cr, dmg, src, soft) {
+    if (VARS.betes && src && cr) {
+      if (src.type === 'cannon' && cr.fly) return;
+      if (VARS.sharp && cr.tr === 'blind' && (src.type === 'arrow' || src.type === 'ballista')) { const a = Array.from(arguments); a[2] = dmg * (src.type === 'ballista' ? 0.6 : 0.3); return base.apply(this, a); }
+      if (src.type === 'ballista' && cr.armor && !soft) { const a = Array.from(arguments); a[2] = dmg + Math.min(dmg - 1, cr.armor) * 0.5; return base.apply(this, a); }
+      if (src.type === 'arrow' && src.evo === 'double' && cr.fly) { const a = Array.from(arguments); a[2] = dmg * 1.5; return base.apply(this, a); }
+    }
+    return base.apply(this, arguments); }; }
+{ const base = launch; launch = function (b, t, st, target, real, x, y) {
+    if (VARS.betes && t && t.type === 'cannon' && target && target.fly) { const g = inRange(b, x, y, st.range).find(c => !c.fly); if (!g) return; target = g; }
+    return base.call(this, b, t, st, target, real, x, y); }; }
+// le Fou annonce le bestiaire au début, puis chaque vague à trait une vague à l'avance
+{ const base = updateUI; updateUI = function () { const r = base.apply(this, arguments);
+    try { if (VARS.betes && G.running && G.jt && G._wv !== G.wave) { G._wv = G.wave; const p = varPair();
+        if (G.wave === 1) fouSay(`Ce soir, le bestiaire : des <b>${VTR[p[0]].n}</b> et des <b>${VTR[p[1]].n}</b>.`, { dur: 4200 });
+        else { const nx = varTrait(G.wave + 1); if (nx) fouSay(`Prochaine vague : des <b>${VTR[nx].n}</b> ! ${VTR[nx].say}.`, { dur: 3800 }); } } } catch (e) {}
+    return r; }; }
+// les fuites, notées par trait (pour les bots qui s'adaptent, et pour la mesure)
+{ const base = leak; leak = function (b, cr) { try { (b.vleak = b.vleak || []).push({ t: G.t, s: cr.from >= 0 ? 'S' : 'W', tr: cr.tr || (cr.fly ? 'vol' : cr.armor >= 4 ? 'blind' : cr.speed >= 1.6 ? 'rapide' : ''), n: cr.lives || 1 }); } catch (e) {} return base.apply(this, arguments); }; }
+// les envois des bots : une fois sur deux, ce qui gêne le plus leur voisin
+function varWeak(b) { const o = { arc: 0, can: 0, giv: 0, n: 0 }; for (const t of b.grid) { if (!t || t.type === 'wall' || isChef(t.type)) continue; o.n++; if (t.type === 'arrow' || t.type === 'ballista') o.arc++; else if (t.type === 'cannon') o.can++; else o.giv++; } const n = Math.max(1, o.n); return { arc: o.arc / n, can: o.can / n, giv: o.giv / n }; }
+{ const base = send; send = function (k, kind) {
+    try { const from = G.b[k]; if (VARS.betes && from && from.bot && S[kind] && !S[kind].hb && !S[kind].boss && Math.random() < 0.5) {
+        const tk = nextAlive(k); if (tk >= 0) { const w = varWeak(G.b[tk]); let best = null, bs = 1.2;
+          for (const key in S) { const s = S[key]; if (s.hb || s.boss || !jtSendOpen(key) || s.cost > from.gold) continue; let sc = 1;
+            if (s.armor && w.arc > 0.5) sc *= 1 + w.arc * 1.5; if (s.fly && w.can > 0.3) sc *= 1 + w.can * 2; if ((s.noSlow || s.speed >= 1.4) && w.giv < 0.12) sc *= 1.6; sc *= 0.9 + Math.min(0.4, s.cost / 400);
+            if (sc > bs) { bs = sc; best = key; } }
+          if (best) kind = best; } } } catch (e) {}
+    return base.call(this, k, kind); }; }
+
+/* ------------------------------------------------------------ 3 · DES BOTS QUI S'ADAPTENT (pour pouvoir mesurer) */
+const VTPL = []; for (const r of [2, 4, 6, 8, 10]) { const right = (r / 2) % 2 === 1; for (let i = 0; i < 8; i++) VTPL.push([right ? i : 8 - i, r]); }
+// a) le labyrinthe : le bot pose le mur qui allonge le plus le chemin (depuis toutes les entrées), au lieu d'un plan fixe de 26 cases
+function varMazeGain(b) {
+  const sp = spawnsOf(b), cur = sp.reduce((s, x) => s + Math.max(0, b.dist[x]), 0); let best = null, bs = cur;
+  for (let i = 0; i < COLS * ROWS; i++) { if (b.grid[i]) continue; const c = i % COLS, r = (i / COLS) | 0; if (buildReason(b, c, r)) continue;
+    b.grid[i] = { type: 'wall' }; const d = bfs(b.grid); b.grid[i] = null; let s = 0, ok = true; for (const x of sp) { if (d[x] < 0) { ok = false; break; } s += d[x]; }
+    // à gain égal, la case qui touche le plus de chemin (une tour y tirera mieux)
+    if (ok && s > bs) { bs = s; best = [c, r]; } }
+  return best ? { c: best[0], r: best[1], gain: bs - cur } : null;
+}
+// b) la tour qu'il faut : une part visée par type, selon le bestiaire annoncé et ce qui a fui récemment
+function varWant(b) {
+  const w = { arrow: 0.5, cannon: 0.3, frost: 0.2 }, inf = !VARS.infoSeats || VARS.infoSeats.includes(b.k);
+  if (VARS.betes && inf) { for (const tr of varPair()) { if (tr === 'vol') { w.arrow += 0.25; w.cannon -= 0.1; } if (tr === 'blind') { w.cannon += 0.25; w.arrow -= 0.1; } if (tr === 'rapide') w.frost += 0.2; }
+    for (let x = G.wave + 1; x <= G.wave + 2; x++) { const tr = varTrait(x); if (tr === 'vol') w.arrow += 0.1; if (tr === 'blind') w.cannon += 0.1; if (tr === 'rapide') w.frost += 0.1; } }
+  if (inf) for (const L of (b.vleak || [])) if (G.t - L.t < 50) { if (L.tr === 'vol') w.arrow += 0.08 * L.n; if (L.tr === 'blind') w.cannon += 0.08 * L.n; if (L.tr === 'rapide') w.frost += 0.08 * L.n; }
+  const s = w.arrow + w.cannon + w.frost; for (const k in w) w[k] = Math.max(0.05, w[k] / s); return w;
+}
+const varFam = t => t.type === 'arrow' || t.type === 'ballista' ? 'arrow' : t.type === 'cannon' ? 'cannon' : 'frost';
+function varShare(b) { const o = { arrow: 0, cannon: 0, frost: 0 }; let n = 0; for (const t of b.grid) { if (!t || t.type === 'wall' || isChef(t.type)) continue; const v = t.spent || 1; o[varFam(t)] += v; n += v; } for (const k in o) o[k] = n ? o[k] / n : 0; return o; }
+function varNeed(b) { const w = varWant(b), s = varShare(b); let best = 'arrow', bd = -9; for (const k in w) { const d = w[k] - s[k]; if (d > bd) { bd = d; best = k; } } return best; }
+const varAdapt = b => VARS.adapt && b.bot && (!VARS.adaptSeats || VARS.adaptSeats.includes(b.k));
+{ const base = aiBuild; aiBuild = function (k) {
+    const me = G.b[k]; if (!me || !me.jt) return base.apply(this, arguments);
+    const all = towersOf(me), sh = all.filter(t => t.type !== 'wall'), walls = all.filter(t => t.type === 'wall');
+    // le labyrinthe : pour tous les bots si VARS.maze (plus de plan fixe)
+    if (VARS.maze && sh.length >= 2 && me.gold >= T.wall.cost) {
+      // d'abord un serpentin (5 rangées de murs, passages alternés), puis le mur qui allonge le plus
+      const tp = VTPL.find(([c, r]) => !me.grid[idx(c, r)] && !buildReason(me, c, r));
+      if (tp && walls.length < sh.length * 1.5 + 4) { if (build(k, 'wall', tp[0], tp[1]) === '') return true; }
+      const m = varMazeGain(me);
+      if (m && m.gain >= 1 && (walls.length < sh.length * 1.5 + 4 || m.gain >= 4)) { if (build(k, 'wall', m.c, m.r) === '') return true; }
+    }
+    if (!varAdapt(me)) {
+      if (VARS.maze && !walls.length) { // plus de mur à convertir : une tour neuve à côté du chemin, comme le ferait un joueur
+        const ty = pick({ arrow: 5, cannon: 3, frost: sh.filter(t => t.type === 'frost').length < 3 ? 2 : 0 });
+        if (me.gold >= T[ty].cost && Math.random() < 0.5) { const sp = varSpot(me); if (sp && build(k, ty, sp[0], sp[1]) === '') return true; } }
+      return base.apply(this, arguments);
+    }
+    if (sh.length < 2 || (me.gold > 250 && Math.random() < 0.4)) return base.apply(this, arguments);
+    const need = varNeed(me);
+    if (VARS.recon && (!VARS.infoSeats || VARS.infoSeats.includes(k)) && me._rcW !== G.wave) { const w = varWant(me), sh2 = varShare(me);
+      if (w[need] - sh2[need] > 0.12) { let over = null, od = 0; for (const f in w) { const d = sh2[f] - w[f]; if (d > od) { od = d; over = f; } }
+        const victim = over && sh.filter(t => !isChef(t.type) && varFam(t) === over && t.lvl <= 3).sort((a, b) => a.lvl - b.lvl)[0];
+        if (victim) { me._rcW = G.wave; sell(k, victim); const e = build(k, need, victim.c, victim.r); if (e === '') { me._rcN = (me._rcN || 0) + 1; return true; } } } }
+    // convertir un mur, en priorité celui qui voit le plus de chemin
+    if (walls.length) { const cost = convertCost(need); if (me.gold < cost) return false; const wt = varBestCell(me, walls.map(t => [t.c, t.r])); const t = me.grid[idx(wt[0], wt[1])]; return convert(k, t, need); }
+    // sinon : une tour neuve sur une case libre au bord du chemin, ou la montée de niveau d'une tour du type qu'il faut
+    const ups = sh.filter(t => !isChef(t.type) && t.lvl < maxLvl(me, t.type) && varFam(t) === need).sort((a, b) => a.lvl - b.lvl);
+    const sp = varSpot(me);
+    if (sp && (!ups.length || ups[0].lvl >= 2 || Math.random() < 0.4) && me.gold >= T[need].cost) return build(k, need, sp[0], sp[1]) === '';
+    const up = ups[0] || sh.filter(t => !isChef(t.type) && t.lvl < maxLvl(me, t.type)).sort((a, b) => a.lvl - b.lvl)[0];
+    if (up) { const ev = up.lvl === 2 && EVO[up.type] ? evoOffer(k, idx(up.c, up.r), up.type)[Math.random() < 0.5 ? 0 : 1] : (up.lvl === 2 && JT_FORMS[up.type] ? varForm(me, up) : ''); return upgrade(k, up, ev) === ''; }
+    return base.apply(this, arguments);
+  }; }
+// la forme du niveau 3 de l'Archer : Baliste contre les blindés, Tir double contre les volants
+function varForm(b, t) { const f = JT_FORMS[t.type]; if (!f) return ''; if (t.type === 'arrow' && VARS.betes && (!VARS.infoSeats || VARS.infoSeats.includes(b.k))) { const p = varPair(); if (p.includes('blind') && !p.includes('vol')) return 'ballista'; if (p.includes('vol') && !p.includes('blind')) return 'double'; } return f[Math.random() < 0.5 ? 0 : 1]; }
+// la case libre, au bord du chemin, qui ne raccourcit pas le chemin et voit le plus de chemin
+function varSpot(b) {
+  const sp = spawnsOf(b), cur = sp.reduce((s, x) => s + Math.max(0, b.dist[x]), 0), route = new Set(sp.flatMap(x => pathCells(b, x))), out = [];
+  for (let i = 0; i < COLS * ROWS; i++) { if (b.grid[i] || route.has(i)) continue; const c = i % COLS, r = (i / COLS) | 0; if (buildReason(b, c, r)) continue;
+    b.grid[i] = { type: 'wall' }; const d = bfs(b.grid); b.grid[i] = null; let s = 0, ok = true; for (const x of sp) { if (d[x] < 0) { ok = false; break; } s += d[x]; } if (!ok || s < cur) continue; out.push([c, r]); }
+  return out.length ? varBestCell(b, out) : null;
+}
+function varBestCell(b, cells) { const route = spawnsOf(b).flatMap(x => pathCells(b, x)); let best = cells[0], bn = -1;
+  for (const [c, r] of cells) { let n = 0; for (const j of route) { const dc = j % COLS - c, dr = ((j / COLS) | 0) - r; if (dc * dc + dr * dr <= 5) n++; } n += Math.random() * 0.5; if (n > bn) { bn = n; best = [c, r]; } } return best; }
+window.varWant = varWant; window.varShare = varShare;
+
+// version tranchée : le givre est deux fois plus fort sur les rapides
+{ const base = slow; slow = function (cr, f, dur) { if (VARS.sharp && cr && cr.tr === 'rapide') f = f * 0.6; return base.call(this, cr, f, dur); }; }
+
+// ===== Prototype « bots à caractère » (agent JOUEUR) — prélude chargé avant inst.js =====
+// Trois caractères de bot, reconnaissables à l'écran sans interface :
+//  - Bâtisseur : long labyrinthe en serpentin, défense épaisse, n'envoie presque rien puis lâche de GROS coups rares (créatures chères).
+//  - Harceleur : labyrinthe court, défense juste suffisante, envoie par SALVES de 5 à 10 créatures identiques.
+//  - Rusé : regarde son voisin ; envoie ce contre quoi il est faible, et frappe quand il est déjà en difficulté.
+// Tous : « vigilance » (ils regardent ce qui arrive dans leur file et renforcent avant), et défense qui s'adapte à ce qu'ils reçoivent.
+// Le siège G.me n'est jamais touché (c'est le joueur, ou son remplaçant scripté).
+const STY = {}, SINC = {}; let SCUR = -1;
+const SROWS = spec => { const o = []; for (const [r, right] of spec) { const cs = right ? [0, 1, 2, 3, 4, 5, 6, 7] : [8, 7, 6, 5, 4, 3, 2, 1]; cs.forEach(c => o.push([c, r])); } return o; };
+const SPLANS = { long: SROWS([[10, true], [8, false], [6, true], [4, false], [2, true]]), court: SROWS([[8, true], [4, false]]) };
+const STYLES = {
+  batisseur: { plan: 'long', wantMul: 1.0, vig: 1.0, firstSend: 120, purse: () => 110 + Math.random() * 90, pickKind: 'masse', bias: { frost: 1.6, cannon: 1.3, arrow: 0.8 } },
+  harceleur: { plan: null, wantMul: 0.9, vig: 0.8, firstSend: 0, purse: () => 40 + Math.random() * 50, pickKind: 'salve', bias: { arrow: 1.3, frost: 0.6 } },
+  ruse: { plan: null, wantMul: 1.0, vig: 1.0, firstSend: 0, purse: () => 35 + Math.random() * 45, pickKind: 'weak', bias: {} },
+};
+const SORDER = (typeof STYLE_ORDER !== 'undefined') ? STYLE_ORDER : ['batisseur', 'harceleur', 'ruse'];
+const BOTSTYLE_INIT = () => { let i = (typeof ROT === 'number' ? ROT : 0); G.b.forEach(b => { if (b.k === G.me || !b.bot) return; const s = SORDER[i++ % SORDER.length]; if (STYLES[s]) { STY[b.k] = { s, ...STYLES[s], next: 0 }; STY[b.k].next = STY[b.k].purse(); } SINC[b.k] = {}; }); };
+// ce que chaque bot a reçu récemment (pour adapter sa défense)
+{ const base = spawnCreep; spawnCreep = function (b, it) { const cr = base.apply(this, arguments);
+    try { if (cr && it && it.from >= 0 && SINC[b.k]) { const m = SINC[b.k]; const s = S[it.kind] || {}; const tag = s.armor ? 'arm' : (s.count || it.kind === 'brood' || it.kind === 'slime') ? 'small' : (s.speed >= 1.4) ? 'fast' : s.fly ? 'fly' : (s.hp >= 300) ? 'big' : 'plain';
+        for (const k in m) m[k] *= 0.97; m[tag] = (m[tag] || 0) + 1; } } catch (e) {}
+    return cr; }; }
+// le choix des tours : les poids du bot dépendent de son caractère et de ce qu'il reçoit
+{ const base = pick; pick = function (w) { const st = SCUR >= 0 && STY[SCUR]; if (!st || !w || !('arrow' in w) || !('cannon' in w)) return base(w);
+    const n = Object.assign({}, w); for (const k in st.bias) if (k in n) n[k] *= st.bias[k];
+    const m = SINC[SCUR] || {}, tot = Object.values(m).reduce((a, b) => a + b, 0) || 1, sh = k => (m[k] || 0) / tot;
+    if ('cannon' in n) n.cannon *= 1 + 2.5 * (sh('arm') + sh('small')); if ('bombard' in n) n.bombard *= 1 + 2 * (sh('arm') + sh('big'));
+    if ('tesla' in n) n.tesla *= 1 + 2.5 * sh('arm'); if ('frost' in n) n.frost = Math.max(n.frost, 0.5) * (1 + 3 * sh('fast'));
+    if ('ballista' in n) n.ballista *= 1 + 2 * (sh('fly') + sh('big')); n.arrow *= 1 + 1.5 * sh('fly');
+    return base(n); }; }
+// le labyrinthe propre au caractère
+{ const base = aiBuild; aiBuild = function (k) { const st = STY[k]; SCUR = st ? k : -1;
+    if (!st || !st.plan) { try { return base.apply(this, arguments); } finally { SCUR = -1; } }
+    const P0 = AI_PLAN.slice(); AI_PLAN.length = 0; SPLANS[st.plan].forEach(p => AI_PLAN.push(p));
+    try { return base.apply(this, arguments); } finally { AI_PLAN.length = 0; P0.forEach(p => AI_PLAN.push(p)); SCUR = -1; } }; }
+// faiblesse du voisin : quelle créature il tient le moins bien
+function sWeak(tb) { const o = { arc: 0, pou: 0, giv: 0, n: 0 };
+  for (const t of tb.grid) { if (!t || t.type === 'wall') continue; o.n++; if (t.type === 'arrow' || t.type === 'ballista') o.arc++; else if (t.type === 'cannon' || t.type === 'bombard' || t.type === 'tesla') o.pou++; else if (t.type === 'frost') o.giv++; }
+  const n = o.n || 1; return { arc: o.arc / n, pou: o.pou / n, giv: o.giv / n, long: tb.dist && tb.dist[SPAWN] + 1 > 30 }; }
+function sKind(k, mode, gold) { const tk = nextAlive(k), tb = G.b[tk], w = sWeak(tb); let best = null, bs = -1;
+  for (const key in S) { const s = S[key]; if (s.hb || !jtSendOpen(key) || s.cost > gold) continue; if (s.boss && mode !== 'big') continue;
+    let sc = 1;
+    if (mode === 'big') sc = s.cost;
+    else if (mode === 'weak') { if (s.armor) sc *= 1 + 3 * Math.max(0, 0.3 - w.pou) * 3; if (s.count || key === 'brood' || key === 'slime') sc *= 1 + 3 * Math.max(0, 0.25 - w.pou) * 3;
+      if (s.speed >= 1.4 || s.noSlow) sc *= 1 + 3 * Math.max(0, 0.2 - w.giv) * 3; if (s.fly && !w.long) sc *= 0.6; if (s.fly && w.long) sc *= 1.8; sc *= 0.6 + Math.min(0.8, s.cost / 150); }
+    else if (mode === 'masse') { sc = s.cost <= gold / 12 ? 1 + s.cost / 20 : 0.05; }
+    else { sc = s.cost <= gold / 5 ? 1 + s.cost / 30 : 0.1; }
+    sc *= 0.85 + Math.random() * 0.3; if (sc > bs) { bs = sc; best = key; } }
+  return best; }
+function sSend(k) { const me = G.b[k], st = STY[k], tk = nextAlive(k); if (tk < 0 || G.t < st.firstSend) return false;
+  const tb = G.b[tk], trouble = tb.creeps.length > 8 || G.t - (tb.leakT || -99) < 5;
+  const go = me.gold >= st.next || (st.pickKind === 'weak' && trouble && me.gold >= st.next * 0.5);
+  if (!go) return false;
+  const kind = sKind(k, st.pickKind, me.gold); if (!kind) { st.next = st.purse(); return false; }
+  let n = 0; const cap = st.pickKind === 'big' ? 3 : st.pickKind === 'masse' ? 20 : 10;
+  while (n < cap && me.gold >= S[kind].cost && send(k, kind)) n++;
+  st.next = st.purse() * (1 + G.t / 600); return n > 0; }
+let SNOSEND = -1;
+{ const base = send; send = function (k) { if (k === SNOSEND) return false; return base.apply(this, arguments); }; }
+{ const base = aiThink; aiThink = function (k) { const st = STY[k]; if (!st) return base.apply(this, arguments);
+    const me = G.b[k]; if (!me.alive || nextAlive(k) < 0) return base.apply(this, arguments);
+    // la défense voulue : celle du bot normal × caractère, + ce qui arrive dans sa file (vigilance)
+    const threat = me.queue.reduce((s, q) => s + (S[q.kind] ? S[q.kind].cost : 6), 0) + me.creeps.filter(c => !c.dead && c.from >= 0).length * 4;
+    const leakB = G.t - me.leakT < 6 ? 30 : 0, want = (18 + G.t * 0.7 * G.D.ai) * st.wantMul + leakB + threat * st.vig;
+    const D = G.D; G.D = Object.assign({}, D, { ai: Math.max(0.01, (want - 18 - leakB) / Math.max(1, 0.7 * G.t)) }); SNOSEND = k;
+    // sur un long labyrinthe, plus de créatures restent sur le terrain sans danger : le seuil « plus de 7 créatures = danger » grandit avec le chemin
+    const real = me.creeps, lim = Math.round(7 * Math.max(1, (me.dist ? me.dist[SPAWN] : 36) / 36)); if (real.length > 7 && real.length <= lim) me.creeps = real.slice(0, 7);
+    const g0 = me.gold; try { base.apply(this, arguments); } finally { G.D = D; SNOSEND = -1; me.creeps = real; }
+    if (me.gold < g0) return;            // il a construit / amélioré / acheté : son tour est fini
+    const def = towersOf(me).reduce((s, t) => s + t.spent, 0);
+    if (def < want || jtBotSaving(me)) return;
+    if (sSend(k)) return;
+    if (st.s === 'batisseur' && me.gold > st.next + 40) aiBuild(k);
+  }; }
+
+/* ===== PLAN COMMUN : ce qui n'existait dans aucun module ===== */
+window.PM = { ren: { win: 0, sw: 0, swL: 0 }, pow: { n: 0, nL: 0 }, zone: { inL: 0, leakL: 0 }, err: null };
+const plNearExit = (b, c, d) => c.fly ? c.y >= ROWS - (d - 0.5) : (c.cell >= 0 && b.dist && b.dist[c.cell] >= 0 && b.dist[c.cell] <= d);
+// 1 · bots : une tour avant deux murs (2 premières minutes) ; la tour choisie d'abord, l'or ensuite
+let PL_CUR = -1;
+{ const base = aiBuild; aiBuild = function (k) { const me = G.b[k]; PL_CUR = k;
+    try {
+      if (PLAN.towerFirst && me && me.jt && G.t < 120) { const all = towersOf(me), sh = all.filter(t => t.type !== 'wall'), walls = all.filter(t => t.type === 'wall');
+        if (sh.length >= 2 && walls.length >= 2 * sh.length) { const ty = pick({ arrow: 5, cannon: 3, frost: sh.filter(t => t.type === 'frost').length < 3 ? 2 : 0 });
+          if (me.gold < convertCost(ty)) return false; return !!convert(k, walls[(Math.random() * walls.length) | 0], ty); } }
+      if (PLAN.chefRush && me && me.jt && G.t > 150 && !jtChefBuiltType(me) && Math.random() < 0.5) { const f = me.grid.filter(u => u && u.type === 'frost' && u.lvl < 4).sort((a, c) => c.lvl - a.lvl)[0];
+        if (f && me.gold >= upCost(f)) { const ev = f.lvl === 2 ? (evoOffer(k, idx(f.c, f.r), 'frost')[0] || '') : ''; if (upgrade(k, f, ev) === '') return true; } }
+      return base.apply(this, arguments);
+    } finally { PL_CUR = -1; } }; }
+{ const base = pick; pick = function (w) { const b = PL_CUR >= 0 && G.b[PL_CUR];
+    if (PLAN.pickFirst && b && b.bot && G.t >= (PLAN.pickFrom || 0) && w && 'arrow' in w && 'cannon' in w) { if (b._want && w[b._want] > 0) return b._want; const r = base.apply(this, arguments); if (T[r] && T[r].cost > T.arrow.cost) b._want = r; return r; }
+    return base.apply(this, arguments); }; }
+{ const base = convert; convert = function (k, t, type) { const r = base.apply(this, arguments); const b = G.b[k]; if (r && b && b._want === type) b._want = ''; return r; }; }
+{ const base = build; build = function (k, type) { const r = base.apply(this, arguments); const b = G.b[k]; if (r === '' && b && b._want === type) b._want = ''; return r; }; }
+// 2 · la grotte : un marcheur sur N seulement
+{ const base = spawnCreep; spawnCreep = function (b, it) { const cr = base.apply(this, arguments);
+    try { if (cr && PLAN.grotte && PLAN.grotteShare > 2 && G.gateB != null && cr.tgt === G.gateB && !(it && it.at)) { b._gq = ((b._gq || 0) + 1) % (PLAN.grotteShare - 1);
+        if (b._gq !== 0) { cr.tgt = SPAWN; cr.x = 4.5 + (Math.random() - 0.5) * 0.2; cr.y = -0.4; } } } catch (e) { PM.err = String(e); }
+    return cr; }; }
+// 2 · les vagues après l'ouverture de la grotte sont un peu plus faibles (le chemin est plus court pour une partie des marcheurs)
+{ const base = spawnCreep; spawnCreep = function (b, it) { const cr = base.apply(this, arguments);
+    try { if (cr && it && it.wave) { let m = PLAN.waveMul || 1; if (PLAN.grotte && G.varGateDone && PLAN.postGate) m *= PLAN.postGate; if (m !== 1) { cr.hp *= m; cr.max = cr.hp; } } } catch (e) {}
+    return cr; }; }
+varGateWave = function () { return PLAN.gateWave || (G.quick ? (PLAN.gateWaveQ || 6) : 11); };
+// 2 · plus d'événements de carte
+{ const base = jtGen; jtGen = function (s) { const e = base.apply(this, arguments);
+    if (PLAN.noMapEv && e && ['eboul', 'feu', 'korrigans', 'crue', 'ruines'].includes(e.k)) e.k = rndOf(['rush', 'cohorte', 'gold']);
+    if (PLAN.noMapEv && e && e.vote) e.vote = null; return e; }; }
+// 3 · Renard : le terrier garde la sortie
+if (PLAN.renChef === 'sortie') { HM_V.renT.chefStep = (b, t) => {
+    const open = t._winEnd > G.t; if (!open && t.hmT2 > G.t) return;
+    const near = b.creeps.filter(c => !c.dead && c.y >= 0 && c.from >= 0 && c.from !== b.k && !c._ren && !c.hb && !(S[c.kind] && S[c.kind].boss) && plNearExit(b, c, PLAN.renZone || 3));
+    if (!near.length) { if (!open) t.hmT2 = G.t + .25; return; }
+    if (!open) { t._winEnd = G.t + (PLAN.renWin || 3); t.hmT2 = G.t + hmPer(PLAN.renEvery); t.kick = G.t; PM.ren.win++; b.rings.push({ x: 4.5, y: ROWS - 0.5, r0: .3, r1: 2.2, t: 3, ttl: 3, color: C.gold }); }
+    for (const cr of near) { const to = cr.from >= 0 && cr.from !== b.k && G.b[cr.from] && G.b[cr.from].alive ? cr.from : nextAlive(b.k);
+      b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: 1, t: .5, ttl: .5, color: C.gold, fill: true }); G.floats.push({ k: b.k, x: cr.x, y: cr.y - .5, txt: 'RENVOYÉ', color: C.gold, t: 1.1, ttl: 1.1 });
+      b.gold += cr.bounty | 0; cr.dead = true; cr.hxGone = true; if (cr._z) PM.zone.inL -= cr.lives || 1; cr._sw = 1; PM.ren.sw++; PM.ren.swL += cr.lives || 1;
+      if (to >= 0 && to !== b.k && S[cr.kind]) { try { const n = spawnCreep(G.b[to], { kind: cr.kind, from: b.k }); if (n) { n.max = Math.max(n.max, cr.max); n.hp = Math.max(1, cr.hp); n._ren = 1; } } catch (e) {} } } };
+  HM_CHF.hren.d = CHF.hren.d = TOWER_INFO.ch_hren = 'Le terrier garde la sortie : quand une créature envoyée par un rival arrive près de la sortie, il s’ouvre 3 s et avale toutes celles qui arrivent, puis les renvoie à leur envoyeur. Une fois toutes les ' + PLAN.renEvery + ' s.';
+  HM_CHF.hren.foe = CHF.hren.foe = 'Sa tanière te renvoie tes créatures quand elles arrivent à sa sortie.'; }
+// 3 · Renard : le pouvoir « avale la sortie » (3 s : ce qui arrive à la sortie repart à l'entrée)
+if (PLAN.renPow === 'sortie') {
+  { const base = jtCast; jtCast = function (k) { const b = G.b[k], em = b && b.jt && b.jt.em;
+      if (!em || em.k !== 'renard' || !b.alive) return base.apply(this, arguments);
+      if (em.cd > 0) return 'Pas encore prêt';
+      if (!b.creeps.some(c => !c.dead && c.y >= 0 && plNearExit(b, c, 3))) return 'Aucune créature près de la sortie';
+      em._winEnd = G.t + 3; em.cd = emCd(em); em.castT = G.t; b.jt.fx.push({ k: 'cast', em: em.k, x: em.c + .5, y: em.r + .5, r: emR(em) + .8, t: G.t });
+      b.rings.push({ x: 4.5, y: ROWS - 0.5, r0: .3, r1: 2.2, t: 3, ttl: 3, color: '#e8a07a' });
+      if (fxOn(k)) { sfx('cast'); jtCry(em.k); } return ''; }; }
+  { const base = jtAutoCast; jtAutoCast = function (b) { const em = b.jt.em; if (!em || em.k !== 'renard') return base.apply(this, arguments);
+      if (b.creeps.filter(c => !c.dead && c.y >= 0 && plNearExit(b, c, 3)).length >= 2) jtCast(b.k); }; }
+  { const base = step; step = function (dt) { const r = base.apply(this, arguments);
+      try { for (const b of G.b) { const em = b.alive && b.jt && b.jt.em; if (!em || !(em._winEnd > G.t)) continue;
+          for (const cr of b.creeps) if (!cr.dead && cr.y >= 0 && !cr.hb && !(S[cr.kind] && S[cr.kind].boss) && plNearExit(b, cr, 2)) { PM.pow.n++; PM.pow.nL += cr.lives || 1; if (cr._z) PM.zone.inL -= cr.lives || 1; cr._sw = 1; cr._z = 0;
+            b.rings.push({ x: cr.x, y: cr.y, r0: .1, r1: .6, t: .4, ttl: .4, color: '#e8a07a', fill: true }); Object.assign(cr, { x: 4.5 + (Math.random() - .5) * .2, y: -0.4, tgt: SPAWN, cell: -1, dir: 0, prog: 0 }); if (cr.fly) cr.y = -0.4; } } } catch (e) { PM.err = String(e); }
+      return r; }; } }
+// 4 · formes du niveau 3 : le Tir double frappe +50 % les volants (la Baliste perce la moitié de l'armure : dans le module ÉQUILIBRE)
+if (PLAN.formes3) { const base = damage; damage = function (b, cr, d, src, soft) { if (src && cr && src.type === 'arrow' && src.evo === 'double' && cr.fly) d *= 1.5; return base.call(this, b, cr, d, src, soft); }; }
+// 6 · V2 : le revenu d'un envoi n'est versé que si la créature a fait la moitié du chemin chez le voisin
+if (PLAN.envoi === 'chemin') {
+  { const base = send; send = function (k, kind) { const from = G.b[k], tk = nextAlive(k), s = S[kind], q0 = tk >= 0 ? G.b[tk].queue.length : 0, i0 = from && from.income; const r = base.apply(this, arguments);
+      if (r && s && tk >= 0) { from.income = i0; const q = G.b[tk].queue, n = s.count || 1; for (let i = q0; i < q.length; i++) if (q[i].from === k && q[i].kind === kind && q[i]._inc == null) q[i]._inc = s.inc / n; }
+      return r; }; }
+  { const base = spawnCreep; spawnCreep = function (b, it) { const cr = base.apply(this, arguments); if (cr && it && it._inc) { cr._inc = it._inc; cr._incFrom = it.from; cr._half = Math.max(2, ((b.dist && b.dist[SPAWN]) || 30) / 2); } return cr; }; }
+  { const base = step; step = function (dt) { const r = base.apply(this, arguments);
+      try { for (const b of G.b) for (const cr of b.creeps) if (cr._inc && !cr._paid && (cr.fly ? cr.y >= ROWS / 2 : cr.prog >= cr._half)) { cr._paid = 1; const f = G.b[cr._incFrom]; if (f && f.alive) f.income += cr._inc; } } catch (e) { PM.err = String(e); }
+      return r; }; } }
+// mesure seulement : chefs-d'œuvre muets
+if (PLAN.noChef) { const base = step; step = function (dt) { for (const b of G.b) for (const t of b.grid) if (t && /^ch_/.test(t.type)) { t.cd = 99; t.hmT = t.hmT2 = G.t + 99; t._winEnd = 0; } return base.apply(this, arguments); }; }
+// mesure : probabilité qu'une créature envoyée qui arrive près de la sortie fuie (pour estimer les vies sauvées par le terrier)
+{ const base = step; step = function (dt) { const r = base.apply(this, arguments);
+    try { for (const b of G.b) { if (!b.alive) continue; for (const c of b.creeps) if (!c.dead && !c._z && c.y >= 0 && c.from >= 0 && plNearExit(b, c, PLAN.renZone || 3)) { c._z = 1; PM.zone.inL += c.lives || 1; } } } catch (e) {}
+    return r; }; }
+{ const base = leak; leak = function (b, cr) { if (cr._z && !cr._sw) PM.zone.leakL += cr.lives || 1; return base.apply(this, arguments); }; }
+/* ===== /PLAN COMMUN ===== */
+
+/* ===== version 159 · la brèche : un adversaire peut ouvrir une deuxième entrée chez son voisin =====
+   Chaque terrain montre dès le début une porte de roche scellée sur un de ses bords (même place pour tous, tirée à chaque partie).
+   À partir de la vague 10 (6 en rapide), la carte « Brèche » apparaît dans Envoyer : 300 or (180 en rapide), une fois par joueur,
+   chez le voisin qu'on attaque, un terrain ne peut être brisé qu'une fois. La porte se fissure pendant une vague, puis s'ouvre pour
+   toute la partie : une créature sur trois arrive par là. Pas de réparation. Pendant la vague d'ouverture, revendre rembourse tout.
+   L'état voyage dans b.tech (bits 512 fissure, 1024 ouverte, 2048 déjà lancée ; la place de la porte dans les bits 12 à 16). */
+const BR = { crack: 512, open: 1024, used: 2048, sh: 12, waveL: 10, waveQ: 6, costL: 300, costQ: 180 };
+PLAN.grotte = false; VARS.grotte = false;
+const brCand = () => { const c = []; for (let r = 3; r <= 9; r++) { c.push(idx(0, r)); c.push(idx(COLS - 1, r)); } return c; };
+const brCost = () => (G && G.quick ? BR.costQ : BR.costL);
+const brWave = () => (G && G.quick ? BR.waveQ : BR.waveL);
+function brOn() { return !!(G && G.jt && G.b && G.gates !== 2 && !G.defi); }
+function brSay(html, dur) { try { FOU.q.length = 0; G._fouLock = 0; fouSay(html, { dur }); G._fouLock = G.t + dur / 1000; } catch (e) {} }
+{ const base = fouSay; fouSay = function () { if (G && G._fouLock && G.t < G._fouLock) return false; return base.apply(this, arguments); }; }
+function brSync() {
+  if (!G || !G.b) return; let gi = -1;
+  for (const b of G.b) { if (!b) continue; const t = b.tech | 0; const g = (t >> BR.sh) & 31; if (g) gi = g - 1; }
+  if (gi >= 0 && G.gates !== 2) G.gateB = brCand()[gi];
+  for (const b of G.b) { if (!b) continue; const t = b.tech | 0, was = !!b.brech, wasC = !!b.brCrack, wasU = !!b.brUsed;
+    b.brech = !!(t & BR.open); b.brCrack = !!(t & BR.crack) && !b.brech; b.brUsed = !!(t & BR.used);
+    if (b.brCrack && !wasC) b._brT = G.t;
+    if (G.quiet || !G.running) continue;
+    try {
+      if (b.k === G.me && b.brCrack && !wasC) { const by = G.b.find(q => q && q.k === b.brBy) || G.b[prevAlive(G.me)]; brSay(`<b>${esc(by ? by.name : 'Un rival')}</b> force ta brèche ! Elle s’ouvre à la prochaine vague.`, 4200); }
+      if (b.k === G.me && b.brech && !was) brSay('La <b>brèche</b> est ouverte : une créature sur trois passe par là. Pendant cette vague, ce que tu revends est remboursé.', 4600);
+      if (b.k === G.me && b.brUsed && !wasU) { const to = G.b[nextAlive(G.me)]; if (to) brSay(`Ta brèche s’ouvrira chez <b>${esc(to.name)}</b> à la prochaine vague.`, 3600); }
+    } catch (e) {}
+  }
+}
+function brAvail(b) {
+  if (!brOn() || !b || !b.alive || b.brUsed || G.wave < brWave()) return false;
+  const tk = nextAlive(b.k); if (tk < 0 || tk === b.k) return false; const to = G.b[tk];
+  return !!(to && to.alive && !to.brech && !to.brCrack);
+}
+function brLaunch(k) {
+  const from = G.b[k]; brSync(); if (!brAvail(from)) return 'x';
+  const tk = nextAlive(k), to = G.b[tk], c = brCost(); if (from.gold < c) return 'x';
+  from.gold -= c; from.tech = (from.tech | 0) | BR.used; to.tech = (to.tech | 0) | BR.crack; to.brAt = G.wave + 1; to.brBy = k;
+  brSync(); return '';
+}
+window.brLaunch = brLaunch;
+// la place de la porte, tirée au début de la partie (la case libre sur le plus de terrains)
+{ const base = newGame; newGame = function () { const r = base.apply(this, arguments);
+    try { if (brOn()) { const cand = brCand(), score = i => G.b.filter(b => b && !b.grid[i] && !(b.ob && obBlocks(b.ob[i]))).length, best = Math.max(...cand.map(score)), pool = cand.filter(i => score(i) === best), g = pool[(Math.random() * pool.length) | 0], gi = cand.indexOf(g);
+      for (const b of G.b) if (b) { b.tech = ((b.tech | 0) & ~(31 << BR.sh) & ~(BR.crack | BR.open | BR.used)) | ((gi + 1) << BR.sh); b.brech = b.brCrack = b.brUsed = false; b.brAt = 0; b.brRefundW = null; }
+      G.gateB = g; } } catch (e) {}
+    return r; }; }
+// l'action « BR » (passe par le réseau comme les autres actions)
+{ const base = applyAction; applyAction = function (k, a) { if (Array.isArray(a) && a[0] === 'BR') return brLaunch(k); return base.apply(this, arguments); }; }
+// l'ouverture, une vague après le lancement
+{ const base = step; step = function (dt) {
+    try { brSync(); } catch (e) {}
+    const r = base.apply(this, arguments);
+    try { if (brOn()) for (const b of G.b) { if (!b || !b.alive || !b.brAt || b.brech || G.wave < b.brAt) continue;
+        b.tech = ((b.tech | 0) | BR.open) & ~BR.crack; brSync(); varCarve(b, G.gateB); b.dist = bfs(b.grid); b.brRefundW = G.wave;
+        b.rings.push({ x: G.gateB % COLS ? COLS - 0.5 : 0.5, y: ((G.gateB / COLS) | 0) + 0.5, r0: .2, r1: 2.2, t: .7, ttl: .7, color: '#e6ddc8', fill: true }); G.shake = Math.max(G.shake || 0, 4); } } catch (e) {}
+    return r; }; }
+// pendant la vague d'ouverture, revendre rembourse tout
+{ const base = sell; sell = function (k, t) { const b = G.b[k], full = b && b.brRefundW != null && G.wave <= b.brRefundW && t && t.spent; const r = base.apply(this, arguments); if (full && !r) b.gold += t.spent - Math.floor(t.spent * 0.6); return r; }; }
+// la carte « Brèche » dans Envoyer, en premier
+const BR_ICO = (() => { const c = document.createElement('canvas'); c.width = 16; c.height = 14; const x = c.getContext('2d');
+  const R = (a, b, w, h, col) => { x.fillStyle = col; x.fillRect(a, b, w, h); };
+  R(2, 1, 12, 12, '#7d8a8f'); R(2, 1, 12, 2, '#a9b4b8'); R(2, 11, 12, 2, '#5f6b70'); R(3, 4, 3, 2, '#95a1a5'); R(10, 7, 3, 2, '#95a1a5');
+  R(8, 1, 1, 3, '#2b2420'); R(7, 4, 1, 3, '#2b2420'); R(8, 7, 1, 2, '#2b2420'); R(9, 9, 1, 4, '#2b2420'); R(9, 2, 1, 2, '#f2e6c8'); R(8, 5, 1, 2, '#f2e6c8');
+  return c.toDataURL(); })();
+{ const base = renderItems; renderItems = function () { const r = base.apply(this, arguments);
+    try { const items = $('items'), me = G.b[G.me];
+      if (G.mode === 'send' && !items.classList.contains('ghost') && brAvail(me)) { const to = G.b[nextAlive(G.me)];
+        if ((G._brShown || 0) < 4) { G._brShown = (G._brShown || 0) + 1; for (const d of [0, 60, 220]) setTimeout(() => { try { $('items').scrollLeft = 0; } catch (e) {} }, d); }
+        items.insertAdjacentHTML('afterbegin', `<button class="item snd v159br" type="button" data-breche="1"><img class="px ico" src="${BR_ICO}" width="16" height="14" style="--w:16;--h:14" alt="" draggable="false"><span class="nm">Brèche</span><span class="ct">${brCost()}</span><span class="tag">chez ${esc(to.name)}</span></button>`);
+        const btn = items.querySelector('.v159br'); if (btn && me.gold < brCost()) btn.classList.add('poor'); } } catch (e) {}
+    return r; }; }
+document.addEventListener('click', e => { const el = e.target && e.target.closest && e.target.closest('#items [data-breche]'); if (!el) return; e.preventDefault(); e.stopPropagation();
+  try { const me = G.b[G.me]; if (me.gold < brCost()) { toast('Pas assez d’or', 'bad'); try { sfx('err'); } catch (er) {} return; } const res = act(['BR']); if (res === 'x') { toast('Impossible pour l’instant', 'bad'); return; } try { sfx('send'); } catch (er) {} renderItems(); } catch (er) {} }, true);
+{ let lastKey = ''; const base = updateUI; updateUI = function () { const r = base.apply(this, arguments);
+    try { brSync(); const me = G.b[G.me], key = G.mode + '|' + brAvail(me) + '|' + (me && me.gold >= brCost()); if (G.mode === 'send' && key !== lastKey) { lastKey = key; renderItems(); } else if (G.mode !== 'send') lastKey = key; } catch (e) {}
+    return r; }; }
+// la porte de roche, dessinée sur chaque terrain tant qu'elle n'est pas ouverte : scellée, puis fissurée pendant la vague qui précède l'ouverture
+{ const prev = window.__jtDrawHook; window.__jtDrawHook = function (o) {
+    if (prev) prev(o);
+    const { b, items } = o; if (!b || !brOn() || G.gateB == null || b.brech) return;
+    const gc = G.gateB % COLS, gr = (G.gateB / COLS) | 0, left = gc === 0, x0 = left ? AX0 + 1 : AX0 + COLS * CS - 9, y0 = Math.round(AY0 + gr * CS + 2), H = CS - 4, crack = b.brCrack, k = crack ? Math.min(1, (G.t - (b._brT || G.t)) / 18) : 0;
+    items.push({ y: AY0 + (gr + 0.5) * CS, fx: x => {
+      const R = (a, c, w, h, col) => { x.fillStyle = col; x.fillRect(Math.round(a), Math.round(c), w, h); };
+      R(x0, y0, 8, H, '#76848a'); R(x0, y0, 8, 2, '#a3afb3'); R(x0 + (left ? 6 : 0), y0, 2, H, '#5d696e'); R(x0, y0 + H - 2, 8, 2, '#5d696e');
+      for (let i = 0; i < 3; i++) R(x0 + 1 + (i % 2) * 3, y0 + 4 + i * 6, 3, 1, '#93a0a4');
+      R(x0 + (left ? 0 : 6), y0 + 3, 2, 3, '#5b7a4e'); R(x0 + (left ? 1 : 5), y0 + H - 6, 2, 3, '#6a8a59');
+      if (crack) { const n = Math.round(3 + k * (H - 5)), glow = 0.55 + 0.45 * Math.sin(G.t * 7);
+        for (let i = 0; i < n; i++) { const cx = x0 + 3 + ((i >> 2) % 2 ? 1 : 0) + (i % 5 === 4 ? -1 : 0); R(cx, y0 + 2 + i, 1, 1, '#2b2420'); if (k > 0.6) { x.globalAlpha = glow; R(cx + 1, y0 + 2 + i, 1, 1, '#f2e6c8'); x.globalAlpha = 1; } }
+        if (k > 0.3) for (let i = 0; i < 3; i++) { const t = (G.t * 0.9 + i * 0.33) % 1; x.globalAlpha = 1 - t; R(x0 + 2 + i * 2, y0 + H * t, 1, 1, '#d8cdb4'); x.globalAlpha = 1; } }
+    } });
+  }; }
+// les bots : le Rusé brise quand son voisin est en difficulté, les autres plus tard, quand ils sont riches
+{ const base = aiThink; aiThink = function (k) { const r = base.apply(this, arguments);
+    try { const b = G.b[k]; if (b && b.bot && brAvail(b) && b.gold >= brCost() * 1.3) { const to = G.b[nextAlive(k)], sty = (typeof STY !== 'undefined' && STY[k]) ? String(STY[k]) : '';
+        const go = sty.startsWith('rus') ? (to.lives <= 12 || Math.random() < 0.01) : (G.wave >= brWave() + 3 && Math.random() < 0.006);
+        if (go) brLaunch(k); } } catch (e) {}
+    return r; }; }
+// la case de la porte reste libre tant qu'elle n'est pas ouverte (on voit d'où l'attaque peut venir)
+{ const base = buildReason; buildReason = function (b, c, r) { try { if (brOn() && G.gateB != null && idx(c, r) === G.gateB) return 'La porte de la brèche'; } catch (e) {} return base.apply(this, arguments); }; }
+
+/* ================================================================ /version 159 */
 
 useTerrain(TERKEY);
 demo();
