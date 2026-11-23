@@ -31610,6 +31610,7 @@ function paSync(force) {
 .pa-ok em{color:#1b2b34;font-size:20px;margin-left:4px}.pa-ok:disabled{opacity:.5}
 `; document.head.appendChild(s); }
 /* ================================================================ /version 152 */
+VX.MAT = MAT; // v166 : les chefs-d'œuvre ajoutent leurs matières
 
 })();
 
@@ -32778,6 +32779,90 @@ const hsArtH = kind => { const d = BEASTS[(typeof BEAST_OF !== 'undefined' && BE
   }
 }; }
 /* ================================================================ /version 165 */
+/* ===== version 166 · chefs-d'œuvre : la Pierre levée (Ours) et le Saule de poison (Corbeau) posés sur le mur, en volume ; la Contagion du Corbeau ===== */
+Object.assign(VX.MAT, {
+  stone: ['#c3cacd', '#929ca2', '#5f696f'], stoneD: ['#7d868c', '#5a636a', '#3a4248'], gouge: ['#6a7378', '#4c555b', '#323a40'], glow: ['#ffe2a0', '#f2a24a', '#b0562a'],
+  wtop: ['#b4bccc', '#8a96aa', '#66708a'], coal: ['#5a4038', '#3a2a24', '#201814'], emb: ['#ffd27a', '#ff7a2e', '#b8361c'], embD: ['#c4502a', '#8a2e1a', '#4a1a12'],
+  vg: ['#6fbf58', '#3f8a38', '#24562a'], vgl: ['#e8ffc0', '#a8f07a', '#5fb04a'], vgd: ['#3d6a34', '#28482a', '#18301c'], bark: ['#3e4150', '#2a2c36', '#17181d'], pot: ['#c4f5a0', '#8ee06a', '#3f8f34'],
+});
+const CV = { cache: new Map() };
+CV.h01 = (i, s) => { const v = Math.sin(i * 127.1 + s * 311.7) * 43758.5453; return v - Math.floor(v); };
+CV.big = (src, k) => { const m = VX.model(); for (const [kk, mat] of src.v) { const [s, t, z] = kk.split(',').map(Number); for (let a = Math.floor(s * k); a < Math.floor((s + 1) * k); a++) for (let b = Math.floor(t * k); b < Math.floor((t + 1) * k); b++) for (let c = Math.floor(z * k); c < Math.floor((z + 1) * k); c++) VX.set(m, a, b, c, mat); } return m; };
+// ---- la Pierre levée : levée lente, chute sèche ; l'impact a lieu à ph = 0
+CV.lift = (ph) => ph < .6 ? 0 : ph < .93 ? Math.round((ph - .6) / .33 * 5) : Math.round((1 - ph) / .07 * 5);
+CV.pierre = (ph) => { const m = VX.model(), L = CV.lift(ph), hot = ph < .14, r = 7;
+  for (let s = -r; s <= r; s++) for (let t = -r; t <= r; t++) { const d = Math.hypot(s, t); if (d > r + .4) continue; const flick = Math.sin(s * 2.1 + t * 1.3 + ph * 40) > .3; VX.set(m, s, t, 0, d > r - 1 ? 'wtop' : (flick || ph < .15 ? 'emb' : (d > r - 2.5 ? 'coal' : 'embD'))); if (d < r - 1.5 && (s * 3 + t) % 4 === 0) VX.set(m, s, t, 1, flick ? 'emb' : 'coal'); }
+  for (let z = 1; z <= 24; z++) { const u = z / 24, w = 3.6 - u * 1.2 - (z > 21 ? (z - 21) * .7 : 0), d = 2.6 - u * .6, sk = Math.round(u * u * 1.6);
+    for (let s = -Math.ceil(w); s <= Math.ceil(w); s++) for (let t = -Math.ceil(d + 1); t <= Math.ceil(d + 1); t++) { const e = (s / w) ** 2 + (t / (d + 1)) ** 2; if (e > 1 + Math.sin(z * 1.7 + s) * .12) continue; VX.set(m, s + sk, t, z + L, z < 3 && (s + t) % 3 === 0 ? 'stoneD' : 'stone'); } }
+  for (let k = 0; k < 3; k++) for (let z = 9; z <= 16; z++) { const t = -2 + k * 2 + Math.round((z - 9) * .22); VX.set(m, Math.round(3.4 - z / 24 * 1.2) + Math.round((z / 24) ** 2 * 1.6), t, z + L, hot && (z + k) % 3 === 0 ? 'glow' : 'gouge'); }
+  return m; };
+// ---- le Saule de poison : tronc noir, longues branches qui pleurent des filets verts
+CV.saule = (ph) => { const m = VX.model();
+  for (const [s, t] of [[-6, 2], [6, -1], [-3, -5], [4, 5], [1, -6]]) VX.line(m, [0, 0, 1], [s, t, 0], 'bark');
+  for (let z = 0; z <= 15; z++) { const u = z / 15, r = 2.4 - u * 1.2, sx = Math.sin(u * 3 + 3) * 1.5, sy = Math.cos(u * 2.4 + 3) * 1; VX.cyl(m, [sx, sy, z - .5], [sx, sy, z + .5], r, 'bark'); }
+  const arms = [[-9, 0], [9, 1], [0, 9], [0, -9], [-7, 7], [7, -7], [-7, -6], [6, 7]];
+  for (const [s, t] of arms) { VX.cyl(m, [0, 0, 14], [s, t, 20], (u) => Math.max(.5, 1 - u * .7), 'bark');
+    for (let k = 0; k < 3; k++) { const X = s * (.55 + k * .2), Y = t * (.55 + k * .2), Z0 = 17 + k * 1.2, len = 9 + ((s + t + k) & 3) * 2, sw = Math.sin(ph * Math.PI * 4 + k + s) * 1.2;
+      for (let i = 0; i < len; i++) VX.set(m, X + sw * i / len, Y, Z0 - i, i > len - 3 ? 'vgl' : (i % 3 ? 'vg' : 'pot')); } }
+  return m; };
+// une image par phase (et par Maison), mise en cache
+CV.img = (name, q, n, k) => { const key = name + q + '|' + k; let c = CV.cache.get(key); if (c) return c; if (CV.cache.size > 200) CV.cache.clear();
+  const [cv, cx] = mkCanvas(96, 96); VX.house(name === 'pierre' ? 'oursA' : 'corbV');
+  VX.draw(cx, [[VX.bake(CV.big(CV[name](q / n), k))]], Math.PI * .3, 48, 72); CV.cache.set(key, cv); return cv; };
+// ---- effets 2D par-dessus : flammes du lit de braise, choc, éclats sous le mur
+CV.ringFire = (cx, oy, t, boom) => { for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2, [fx, fy] = VX.scr(Math.PI * .3, Math.cos(an) * 6.9, Math.sin(an) * 6.9, 1.25, cx, oy); xFire(fx, fy, 1, boom ? 9 : 3 + (i % 3), t + i); } };
+CV.shock = (cx, ay, ph) => { if (ph > .3) return; const q = ph / .3, oy = ay + 10, h01 = CV.h01;
+  const R = 4 + q * 22; hmAlpha(1 - q, () => { for (let i = 0; i < 48; i++) { const an = i / 48 * Math.PI * 2; P.px(cx + Math.cos(an) * R, oy + 1 + Math.sin(an) * R * .45, i % 3 ? '#ffb45a' : '#fff0b8'); if (i % 4 === 0) P.px(cx + Math.cos(an) * (R - 2), oy + Math.sin(an) * (R - 2) * .45, '#ff6a2e'); } });
+  for (let i = 0; i < 18; i++) { const an = i / 18 * Math.PI * 2, sp = 14 + h01(i, 6) * 18, X = cx + Math.cos(an) * sp * q, Y = oy - Math.abs(Math.sin(an)) * 4 - (20 + h01(i, 2) * 16) * q + 40 * q * q; hmAlpha(1 - q, () => P.px(X, Y, i % 2 ? '#fff0b8' : '#ffb45a')); }
+  if (q < .25) hmAlpha(.6 * (1 - q * 4), () => P.ell(cx, oy - 4, 9, 6, '#ffe6a0'));
+  hmAlpha(1 - q, () => { for (const [x0, pts] of [[-1, [[0, 15], [-2, 17], [-1, 19], [-4, 22]]], [2, [[0, 15], [2, 18], [5, 20], [6, 22]]], [-6, [[0, 14], [-3, 16]]]]) { let px = cx + x0, py = ay + pts[0][1]; for (const [dx, dy] of pts.slice(1)) { P.line(px, py, cx + x0 + dx, ay + dy, '#3c4256'); px = cx + x0 + dx; py = ay + dy; } } });
+  for (let i = 0; i < 26; i++) { const side = i % 2 ? 1 : -1, vx = side * (8 + h01(i, 3) * 34), vy = -(10 + h01(i, 7) * 30), tt = q * .85, x0 = cx + (h01(i, 1) - .5) * 12, y0 = ay + (i % 3 ? 16 + h01(i, 5) * 4 : 10), gY = ay + 25 + h01(i, 4) * 7;
+    let X = x0 + vx * tt, Y = y0 + vy * tt + 80 * tt * tt; if (Y > gY) { Y = gY; X = x0 + vx * Math.min(tt, .5); }
+    const c = ['#c9d1d4', '#8a96aa', '#66708a', '#b4bccc'][i % 4], sz = i % 3 === 0 ? 2 : 1;
+    hmAlpha(Y >= gY ? Math.max(0, 1 - (q - .5) * 2.5) : 1, () => { P.rect(X, Y, sz + (i % 5 === 0 ? 1 : 0), sz, c); if (sz > 1) P.px(X, Y + sz, '#4a5268'); }); }
+  for (let i = 0; i < 10; i++) { const X = cx + (i - 4.5) * 3.2, Y = ay + 22 - h01(i, 9) * 3 - q * 4; hmAlpha((1 - q) * .8, () => P.ell(X, Y, Math.round(1 + q * 2), 1, '#c9d1d4')); } };
+CV.roots = (cx, ay) => { const pal = ['#17181d', '#22232b', '#2f313b', '#3e4150'];
+  for (const [dx, dy] of [[-10, 2], [10, 1], [-6, 4], [7, 4], [-2, -4], [3, -3]]) P.line(cx, ay + 10, cx + dx, ay + 10 + dy, pal[1]);
+  for (const [dx, len] of [[-8, 6], [-3, 4], [5, 7], [9, 3]]) { P.line(cx + dx * .6, ay + 13, cx + dx, ay + 15, pal[1]); for (let j = 0; j < len; j++) P.px(cx + dx + Math.round(Math.sin(j * .9 + dx) * .6), ay + 15 + j, j % 2 ? pal[0] : pal[1]); }
+  for (const [dx, dy] of [[-8, -1], [8, -2]]) { P.rect(cx + dx - 1, ay + 9 + dy, 3, 2, '#8a96aa'); P.hl(cx + dx - 1, ay + 9 + dy, 3, '#b4bccc'); } };
+// ---- branchement sur les deux chefs-d'œuvre
+CV.phOurs = (t) => { const per = hmPer(HM.R.chef.ours); if (t.hmT2 == null) return .5; return Math.max(0, Math.min(.999, 1 - (t.hmT2 - G.t) / per)); };
+{ const ev = 'hmx_oursOssuaire2';
+  HX.bodies[ev] = (x, y) => { P.px(x + 12, y + 10, 'rgba(0,0,0,0)'); };
+  HX.at[ev] = () => [12, -14];
+  HX.tops[ev] = (x, b, t, s) => { const cx = s.x + 12, ay = s.y, ph = CV.phOurs(t), q = Math.floor(ph * 40) % 40;
+    x.drawImage(CV.img('pierre', q, 40, 1.25), cx - 48, ay + 10 - 72);
+    CV.ringFire(cx, ay + 10, G.t, ph < .18); CV.shock(cx, ay, ph); }; }
+{ const ev = 'hmx_corbArbreD';
+  HX.bodies[ev] = (x, y) => { P.px(x + 12, y + 10, 'rgba(0,0,0,0)'); };
+  HX.at[ev] = () => [12, -16];
+  HX.tops[ev] = (x, b, t, s) => { const cx = s.x + 12, ay = s.y, q = Math.floor(((G.t * .25 + (t.id || 0) * .37) % 1) * 32);
+    CV.roots(cx, ay); x.drawImage(CV.img('saule', q, 32, 1.4), cx - 48, ay + 10 - 72); }; }
+// ---- l'onde de la Pierre couvre tout le terrain
+{ const base = HM_V.oursA.chefStep; HM_V.oursA.chefStep = function (b, t) { const n = b.rings.length; const r = base.apply(this, arguments);
+    for (let i = n; i < b.rings.length; i++) { const g = b.rings[i]; g.r1 = Math.max(COLS, ROWS) + 2; g.t = g.ttl = 1.2; } return r; }; }
+// ---- la Contagion : le poison du Saule ne saute plus au toucher ; quand une créature empoisonnée par lui meurt, il saute sur ses deux voisines
+const CTG = { r: 1.7, n: 2, dur: 3 };
+CTG.chef = (src) => !!(src && src.type === 'ch_hcorb');
+{ const base = HM_V.corbV.hit; HM_V.corbV.hit = function (b, p, cr, chef) { if (!chef) return base.apply(this, arguments);
+    HM.puddles.push({ k: b.k, x: cr.x, y: cr.y, t1: G.t + 4, r: .8, src: p.src, dps: p.dmg * 1.2 }); }; }
+CTG.spread = (b, cr) => { const p = cr.poison; if (!p || !CTG.chef(p.src) || G.t > p.until + .05 || cr.ctgDone) return; cr.ctgDone = true;
+  const near = b.creeps.filter(c => !c.dead && c !== cr && c.y >= 0 && Math.hypot(c.x - cr.x, c.y - cr.y) < CTG.r).sort((a, c) => Math.hypot(a.x - cr.x, a.y - cr.y) - Math.hypot(c.x - cr.x, c.y - cr.y)).slice(0, CTG.n);
+  for (const c of near) { const d = c.poison && G.t < c.poison.until ? c.poison.dps : 0; c.poison = { dps: Math.max(d, p.dps), until: G.t + CTG.dur, src: p.src };
+    if (!G.quiet) b.zaps.push({ ctg: 1, pts: [[cr.x, cr.y - .3], [c.x, c.y - .3]], t: .45, ttl: .45 }); }
+  if (!G.quiet) for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; b.parts.push({ x: cr.x, y: cr.y, vx: Math.cos(a) * 1.4, vy: Math.sin(a) * 1.4, t: .3, ttl: .3, color: i % 2 ? '#8ee06a' : '#d9f5b8', size: .05 }); } };
+{ const base = damage; damage = function (b, cr, dmg, src, soft) { const was = cr.dead; const r = base.apply(this, arguments); if (!was && cr.dead) try { CTG.spread(b, cr); } catch (e) {} return r; }; }
+// l'arc vert du poison qui saute
+{ const base = drawZap; drawZap = function (x, z) { if (!z.ctg) return base.apply(this, arguments);
+    const u = 1 - z.t / z.ttl, [x0, y0] = [AX0 + z.pts[0][0] * CS, AY0 + z.pts[0][1] * CS], [x1, y1] = [AX0 + z.pts[1][0] * CS, AY0 + z.pts[1][1] * CS], q = Math.min(1, u * 2.2), n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 2) + 2;
+    hmAlpha(u < .6 ? 1 : (1 - u) / .4, () => { for (let i = 0; i <= n; i++) { const v = i / n * q; P.px(x0 + (x1 - x0) * v, y0 + (y1 - y0) * v - Math.sin(v * Math.PI) * 9, i % 3 ? '#8ee06a' : '#e8ffd0'); } if (q >= 1) P.rect(x1 - 1, y1 - 1, 3, 3, '#c4f5a0'); }); }; }
+// ---- noms et textes
+Object.assign(HM_CHF.hours, { n: 'Pierre levée', full: 'La Pierre levée', d: 'Toutes les ' + String(HM.R.chef.ours).replace('.', ',') + ' s, la Pierre levée retombe dans sa braise : toutes tes créatures perdent 10 % de leur vie (3 % pour un boss) et sont étourdies ; celles qui sont près d’elle reculent.', foe: 'Sa pierre levée secoue tout son terrain.' });
+Object.assign(HM_CHF.hcorb, { n: 'Saule de poison', full: 'Le Saule de poison', d: 'La Contagion : son poison va partout sur ton terrain ; quand une créature empoisonnée meurt, le poison saute sur ses deux voisines.', foe: 'Son poison saute de créature en créature.' });
+for (const k of ['hours', 'hcorb']) { if (CHF[k]) Object.assign(CHF[k], { n: HM_CHF[k].n, full: HM_CHF[k].full, d: HM_CHF[k].d, foe: HM_CHF[k].foe }); TOWER_INFO['ch_' + k] = HM_CHF[k].d; }
+HM.X.oursOssuaire2.n = 'La Pierre levée'; HM.X.corbArbreD.n = 'Le Saule de poison';
+
+/* ================================================================ /version 166 */
 
 /* ================================================================ version 160 · W2 : les décors des terrains de l’histoire (peints dans le terrain du jeu) */
 // v230 · story terrains painted INTO the terrain bake (organic water, river through the forest, wooden bridge, menhirs)
