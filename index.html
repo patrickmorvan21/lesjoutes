@@ -32823,6 +32823,88 @@ setInterval(() => {
   if (AMI.amis.some(amiOn) || Date.now() - AMW.invAt < 60000) amiPollNow();
 }, 4000);
 /* ================================================================ /version 168 */
+
+/* ================================================================ version 169 · l'invitation, tout de suite, d'un accueil à l'autre
+   Patrick, 23/11 (19 h 40) : « il est à l'accueil, j'envoie une invitation, moi aussi depuis mon écran d'accueil, il est censé recevoir le
+   message instantanément ». Jusqu'ici l'ami n'apprenait l'invitation qu'au bout d'une chaîne : ma table devait d'abord se connecter au serveur de
+   jeu (1 à 4 s sur un téléphone), puis le serveur des amis devait l'enregistrer, puis le relais prévenait l'ami, qui redemandait au serveur.
+   Et un aller-retour pouvait se perdre si la place changeait pendant qu'une demande était en route. Maintenant :
+   - dès que je touche « Inviter à jouer », l'ami reçoit par le relais « Patrick t'invite, sa table s'ouvre… » sur son accueil ;
+   - dès que ma table existe, son code part directement par le relais : la plaque de l'ami devient « Patrick t'attend », à toucher, sans attendre
+     le serveur (le serveur confirme ensuite ; pendant 20 s, la page croit le relais plutôt qu'une réponse en retard) ;
+   - la connexion au serveur de jeu est préparée dès qu'on ouvre la fiche d'un ami (chez moi) et dès que l'invitation arrive (chez lui) ;
+   - une demande au serveur faite pendant qu'une autre est en route n'est plus perdue. */
+const AMQ2 = { seen: new Map(), pre: null, tab: null, watch: 0 };
+// a demand while another is on its way: kept for when it comes back
+{ const base = amiPoll; amiPoll = function () { if (AMI.busy) { AMQ.again = true; return; } return base.apply(this, arguments); }; }
+function amq2Send(code, k, extra) {
+  if (!AMQ.sub || !/^[A-Z2-9]{6}$/.test(code || '')) return;
+  const p = JSON.stringify(Object.assign({ v: 1, f: AMQ.sub, k, id: rid(8) }, extra || {}));
+  Object.values(AMQ.links).forEach(L => { if (L.on) try { L.client.publish(AMQ_T + code, p, false); } catch (e) {} });
+}
+const amq2Warm = () => { try { if (WEB && NET.mode === 'solo') netUp().catch(() => {}); } catch (e) {} };
+// me: the friend's sheet open, the game's server made ready; « Inviter à jouer »: the word at once, then the table's code as soon as it exists
+{ const base = amiDraw; amiDraw = function () { const r = base.apply(this, arguments); if (AMI.open === 'play') amq2Warm(); return r; }; }
+{ const base = am2Play; am2Play = function (m) {
+  const to = AM2.with || '';
+  if (to && am2CanPlay()) { amq2Send(to, 'pre', { m: MODE_NAME[m] ? m : 'lt' }); setTimeout(() => amq2Send(to, 'pre', { m: MODE_NAME[m] ? m : 'lt' }), 1500); }
+  const r = base.apply(this, arguments);
+  clearInterval(AMQ2.watch);
+  if (to) { let n = 0, sent = '';
+    AMQ2.watch = setInterval(() => {
+      n++;
+      const s = amiState();
+      if (s.st === 'table' && s.room) {
+        const key = s.room + '|' + s.rk;
+        if (key !== sent) { sent = key; const x = { room: s.room, m: s.m, rn: s.rn, rk: s.rk }; amq2Send(to, 'tab', x); setTimeout(() => amq2Send(to, 'tab', x), 2500); }
+      }
+      if (n > 240 || (sent && NET.mode === 'solo')) clearInterval(AMQ2.watch);
+    }, 150); }
+  return r;
+}; }
+// him: what the relay says, believed at once
+{ const base = amqMsg; amqMsg = function (t, p) {
+  base.apply(this, arguments);
+  let d; try { d = JSON.parse(p); } catch (e) { return; }
+  if (!d || d.v !== 1 || typeof d.id !== 'string' || d.f === AMQ.sub || (d.k !== 'pre' && d.k !== 'tab')) return;
+  const now = Date.now(); if (AMQ2.seen.has(d.id)) return; AMQ2.seen.set(d.id, now);
+  if (AMQ2.seen.size > 40) for (const [k, at] of AMQ2.seen) if (now - at > 60000) AMQ2.seen.delete(k);
+  const a = AMI.amis.find(x => x.code === d.f); if (!a || NET.mode !== 'solo') return;
+  if (d.k === 'pre') { if (!AMQ2.tab || AMQ2.tab.f !== d.f || now - AMQ2.tab.at > 20000) AMQ2.pre = { f: d.f, m: MODE_NAME[d.m] ? d.m : 'lt', at: now }; }
+  else if (/^[a-z0-9]{4}$/.test(d.room || '')) {
+    AMQ2.tab = { f: d.f, room: d.room, m: MODE_NAME[d.m] ? d.m : 'lt', rn: Math.max(2, Math.min(8, d.rn | 0)), rk: Math.max(1, Math.min(8, d.rk | 0)), at: now };
+    AMQ2.pre = null; AMQ.invFrom = d.f; AMQ.invAt = now;
+  }
+  amq2Warm();
+  try { amiRender(); } catch (e) {}
+  setTimeout(() => { try { amiRender(); } catch (e) {} }, 12500);
+}; }
+// the relay's word kept over a late answer of the server, for 20 s
+{ const base = amiRender; amiRender = function () {
+  const T = AMQ2.tab;
+  if (T && Date.now() - T.at < 20000) { const a = AMI.amis.find(x => x.code === T.f); if (a && !(a.st === 'table' && a.room === T.room)) Object.assign(a, { st: 'table', room: T.room, m: T.m, rn: T.rn, rk: Math.max(T.rk, a.room === T.room ? a.rk | 0 : 0) }); }
+  else if (T) AMQ2.tab = null;
+  return base.apply(this, arguments);
+}; }
+// the home: the friend who invites, while his table opens
+{ const base = waitPlate; waitPlate = function () {
+  base.apply(this, arguments);
+  const p = $('waitPlate'), P = AMQ2.pre; if (!p || !p.hidden || !P || !WEB) return;
+  if (Date.now() - P.at > 12000 || NET.mode !== 'solo') { AMQ2.pre = null; return; }
+  const a = AMI.amis.find(x => x.code === P.f); if (!a) return;
+  const m = P.m, nm = cleanName(a.n);
+  p.dataset.code = ''; p.classList.add('inv128'); p.dataset.m = m;
+  const key = ['pre', a.code, m, a.h, a.c, a.u].join('|');
+  if (p.dataset.k128 !== key || !p.querySelector('canvas')) {
+    p.dataset.k128 = key;
+    const bm = document.querySelector(`#modes .ma-list .mb[data-mode="${m}"] .mb-pic`), bg = bm ? (bm.style.backgroundImage || getComputedStyle(bm).backgroundImage) : 'none';
+    p.innerHTML = `<span class="art" style='background-image:${bg.replace(/'/g, '%27')}'></span><canvas aria-hidden="true"></canvas><span class="tx"><span class="t1">${esc(nm)} t’invite</span><span class="t2">${esc(MODE_NAME[m])} · sa table s’ouvre…</span></span><span class="go" style="opacity:.5">Rejoindre</span>`;
+    try { am2Skin(p.querySelector('canvas'), a.h, a.c, a.u, 76); } catch (e) {}
+  }
+  p.setAttribute('aria-label', `${nm} t’invite à sa table de ${MODE_NAME[m]}, elle s’ouvre`);
+  p.hidden = false;
+}; }
+/* ================================================================ /version 169 */
 /* ===== version 166 · chefs-d'œuvre : la Pierre levée (Ours) et le Saule de poison (Corbeau) posés sur le mur, en volume ; la Contagion du Corbeau ===== */
 Object.assign(VX.MAT, {
   stone: ['#c3cacd', '#929ca2', '#5f696f'], stoneD: ['#7d868c', '#5a636a', '#3a4248'], gouge: ['#6a7378', '#4c555b', '#323a40'], glow: ['#ffe2a0', '#f2a24a', '#b0562a'],
