@@ -29453,6 +29453,8 @@ var HS = (function () {
     HS.sel = n; show('map');
   }
   HS.enter = enter;
+  // version 170: the rival of the stage being played, for the thunder of the last lives (portrait, short name, la/le)
+  HS.rival = () => { const S0 = G && G.story; if (!S0) return null; const s = STAGES[S0.i], k = sprOf(s); return A[k] ? { src: A[k][2], w: A[k][0], h: A[k][1], name: s.short || nameOf(s), fem: /^la\s/i.test(s.sub || '') } : null; };
 
   /* ---------------------------------------------------------------- the home: « Histoire », above the Défi du jour */
   function card() {
@@ -34303,6 +34305,142 @@ const musTrack = () => { try {
     return baseCheck.apply(this, arguments);
 }; }
 setInterval(() => { try { if (MUS.el && !MUS.swp && MUS.cur !== musTrack()) musCheck(); } catch (e) {} }, 300);
+
+/* version 170 (23/11, Patrick : « Tu peux partir sur le coup de tonnerre ») · la fin de manche qui s'emballe.
+   Quand toi tu tombes à 5 vies, quand ton rival y tombe (à deux joueurs), ou quand il ne reste que deux joueurs (à trois et plus) :
+   un éclair blanc, l'écran tremble, une bande en biais traverse l'écran (« Le Coup de tonnerre », maquette validée le 23/11),
+   et une musique de boss part jusqu'à la fin de la manche, tirée au hasard parmi six morceaux (musique/boss-1.mp3 … boss-6.mp3,
+   faits avec Suno par Patrick), jamais deux fois de suite le même. Le bord de l'écran bat ensuite, rouge si c'est toi, or sinon.
+   Le message remplace la bulle du Fou « Plus que 5 vies ! ». Rien pendant la partie guidée, ni pour un spectateur. */
+const BT_TRACKS = ['musique/boss-1.mp3', 'musique/boss-2.mp3', 'musique/boss-3.mp3', 'musique/boss-4.mp3', 'musique/boss-5.mp3', 'musique/boss-6.mp3'];
+const BT = { ov: null, el: null, g: null, src: null, playing: false, game: null, seen: {}, n0: 0, tm: [] };
+const BT_CSS = `
+#bt{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden;--u:1px}
+#bt[hidden]{display:none}
+#bt .d{position:absolute;inset:0;background:rgba(8,10,12,.52);opacity:0;transition:opacity .2s steps(3)}
+#bt.on .d{opacity:1}
+#bt .v{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse at 50% 50%,transparent 55%,var(--vc,rgba(196,84,74,.85)) 100%);transition:opacity .3s steps(3)}
+#bt.vig .v{opacity:.9}
+#bt.beat .v{animation:btBeat 1.1s steps(4) infinite}
+@keyframes btBeat{0%,100%{opacity:.16}18%{opacity:.42}36%{opacity:.2}52%{opacity:.34}}
+#bt .f{position:absolute;inset:0;background:#fff;opacity:0}
+#bt .f.go{animation:btFlash .32s steps(3) forwards}
+@keyframes btFlash{0%{opacity:.9}100%{opacity:0}}
+#bt .bb{position:absolute;left:-20%;right:-20%;top:38%;height:calc(var(--u)*170);rotate:-8deg;background:var(--bc);transform:translateX(-130%);transition:transform .2s steps(4);overflow:hidden}
+#bt .bb::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.14) 0 calc(var(--u)*2),transparent 0 calc(var(--u)*22));animation:btSpeed .25s linear infinite}
+@keyframes btSpeed{to{background-position:calc(var(--u)*-44) 0}}
+#bt .bb::after{content:"";position:absolute;left:0;right:0;top:calc(var(--u)*10);bottom:calc(var(--u)*10);border-top:calc(var(--u)*4) solid rgba(241,237,225,.55);border-bottom:calc(var(--u)*4) solid rgba(241,237,225,.55)}
+#bt.in .bb{transform:none}
+#bt.out .bb{transform:translateX(130%);transition:transform .22s steps(4)}
+#bt .bb.two{rotate:6deg;top:55%;height:calc(var(--u)*92);transform:translateX(130%)}
+#bt.in .bb.two{transform:none}
+#bt.out .bb.two{transform:translateX(-130%)}
+#bt .tx{position:absolute;left:20%;right:20%;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;align-items:center;skew:-8deg 0;z-index:1;text-align:center}
+#bt .sm{white-space:nowrap;font-weight:700;font-size:calc(var(--u)*18);letter-spacing:calc(var(--u)*2);color:#f1ede1;transform:translateX(60%);opacity:0;transition:transform .22s steps(4),opacity .2s steps(2)}
+#bt .bg{white-space:nowrap;font-family:"Jersey 10",monospace;color:#f1ede1;line-height:.86;letter-spacing:calc(var(--u)*1);font-size:calc(var(--u)*var(--cf,96));text-shadow:calc(var(--u)*-3) calc(var(--u)*3) 0 rgba(0,0,0,.3);transform:translateX(-60%);opacity:0;transition:transform .22s steps(4),opacity .2s steps(2)}
+#bt .bb.two .bg{--cf:44}
+#bt.t2 .sm,#bt.t2 .bg{transform:none;opacity:1}
+#bt .pt{position:absolute;right:21%;bottom:calc(var(--u)*-6);z-index:2;transform:translateX(160%);transition:transform .24s steps(4);image-rendering:pixelated;image-rendering:crisp-edges}
+#bt.t2 .pt{transform:none}
+#cv.btShake{animation:btShake .36s steps(6)}
+@keyframes btShake{0%{translate:0 0}17%{translate:-6px 3px}34%{translate:5px -4px}50%{translate:-4px 2px}67%{translate:3px -2px}84%{translate:-1px 1px}100%{translate:0 0}}
+@media (prefers-reduced-motion:reduce){#cv.btShake{animation:none}#bt .bb::before{animation:none}}`;
+function btOv() {
+  if (BT.ov) return BT.ov;
+  const st = document.createElement('style'); st.textContent = BT_CSS; document.head.appendChild(st);
+  const o = document.createElement('div'); o.id = 'bt'; o.hidden = true; o.setAttribute('aria-live', 'assertive');
+  o.innerHTML = '<div class="d"></div><div class="v"></div><div class="s"></div><div class="f"></div>';
+  document.body.appendChild(o); BT.ov = o; return o;
+}
+function btReset() { BT.tm.forEach(clearTimeout); BT.tm = []; if (BT.ov) { BT.ov.className = ''; BT.ov.hidden = true; BT.ov.querySelector('.s').innerHTML = ''; } }
+const btAt = (ms, f) => BT.tm.push(setTimeout(f, ms));
+const btWho = b => cleanName((b && (b.name || b.nick)) || 'Rival');
+// the music: one track per game, never the same as last time; it waits, loaded, until the moment comes
+function btPick() {
+  let last = -1; try { last = +(localStorage.getItem('ddl-bt-last') ?? -1); } catch (e) {}
+  let i = Math.floor(Math.random() * BT_TRACKS.length); if (BT_TRACKS.length > 1 && i === last) i = (i + 1 + Math.floor(Math.random() * (BT_TRACKS.length - 1))) % BT_TRACKS.length;
+  try { localStorage.setItem('ddl-bt-last', String(i)); } catch (e) {}
+  return BT_TRACKS[i];
+}
+function btLoad() {
+  try {
+    if (!BT.el) { BT.el = new Audio(); BT.el.loop = true; BT.el.preload = 'auto'; }
+    BT.src = btPick(); BT.el.src = BT.src; BT.el.load(); BT.g = BT.g || null;
+  } catch (e) {}
+}
+function btPlay() {
+  if (!(MUS.on && SFX.on) || !BT.el) return;
+  try {
+    audioInit(); const a = SFX.ctx;
+    if (a && !BT.g) { const s = a.createMediaElementSource(BT.el); BT.g = a.createGain(); BT.g.gain.value = 0; s.connect(BT.g); BT.g.connect(a.destination); }
+    BT.el.currentTime = 0; const p = BT.el.play(); if (p && p.catch) p.catch(() => {});
+    if (BT.g) { BT.g.gain.cancelScheduledValues(a.currentTime); BT.g.gain.setValueAtTime(0, a.currentTime); BT.g.gain.linearRampToValueAtTime(0.3, a.currentTime + 0.35); }
+    BT.playing = true;
+  } catch (e) {}
+}
+function btStop(fast) {
+  if (!BT.playing) return; BT.playing = false;
+  try {
+    const a = SFX.ctx;
+    if (BT.g && a) { BT.g.gain.cancelScheduledValues(a.currentTime); BT.g.gain.setTargetAtTime(0, a.currentTime, fast ? 0.05 : 0.25); }
+    setTimeout(() => { try { if (!BT.playing) BT.el.pause(); } catch (e) {} }, fast ? 200 : 1200);
+  } catch (e) {}
+}
+function btThump() {
+  if (!SFX.on) return;
+  try { audioInit(); const a = SFX.ctx, t = a.currentTime, o = a.createOscillator(), g = a.createGain();
+    o.type = 'square'; o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(38, t + .32);
+    g.gain.setValueAtTime(.2, t); g.gain.exponentialRampToValueAtTime(.001, t + .4); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + .42); } catch (e) {}
+}
+// the moment itself
+function btShow(kind, opp, n) {
+  const o = btOv(); btReset();
+  const u = Math.min(innerWidth, 520) / 390; o.style.setProperty('--u', u + 'px');
+  let h = '', vc = 'rgba(224,162,74,.7)';
+  const lives = k => k > 1 ? `${k} VIES` : 'UNE VIE';
+  if (kind === 'me') {
+    vc = 'rgba(196,84,74,.85)';
+    h = `<div class="bb" style="--bc:#c4544a"><div class="tx"><div class="sm">IL NE TE RESTE PLUS ${n > 1 ? 'QUE' : 'QU’'}</div><div class="bg" style="--cf:96">${lives(n)}</div></div></div>`;
+  } else if (kind === 'rival') {
+    const R = (G.story && HS.rival) ? HS.rival() : null, who = (R && R.name) || btWho(opp);
+    const fem = !!(R && R.fem);
+    h = `<div class="bb" style="--bc:#c9953e"><div class="tx"${R ? ' style="left:21%;right:37%"' : ''}><div class="sm"${R ? ' style="font-size:calc(var(--u)*15)"' : ''}>${esc(who.toUpperCase())} N’A PLUS ${n > 1 ? 'QUE ' + lives(n) : 'QU’UNE VIE'}</div><div class="bg" style="--cf:${R ? 50 : 76}">${fem ? 'ACHÈVE-LA !' : 'ACHÈVE-LE !'}</div></div>` +
+      (R ? `<img class="pt" src="${R.src}" alt="" style="height:calc(var(--u)*${Math.round(R.h * 1.2)})">` : '') + '</div>';
+  } else {
+    h = `<div class="bb" style="--bc:#7192b6;top:27%"><div class="tx"><div class="bg" style="--cf:76">DUEL FINAL</div></div></div><div class="bb two" style="--bc:#b5655b"><div class="tx"><div class="bg">TOI CONTRE ${esc(btWho(opp).toUpperCase())}</div></div></div>`;
+  }
+  o.style.setProperty('--vc', BT.seen.me ? 'rgba(196,84,74,.85)' : vc);   // once you are in danger, the edge stays red
+  o.querySelector('.s').innerHTML = h; o.hidden = false;
+  o.querySelector('.f').classList.remove('go'); void o.offsetWidth; o.querySelector('.f').classList.add('go');
+  o.classList.add('on', 'vig');
+  const cv = $('cv'); if (cv) { cv.classList.remove('btShake'); void cv.offsetWidth; cv.classList.add('btShake'); setTimeout(() => cv.classList.remove('btShake'), 400); }
+  btThump(); buzz([40, 30, 80]);
+  if (!BT.playing) btPlay();
+  btAt(40, () => o.classList.add('in'));
+  btAt(240, () => o.classList.add('t2'));
+  btAt(2300, () => o.classList.add('out'));
+  btAt(2600, () => { o.classList.remove('on', 'in', 't2', 'out'); o.querySelector('.s').innerHTML = ''; o.classList.add('vig', 'beat'); });
+}
+function btLive() { return !!(G && G.running && !G.ended && !G.spec && !G.guided && !G.guide && G.b && G.b[G.me]); }
+function btTick() {
+  if (!G || !G.running || G.spec || G.guided || G.guide) { if (BT.game) { btStop(true); btReset(); BT.game = null; } return; }
+  if (G !== BT.game) { btStop(true); btReset(); BT.game = G; BT.seen = {}; BT.n0 = G.b.length; btLoad(); }
+  if (G.ended) { if (BT.playing) btStop(); if (BT.ov && !BT.ov.hidden) btReset(); return; }
+  const me = G.b[G.me]; if (!me) return;
+  if (!me.alive) { if (BT.playing) btStop(); if (BT.ov && !BT.ov.hidden) btReset(); return; }
+  if (!(MUS.on && SFX.on) && BT.playing) btStop(true);
+  if (me.lives > 0 && me.lives <= 5 && !BT.seen.me) { BT.seen.me = 1; btShow('me', null, me.lives); return; }
+  if (BT.n0 === 2) {
+    const opp = G.b.find(b => b.k !== G.me);
+    if (opp && opp.alive && opp.lives > 0 && opp.lives <= 5 && !BT.seen.rival) { BT.seen.rival = 1; btShow('rival', opp, opp.lives); return; }
+  } else if (BT.n0 >= 3) {
+    const alive = G.b.filter(b => b.alive);
+    if (alive.length === 2 && !BT.seen.duel) { BT.seen.duel = 1; btShow('duel', alive.find(b => b.k !== G.me), 0); return; }
+  }
+}
+setInterval(btTick, 250);
+// the Fou no longer says « Plus que 5 vies ! » the moment the thunder does
+{ const base = l2LowCry; l2LowCry = function () { if (btLive() && !BT.seen.me) return true; return base.apply(this, arguments); }; }
 
 useTerrain(TERKEY);
 demo();
