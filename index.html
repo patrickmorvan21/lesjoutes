@@ -32781,6 +32781,44 @@ const hsArtH = kind => { const d = BEASTS[(typeof BEAST_OF !== 'undefined' && BE
   }
 }; }
 /* ================================================================ /version 165 */
+
+/* ================================================================ version 168 · l'invitation, même après une page en veille
+   Patrick, 23/11 (19 h 13), après la v157 : l'ami attend encore « parfois 6 secondes », ou doit changer d'écran et revenir pour voir l'invitation.
+   La cause la plus probable : quand la page ou l'appli passe en arrière-plan (on va dans Messages pour prévenir l'ami, l'écran se verrouille),
+   l'iPhone gèle la page et coupe sans bruit la liaison avec le relais. Au retour, la page croit la liaison ouverte : le signal de l'ami se
+   perd, il ne reste que le filet (toutes les 8 s, et seulement sur l'accueil). Maintenant :
+   - au retour sur la page ou dans l'appli, la liaison au relais est refaite aussitôt et le serveur est interrogé tout de suite, puis 1,5 s et 4 s après ;
+   - une liaison morte se voit en 10 s au lieu de 45 s, et se refait en 1,5 s au lieu de 4 s ;
+   - tant qu'un ami est en ligne, le serveur est interrogé toutes les 4 s sur tous les écrans des menus (pas seulement l'accueil) ;
+   - l'invitation exprès est envoyée deux fois, à 2,5 s d'écart, au cas où un relais se refaisait. */
+{ const base = workerClient; workerClient = function (bi, url, opts) {
+  if (typeof bi === 'string' && /^a\d$/.test(bi) && opts) opts = Object.assign({}, opts, { keepalive: 10, reconnectPeriod: 1500, connectTimeout: 5000 });
+  return base.call(this, bi, url, opts);
+}; }
+const AMW = { at: 0, invAt: 0 };
+function amqWake() {
+  if (Date.now() - AMW.at < 1500) return; AMW.at = Date.now();
+  try { amqStart(); } catch (e) {}
+  Object.values(AMQ.links).forEach(L => { try { if (L.on) L.client.kick(); else L.client.reconnect(); } catch (e) {} });
+  if (!amiOnline()) return;
+  amiPollNow(); setTimeout(amiPollNow, 1500); setTimeout(amiPollNow, 4000);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) amqWake(); });
+window.addEventListener('pageshow', amqWake);
+window.addEventListener('focus', amqWake);
+window.addEventListener('online', amqWake);
+try { const CA = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App; if (CA && CA.addListener) CA.addListener('resume', amqWake); } catch (e) {}
+// an invitation heard: the friends' state asked again a little later too
+{ const base = amqMsg; amqMsg = function (t, p) { base.apply(this, arguments); AMW.invAt = Date.now(); setTimeout(amiPollNow, 1200); }; }
+// the invitation exprès, sent twice
+{ const base = amqSend; amqSend = function (code, k) { base.apply(this, arguments); if (k === 'inv') setTimeout(() => base.call(this, code, 'inv'), 2500); }; }
+// while a friend is online (only he can invite), the server asked every 4 s on every screen of the menus
+setInterval(() => {
+  if (document.hidden || !amiOnline() || NET.mode !== 'solo' || (G && G.running && !G.ended && !G.quiet)) return;
+  if (Date.now() - (AMI.at || 0) < 2500) return;
+  if (AMI.amis.some(amiOn) || Date.now() - AMW.invAt < 60000) amiPollNow();
+}, 4000);
+/* ================================================================ /version 168 */
 /* ===== version 166 · chefs-d'œuvre : la Pierre levée (Ours) et le Saule de poison (Corbeau) posés sur le mur, en volume ; la Contagion du Corbeau ===== */
 Object.assign(VX.MAT, {
   stone: ['#c3cacd', '#929ca2', '#5f696f'], stoneD: ['#7d868c', '#5a636a', '#3a4248'], gouge: ['#6a7378', '#4c555b', '#323a40'], glow: ['#ffe2a0', '#f2a24a', '#b0562a'],
