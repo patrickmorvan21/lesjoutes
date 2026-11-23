@@ -32360,6 +32360,100 @@ document.addEventListener('click', e => { const el = e.target && e.target.closes
 { const base = buildReason; buildReason = function (b, c, r) { try { if (brOn() && G.gateB != null && idx(c, r) === G.gateB) return 'La porte de la brèche'; } catch (e) {} return base.apply(this, arguments); }; }
 
 /* ================================================================ /version 159 */
+/* ================================================================ version 161 · des choux pour le fou, sur toute la largeur (Patrick, 18/11 : « Choux du fou : validé » ; planche 28, 2ᵉ image)
+   Le castelet reste au centre, tel quel (ses fenêtres, ses clics, ses points qui montent n'ont pas bougé). Autour de lui, un second dessin posé
+   dessous couvre tout l'écran : le ciel et les fanions en haut, le rempart de pierre de chaque côté, le pavé, et la foule tout le long du bas.
+   Le cadre en bois de l'ancien dessin disparaît (le castelet se dessine seul, sur fond transparent). */
+const CHX = { built: false, in: false, key: '', bg: null, err: 0 };
+function chBuild() {
+  if (CHX.built) return true;
+  const cv = $('jtPalCv'), box = cv && cv.parentElement; if (!box) return false;
+  CHX.built = true;
+  const c = document.createElement('canvas'); c.id = 'chBack'; c.hidden = true; c.setAttribute('aria-hidden', 'true'); box.insertBefore(c, box.firstChild);
+  const st = document.createElement('style'); st.id = 'ch161';
+  st.textContent = '.jt-entr.ch-on .jt-pal-box{width:calc(100% + var(--u)*16);margin-left:calc(var(--u)*-8);margin-right:calc(var(--u)*-8)}' +
+    '#chBack{position:absolute;left:0;top:0;image-rendering:pixelated;pointer-events:none}#chBack[hidden]{display:none}';
+  document.head.appendChild(st);
+  return true;
+}
+// the castelet alone: his own drawing (casBg), without its frame and its sky, so that the wide backdrop shows around it
+function chBooth() {
+  if (CHX.bg) return CHX.bg;
+  const [cv, x] = mkCanvas(FG_W, FG_H), prev = P, f1 = fgFrame, f2 = fgSky; P = mkPen(x); fgFrame = () => {}; fgSky = () => {};
+  try { casBg(); } finally { P = prev; fgFrame = f1; fgSky = f2; }
+  return CHX.bg = cv;
+}
+{ const base = fgBg; fgBg = function (E, key, fn) { if (CHX.in && key === 'booth3') return chBooth(); return base.apply(this, arguments); }; }
+{ const base = fgDrawChoux; fgDrawChoux = function (x, E) { CHX.in = true; try { return base.apply(this, arguments); } finally { CHX.in = false; } }; }
+
+// the wide backdrop, in the castelet's own pixels: (kx, ky) is where the castelet's corner falls in it
+function chPaintBack(x, W, H, kx, ky) {
+  const prev = P; P = mkPen(x); x.imageSmoothingEnabled = false;
+  try {
+    const SKY = ky + 44, FLOOR = ky + 214, BOT = ky + FG_H;
+    // sky, with a few clouds (the castelet's own sky is gone: it is this one)
+    const bands = ['#a9c4d4', '#b4ccd9', '#bed3dd', '#c8d9e0', '#d2dfe2'];
+    for (let y = 0; y < SKY; y++) P.hl(0, y, W, bands[Math.max(0, Math.min(4, Math.floor((y - 6) / (SKY - 6) * 5)))]);
+    for (let i = 0; i < 5; i++) { const cx = 10 + ((i * 53 + 17) % Math.max(20, W - 20)), cy = 10 + ((i * 23 + 7) % Math.max(14, ky + 16)); P.hl(cx - 6, cy, 13, '#e3ecee'); P.hl(cx - 3, cy - 1, 8, '#e3ecee'); }
+    // the rampart: stone, its merlons along the top
+    P.rect(0, SKY, W, FLOOR - SKY, '#a99d7e');
+    for (let y = SKY, row = 0; y < FLOOR; y += 6, row++) {
+      const off = row % 2 ? 7 : 0;
+      for (let xx = -off; xx < W; xx += 14) { const n = phash(Math.floor((xx + 14) / 7), row, 5); P.rect(xx, y + 1, 13, 5, n > 0.86 ? '#d6ccaf' : n < 0.2 ? '#b7ab8b' : '#c8bd9d'); }
+    }
+    for (let xx = 2; xx < W; xx += 12) { P.rect(xx, SKY - 5, 7, 6, '#c8bd9d'); P.hl(xx, SKY - 5, 7, '#d6ccaf'); P.vl(xx + 6, SKY - 5, 6, '#a99d7e'); }
+    // the bunting, from the castelet's posts to the edges (his own garlands, beside them, stay in his drawing)
+    for (const [a, b] of [[0, kx + 7], [kx + FG_W - 7, W]]) {
+      const n = Math.max(1, b - a), cols = ['#b5655b', '#e6c35a', '#7192b6', '#ece6d6', '#9a87bf'];
+      for (let s = 0; s < n; s++) { const yy = ky + 9 + Math.round(Math.sin(s / n * Math.PI) * 6); P.px(a + s, yy, '#8a6a48'); if (s % 5 === 2) { const c = cols[(s / 5 | 0) % cols.length]; P.rect(a + s - 1, yy + 1, 3, 2, c); P.px(a + s, yy + 3, c); } }
+    }
+    // the cobbles, the same as under the castelet (his drawing paints them from x = 7 to 113, this one goes on beyond)
+    for (let y = FLOOR; y < BOT - 6; y++) for (let i = 0; i < W; i++) {
+      const ax = i - kx, ay = y - ky, row = ay >> 2, off = row % 2 ? 3 : 0, gap = (((ax + off) % 6 + 6) % 6 === 0) || (ay % 4 === 0), nn = phash(Math.floor((ax + off) / 6), row, 31);
+      P.px(i, y, gap ? '#a89a80' : nn > 0.66 ? '#cbbfa6' : nn > 0.33 ? '#c2b59b' : '#b9ad94');
+    }
+    P.hl(0, FLOOR - 1, W, '#8c805f');
+    // the crowd goes on from his two groups, to the edges
+    const hair = ['#5a4436', '#c9a04a', '#3f3b44', '#8a6a48', '#b5655b', '#6b4a32'], cloth = ['#7192b6', '#9a87bf', '#c78a4c', '#b5655b', '#5d5862', '#c4809f'];
+    for (const side of [-1, 1]) for (let j = 1; j < 30; j++) {
+      const cx = kx + (side < 0 ? 13 - 11 * j : 108 + 11 * j); if (cx < -6 || cx > W + 6) break;
+      const hy = ky + 251 + Math.floor(phash(j, side + 3, 12) * 5), c = cloth[Math.floor(phash(j, side + 3, 17) * cloth.length)];
+      P.rect(cx - 5, hy + 3, 11, ky + 264 - hy - 3, c); P.hl(cx - 5, hy + 3, 11, fgLt(c, 0.25));
+      P.ell(cx, hy, 3, 3, hair[Math.floor(phash(j, side + 3, 21) * hair.length)]);
+      if (phash(j, side + 3, 25) > 0.66) { P.rect(cx - 4, hy - 4, 9, 3, '#b5655b'); P.px(cx + 4, hy - 5, '#e6c35a'); }
+    }
+    // the beams, top and bottom, where the old frame was
+    P.rect(0, 0, W, 3, '#2b2a2a'); P.rect(0, 3, W, 3, '#5a4436');
+    P.rect(0, BOT - 6, W, 3, '#5a4436'); P.rect(0, BOT - 3, W, H - BOT + 3, '#2b2a2a');
+  } finally { P = prev; }
+}
+function chLayout() {
+  if (!chBuild()) return;
+  const b = $('chBack'), cv = PAL.cv; if (!cv || !FGB.cw) return;
+  const bw = FGB.bw, bh = FGB.bh, sc = FGB.cw / FG_W, cl = FGB.cl, ct = Math.max(0, bh - FGB.ch);
+  cv.style.top = Math.round(ct + FGB.ch / 2) + 'px'; FGB.ct = ct; // the castelet stands at the foot of the box; what is left of the height is sky
+  { const tm = $('fgTime'); if (tm) tm.style.top = Math.round(7 * sc) + 'px'; } // the timer under the top beam
+  const kx = Math.ceil(cl / sc - 1e-6), ky = Math.ceil(ct / sc - 1e-6), left = cl - kx * sc, top = ct - ky * sc;
+  const W = Math.ceil((bw - left) / sc) + 1, H = Math.ceil((bh - top) / sc) + 1;
+  b.style.left = left.toFixed(2) + 'px'; b.style.top = top.toFixed(2) + 'px'; b.style.width = (W * sc).toFixed(2) + 'px'; b.style.height = (H * sc).toFixed(2) + 'px';
+  const key = [W, H, kx, ky].join();
+  if (CHX.key !== key) { CHX.key = key; b.width = W; b.height = H; chPaintBack(b.getContext('2d'), W, H, kx, ky); }
+  b.hidden = false;
+}
+{ const base = fgColLayout; fgColLayout = function () {
+    const r = base.apply(this, arguments);
+    try { const E = G && G.entr; if (E && E.game === 'choux') chLayout(); else { const b = $('chBack'); if (b && !b.hidden) b.hidden = true; } }
+    catch (e) { if (!CHX.err) { CHX.err = 1; console.warn('fou:', e); } }
+    return r; }; }
+{ const base = fgCtlFrame; fgCtlFrame = function () {
+    const E = G && G.entr, en = $('jtEntr'), want = !!(E && E.game === 'choux');
+    if (en && en.classList.contains('ch-on') !== want) { chBuild(); en.classList.toggle('ch-on', want); FGB.lay = ''; }
+    return base.apply(this, arguments); }; }
+{ const base = fgCleanup; fgCleanup = function () {
+    const r = base.apply(this, arguments);
+    try { const en = $('jtEntr'); if (en) en.classList.remove('ch-on'); const b = $('chBack'); if (b) b.hidden = true; CHX.key = ''; } catch (e) {}
+    return r; }; }
+/* ================================================================ /version 161 */
 
 /* ================================================================ version 160 · W2 : les décors des terrains de l’histoire (peints dans le terrain du jeu) */
 // v230 · story terrains painted INTO the terrain bake (organic water, river through the forest, wooden bridge, menhirs)
