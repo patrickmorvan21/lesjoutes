@@ -29438,12 +29438,13 @@ var HS = (function () {
   function renderMap(col) {
     const n = next(), sel = open(HS.sel) ? HS.sel : Math.min(n, STAGES.length - 1); HS.sel = sel;
     const ch = chOf(sel), C = CHAPS[ch], list = chStages(ch);
-    const W = col.clientWidth || 390, H = col.clientHeight || 844, sc = Math.max(W / C.iw, H / C.ih), ox = (W - C.iw * sc) / 2, oy = H - C.ih * sc, f = Math.min(1, sc / 0.532);
+    // v174: the map fills the screen (Patrick, 24/11: « un blanc en bas qui ne sert à rien ») — the path and the clues sit in the top two thirds of the pictures
+    const W = col.clientWidth || innerWidth || 390, H = col.clientHeight || innerHeight || 844, sc = Math.max(W / C.iw, (H - 90) / (C.ih * 0.66)), ox = (W - C.iw * sc) / 2, oy = 0, f = Math.min(1, H / 844);
     const T = (ix, iy) => [ox + ix * sc, oy + iy * sc];
     let h = `<div class="hs-cmap"><img class="scene" src="${A[C.map][2]}" alt="La carte du chapitre ${C.n}" style="left:${ox}px;top:${oy}px;width:${C.iw * sc}px;height:${C.ih * sc}px">` +
       `<canvas class="life" width="${Math.ceil(W / 2)}" height="${Math.ceil(H / 2)}" aria-hidden="true"></canvas>`;
     list.forEach(s => {
-      const i = s.i, big = !!s.big, D = big ? 100 : 84, w = (D + 32) * f, hh = (D + 40) * f, cy = (40 + D / 2) * f, [px, py] = T(C.at[s.id][0], C.at[s.id][1]), op = open(i), st = stars(s.id);
+      const i = s.i, big = !!s.big, D = big ? 100 : 84, w = (D + 32) * f, hh = (D + 40) * f, cy = (40 + D / 2) * f, [px0, py0] = T(C.at[s.id][0], C.at[s.id][1]), px = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, px0)), py = Math.min(H - 96 - (hh - cy), Math.max(cy + 60, py0)), op = open(i), st = stars(s.id);
       h += `<button type="button" class="hs-st" data-hs="st" data-i="${i}"${op ? '' : ' disabled'} style="left:${Math.round(px - w / 2)}px;top:${Math.round(py - cy)}px;width:${Math.round(w)}px;height:${Math.round(hh)}px" aria-label="Manche ${i - chFirst(ch) + 1}, ${esc(nameOf(s))}${st ? ', ' + st + ' étoiles sur 3' : op ? '' : ', fermée'}"${i === sel ? ' aria-current="true"' : ''}>` +
         (i === sel ? `<span class="hs-ring" style="top:${cy / hh * 100}%;width:${(D + 40) / (D + 32) * 100}%"><i style="background-image:url(${ringUrl()})"></i></span>` : '') +
         `<span class="cv" data-cv="${i}"></span>` + (st ? starRow(st).replace('class="hs-stars ', `style="top:${(40 + D + 4) / (D + 40) * 100}%" class="hs-stars `) : '') + '</button>';
