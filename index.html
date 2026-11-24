@@ -8038,7 +8038,7 @@ function drawLaneArt(b) {
   }
   // the attacker's banner on the gate, the owner's banners at the exit
   const atk = prevAlive(b.k);
-  if (G.gates === 2 || b.brech) { const cy = AY0 + ((G.gateB == null ? 4 : (G.gateB / COLS | 0)) + 0.5) * CS, rt = G.gateB != null && G.gateB % COLS; blit(x, rt ? caveSpriteR() : caveSprite(), rt ? AX0 + COLS * CS - 4 : AX0 + 4, cy); if (atk >= 0 && b.alive) { const ac = pcol(atk); blit(x, flagSprite(PCOL[ac], PDARK[ac], b.queue.length ? fmod(G.t * 6, 2) : 0), rt ? AX0 + COLS * CS + 20 : AX0 - 20, cy - 8); } }
+  if (G.gates === 2 || b.brech) { const cy = AY0 + ((G.gateB == null ? 4 : (G.gateB / COLS | 0)) + 0.5) * CS, rt = G.gateB != null && G.gateB % COLS; blit(x, brGateSpr('open', rt), rt ? AX0 + COLS * CS : AX0, cy); if (atk >= 0 && b.alive) { const ac = pcol(atk), f = b.queue.length ? fmod(G.t * 6, 2) : 0; blit(x, flagSprite(PCOL[ac], PDARK[ac], f), rt ? AX0 + COLS * CS + 4 : AX0 - 4, cy - 18); blit(x, flagSprite(PCOL[ac], PDARK[ac], 1 - f), rt ? AX0 + COLS * CS + 21 : AX0 - 21, cy - 18); } }
   if (atk >= 0 && b.alive) {
     const f = b.queue.length ? fmod(G.t * 6, 2) : 0;
     const ac = pcol(atk);
@@ -34558,28 +34558,75 @@ function brSealSpr(right) {
     return right ? sprFlip(sp) : sp;
   });
 }
+// version 172b (Patrick, 24/11 : « ça doit ressembler à l'ouverture en haut : un chemin avec un passage sans les arbres, et à la place une grosse
+// porte en bois, qui ne doit pas empiéter sur le terrain ») : a clearing cut through the trees beside the lane, the creatures' path in it, and
+// across the path, outside the lane, a heavy wooden door in its log frame; open, only the frame is left and the planks lie on the ground.
+const BRG = { IRON: ['#2a2f36', '#3d444c', '#5b646e', '#8a939c'] };
+function brGateSpr(state, right) {
+  return sprGet('brgate|' + state + (right ? 'R' : 'L'), () => {
+    const sp = bakeAt(50, 46, 44, 23, (x, y) => {
+      const G4 = [K.g0, K.g1, K.g2, K.g3], sh = K.gsh || K.g0, W = BRX.WOOD, I = BRG.IRON;
+      // the clearing: grass where the trees were, ragged at the top and the bottom, fading into the wood on the far side
+      for (let i = -42; i <= 0; i++) {
+        const t = -13 + Math.round(vnoise(i / 3, 1, 301) * 3), bt = 12 - Math.round(vnoise(i / 3, 2, 302) * 3);
+        for (let j = t; j <= bt; j++) {
+          if (i < -38 + vnoise(j / 3, 3, 303) * 5) continue;
+          const n = vnoise((x + i) / 5, (y + j) / 5, 304);
+          P.px(x + i, y + j, j <= t + 1 ? sh : n > .72 ? G4[3] : n > .48 ? G4[2] : n > .25 ? G4[1] : G4[0]);
+        }
+      }
+      // the creatures' path, like the one at the top
+      for (let i = -42; i <= 0; i++) {
+        const hw = 5 + vnoise(i / 4, 5, 305) * 1.6, far = i < -36 + vnoise(4, i / 3, 306) * 4;
+        if (far) continue;
+        for (let j = -8; j <= 8; j++) { const d = Math.abs(j - 0.5); if (d > hw) continue;
+          const h = vnoise((x + i) / 2, (y + j) / 2, 307);
+          P.px(x + i, y + j, d > hw - 1 ? K.t1 : h > .78 ? K.t1 : (K.ts && h < .1) ? K.ts : K.t0); }
+      }
+      // the door's frame: two logs and a beam, outside the lane (right against it, so it shows on a phone)
+      x += 1;
+      castRect(x - 24, y + 6, x - 3, y + 10, 8);
+      const log = (i0, j0, w, h) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) P.px(x + i0 + i, y + j0 + j, i === 0 && w > 1 ? W[2] : (j + i0) % 5 === 0 ? W[0] : W[1]); };
+      log(-23, -16, 3, 26); log(-7, -16, 3, 26);
+      for (let i = -24; i <= -4; i++) { P.px(x + i, y - 18, W[3]); P.px(x + i, y - 17, i % 4 ? W[2] : W[1]); P.px(x + i, y - 16, W[0]); }
+      if (state === 'seal') {
+        // the door: thick planks, two iron bands, a ring
+        for (let i = -20; i <= -7; i++) for (let j = -15; j <= 8; j++) {
+          const seam = (i + 20) % 4 === 3, top = j < -13;
+          P.px(x + i, y + j, seam ? W[0] : top ? W[3] : ((i + 20) >> 2) % 2 ? W[1] : W[2]);
+        }
+        for (const j of [-9, 3]) for (let i = -21; i <= -6; i++) { P.px(x + i, y + j, I[1]); P.px(x + i, y + j + 1, I[0]); if ((i + 21) % 4 === 1) P.px(x + i, y + j, I[3]); }
+        P.px(x - 10, y - 3, I[3]); P.px(x - 11, y - 2, I[2]); P.px(x - 9, y - 2, I[2]); P.px(x - 10, y - 1, I[3]);
+        for (let i = -20; i <= -7; i++) P.px(x + i, y + 9, K.dk);
+      } else {
+        // open: one leaf hangs from the near log, the rest lies on the path
+        for (let i = -20; i <= -18; i++) for (let j = -14; j <= 4; j++) P.px(x + i, y + j + (i + 20), (i + 20) === 1 ? W[1] : W[2]);
+        P.px(x - 19, y - 8, I[2]); P.px(x - 19, y - 2, I[2]);
+        for (const [a, b, w] of [[-15, 5, 6], [-11, 7, 5], [-30, 4, 4], [-27, -5, 3]]) { for (let i = 0; i < w; i++) { P.px(x + a + i, y + b, W[2]); P.px(x + a + i, y + b + 1, W[0]); } }
+      }
+    });
+    return right ? sprFlip(sp) : sp;
+  });
+}
 // drawn on the lane while it is sealed: the cave on the edge, the cell it opens onto in dotted lines; cracked: the slits glow, dust falls, it shakes
 function brDrawDoor(x, b, right, gr, crack, k) {
-  const cy = AY0 + (gr + 0.5) * CS, ax = right ? AX0 + COLS * CS - BRX.IN : AX0 + BRX.IN;
+  const cy = AY0 + (gr + 0.5) * CS, ax = right ? AX0 + COLS * CS : AX0;
   const sh = crack && k > 0.55 && Math.floor(G.t * 9) % 4 === 0 ? (Math.floor(G.t * 23) % 2 ? 1 : -1) : 0;
-  blit(x, brSealSpr(right), ax + sh, cy);
-  // the cell the cave opens onto: dotted, kept free (pulsing while the coach speaks of it)
+  blit(x, brGateSpr('seal', right), ax + sh, cy);
+  // the cell it opens onto: dotted, kept free (pulsing while the coach speaks of it)
   const c0 = right ? AX0 + (COLS - 1) * CS : AX0, r0 = AY0 + gr * CS, on = b.k === G.me && G._coDoor;
   x.globalAlpha = on ? 0.55 + 0.4 * Math.sin(G.t * 6) : crack ? 0.6 : 0.32; x.fillStyle = on ? '#f3d27e' : crack ? '#f2a35a' : '#f3ecd8';
   for (let i = 2; i < CS - 2; i += 4) { x.fillRect(c0 + i, r0 + 1, 2, 1); x.fillRect(c0 + i, r0 + CS - 2, 2, 1); x.fillRect(c0 + 1, r0 + i, 1, 2); x.fillRect(c0 + CS - 2, r0 + i, 1, 2); }
   x.globalAlpha = 1;
   if (!crack) return;
-  // the slits between the boulders glow, more and more; dust falls from the top of the rock
-  const mx = (px) => right ? ax - px : ax + px, glow = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(G.t * (4 + 4 * k)));
-  const slits = [[[1, -6], [3, -3], [2, 0], [4, 2], [3, 5]], [[8, -8], [8, -5], [10, -2], [9, 1], [11, 4]], [[5, 0], [7, 1], [9, 0], [12, 1]]];
-  const n = Math.max(1, Math.round(k * 3));
-  for (let s = 0; s < n; s++) { const L = slits[s];
-    for (let q = 0; q < L.length - 1; q++) { const [a0, b0] = L[q], [a1, b1] = L[q + 1], m = Math.max(Math.abs(a1 - a0), Math.abs(b1 - b0));
-      for (let t = 0; t <= m; t++) { const px = Math.round(a0 + (a1 - a0) * t / m), py = Math.round(b0 + (b1 - b0) * t / m);
-        x.globalAlpha = glow; x.fillStyle = '#e8743a'; x.fillRect(mx(px) + sh - (right ? 1 : 0), cy + py, 1, 1);
-        if (k > 0.5) { x.globalAlpha = glow * 0.9; x.fillStyle = '#ffd98a'; x.fillRect(mx(px) + sh - (right ? 1 : 0), cy + py, 1, 1); } } } }
-  x.globalAlpha = 0.18 * glow; x.fillStyle = '#ff9a4a'; x.fillRect(mx(right ? 13 : -2) + sh, cy - 9, 16, 16); x.globalAlpha = 1;
-  for (let i = 0; i < 4; i++) { const t = (G.t * (0.7 + k) + i * 0.27) % 1; x.globalAlpha = 1 - t; x.fillStyle = '#d8cdb4'; x.fillRect(mx(1 + i * 3), cy - 12 + Math.round(16 * t), 1, 1); }
+  // cracked: light through the seams of the planks, more and more; dust from the beam
+  const mx = p => (right ? ax - p - 1 : ax + p) + sh, glow = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(G.t * (4 + 4 * k)));
+  const seams = [-16, -12, -8], n = Math.max(1, Math.round(k * 3));
+  for (let s2 = 0; s2 < n; s2++) { const sx = seams[s2];
+    for (let j = -14; j <= 8; j++) { if (vnoise(sx, j / 2, 311 + s2) > .78) continue; const w = vnoise(sx, j / 4, 321) > .6 ? 1 : 0;
+      x.globalAlpha = glow; x.fillStyle = '#e8843a'; x.fillRect(mx(sx + w), cy + j, 1, 1);
+      if (k > 0.5 && Math.abs(j) < 9) { x.fillStyle = '#ffd98a'; x.fillRect(mx(sx + w), cy + j, 1, 1); } } }
+  for (let i = 0; i < 4; i++) { const t = (G.t * (0.7 + k) + i * 0.27) % 1; x.globalAlpha = 1 - t; x.fillStyle = '#d8cdb4'; x.fillRect(mx(-18 + i * 4), cy - 15 + Math.round(22 * t), 1, 1); }
   x.globalAlpha = 1;
 }
 // the thunder: the game waits while the band crosses the screen, when no friend is waiting (Patrick, 24/11 : « le jeu doit être en pause »)
