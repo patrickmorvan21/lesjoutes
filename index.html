@@ -32363,7 +32363,10 @@ PLAN.grotte = false; VARS.grotte = false;
 const brCand = () => { const c = []; for (let r = 3; r <= 9; r++) { c.push(idx(0, r)); c.push(idx(COLS - 1, r)); } return c; };
 const brCost = () => (G && G.quick ? BR.costQ : BR.costL);
 const brWave = () => (G && G.quick ? BR.waveQ : BR.waveL);
-function brOn() { return !!(G && G.jt && G.b && G.gates !== 2 && !G.defi); }
+// version 173 (Patrick, 24/11 : « enlève cette idée de brèche, on verra si on l'implante plus tard ») : switched off, everything kept for later
+// (no door on the terrains, no « Brèche » card in Envoyer, the bots never use it, the story's lessons about it never come)
+BR.off = true;
+function brOn() { return !BR.off && !!(G && G.jt && G.b && G.gates !== 2 && !G.defi); }
 function brSay(html, dur) { try { FOU.q.length = 0; G._fouLock = 0; fouSay(html, { dur }); G._fouLock = G.t + dur / 1000; } catch (e) {} }
 { const base = fouSay; fouSay = function () { if (G && G._fouLock && G.t < G._fouLock) return false; return base.apply(this, arguments); }; }
 function brSync() {
