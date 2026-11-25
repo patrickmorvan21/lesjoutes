@@ -24362,11 +24362,29 @@ const ET_TUNE = [
   [[0, 72, 2], [2, 71, 1], [3, 69, 1], [4, 67, 2], [6, 66, 2]],
   [[0, 64, 1], [1, 66, 1], [2, 67, 1], [3, 69, 1], [4, 62, 4]],
 ];
-function etMusicPlan() {
+/* version 177 (25/11, Patrick : « la musique en fond n'est pas du tout en rythme avec les tambours ; il faudrait une musique rythmée par rapport à ça ») :
+   the fife now plays on the very notes that fall (one note of the bar's tune per drum to hit, two at once when both drums are due), a soft
+   bass drum marks beats 1 and 3, the tambourine 2 and 4, the shaker every eighth: the tune is the chart, heard. */
+function etMusicPlan(cond) {
   const L = [];
   for (let j = 0; j < 4; j++) L.push({ t: j * ET_BEAT, k: 'stick', a: j === 0 });
-  for (let b = 1; b <= 12; b++) for (let j = 0; j < 8; j++) { L.push({ t: b * ET_BAR + j * ET_SLOT, k: 'shk', a: j % 2 === 0 }); if (j === 2 || j === 6) L.push({ t: b * ET_BAR + j * ET_SLOT, k: 'tamb' }); }
-  ET_TUNE.forEach((bar, bi) => bar.forEach(([j, m, len]) => L.push({ t: (bi + 1) * ET_BAR + j * ET_SLOT, k: 'fife', m, d: len * ET_SLOT })));
+  for (let b = 1; b <= 12; b++) for (let j = 0; j < 8; j++) {
+    L.push({ t: b * ET_BAR + j * ET_SLOT, k: 'shk', a: j % 2 === 0 });
+    if (j === 2 || j === 6) L.push({ t: b * ET_BAR + j * ET_SLOT, k: 'tamb' });
+    if (j === 0 || j === 4) L.push({ t: b * ET_BAR + j * ET_SLOT, k: 'kick', a: j === 0 });
+  }
+  const bars = cond && cond.bars;
+  if (bars && bars.length === 12) {
+    bars.forEach((pat, bi) => {
+      const pitches = ET_TUNE[bi].map(n => n[1]), hits = [];
+      for (let j = 0; j < 8; j++) if (pat[j] !== '.') hits.push(j);
+      hits.forEach((j, k) => {
+        const nx = k + 1 < hits.length ? hits[k + 1] : 8, len = Math.min(2, nx - j), m = pitches[k % pitches.length], t = (bi + 1) * ET_BAR + j * ET_SLOT;
+        L.push({ t, k: 'fife', m, d: len * ET_SLOT });
+        if (pat[j] === 'B') L.push({ t, k: 'fife', m: m - 5, d: len * ET_SLOT, lo: 1 });
+      });
+    });
+  } else ET_TUNE.forEach((bar, bi) => bar.forEach(([j, m, len]) => L.push({ t: (bi + 1) * ET_BAR + j * ET_SLOT, k: 'fife', m, d: len * ET_SLOT })));
   L.push({ t: 12 * ET_BAR + 4 * ET_SLOT, k: 'chord' });
   L.sort((a, c) => a.t - c.t);
   return L;
@@ -24421,7 +24439,8 @@ function etPlay(ev, when) {
   if (!mu) return;
   if (ev.k === 'shk') etNoise('highpass', 7200, 0.8, t, ev.a ? 0.05 : 0.035, ev.a ? 0.05 : 0.03);
   else if (ev.k === 'tamb') { etNoise('bandpass', 6200, 3, t, 0.16, 0.07); etNoise('highpass', 9000, 0.7, t, 0.09, 0.04); }
-  else if (ev.k === 'fife') etFife(t, ev.m, ev.d, 0.075);
+  else if (ev.k === 'fife') etFife(t, ev.m, ev.d, ev.lo ? 0.05 : 0.075);
+  else if (ev.k === 'kick') { etOsc('sine', ev.a ? 95 : 85, t, 0.16, ev.a ? 0.16 : 0.11, 42); }
   else if (ev.k === 'chord') { [62, 66, 69, 74].forEach(m => etFife(t, m, 1.3, 0.04)); etOsc('sine', sxN(38), t, 1.3, 0.12, 0, null, 0.02); }
 }
 // the player's drums: the left a deep « boum », the right a dry « tac »; « Parfait » rings a little bell
@@ -24438,7 +24457,7 @@ function etBell() { if (!etSnd()) return; try { const t = SFX.ctx.currentTime; e
 function etAudioFrame(E) {
   if (E.phase !== 'play') { if (ET.drone) etDroneStop(0.6); return; }
   const t = etClock(E); if (t < 0 || !etSnd()) { if (ET.drone) etDroneStop(0.2); return; }
-  if (!ET.plan || ET.seed !== E.seed) { ET.plan = etMusicPlan(); ET.seed = E.seed; ET.pi = 0; }
+  if (!ET.plan || ET.seed !== E.seed) { let c = E.cond; try { if (!c || !c.bars) c = etCond(E.seed); } catch (e) { c = null; } ET.plan = etMusicPlan(c); ET.seed = E.seed; ET.pi = 0; }
   const a = SFX.ctx, lat = Math.min(0.1, Math.max(0, a.outputLatency || a.baseLatency || 0));
   if (MUS.on && !ET.drone && t < FG.etend.dur - 0.6) etDroneStart();
   if ((!MUS.on || t >= FG.etend.dur - 0.05) && ET.drone) etDroneStop(MUS.on ? 0.9 : 0.2);
@@ -34699,6 +34718,12 @@ window.addEventListener('message', e => {
   } catch (er) {}
 });
 { const base = closeFarm; closeFarm = function () { try { if (BT.farm) { btStop(true); BT.farm = false; } } catch (e) {} return base.apply(this, arguments); }; }
+// version 177: the boss music steps aside during « La danse des étendards » (its own tune keeps the beat), and comes back after
+setInterval(() => { try {
+  const on = !!(G && G.entr && G.entr.game === 'etend'), a = SFX.ctx; if (!BT.g || !a) return;
+  if (on && BT.playing && !BT.duck) { BT.duck = true; BT.g.gain.cancelScheduledValues(a.currentTime); BT.g.gain.setTargetAtTime(0, a.currentTime, 0.15); }
+  else if (!on && BT.duck) { BT.duck = false; if (BT.playing) { BT.g.gain.cancelScheduledValues(a.currentTime); BT.g.gain.setTargetAtTime(0.3, a.currentTime, 0.4); } }
+} catch (e) {} }, 200);
 // the boss music stops with the screen (locked phone, other app) and comes back with it
 document.addEventListener('visibilitychange', () => { try { if (!BT.el) return; if (document.hidden) BT.el.pause(); else if (BT.playing) { const p = BT.el.play(); if (p && p.catch) p.catch(() => {}); } } catch (e) {} });
 // the button a lesson of the story speaks of shines
