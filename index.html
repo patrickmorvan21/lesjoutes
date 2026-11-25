@@ -23599,7 +23599,7 @@ fgText = function fgText4() {
   const g = FG[E.game], me = G.b[G.me], plays = fgIn(G.me), st = fgMine(), end = E.phase === 'end' && E.res;
   const mine = st || fgInit(E.game);
   // who plays: the Houses' chips (the cabbages each one has, a gold mark at the end of the race or the pole)
-  const val = k => { const s = fgStOf(E, k); return E.game === 'jongle' ? String(s.pts | 0) : E.game === 'choux' || E.game === 'etend' ? String(s.score | 0) : s.fin >= 0 ? '<i></i>' : ''; };
+  const val = k => { const s = fgStOf(E, k); return E.game === 'jongle' ? String(s.pts | 0) : E.game === 'pomme' || E.game === 'bulles' ? String(s.sc | 0) : E.game === 'choux' || E.game === 'etend' ? String(s.score | 0) : s.fin >= 0 ? '<i></i>' : ''; };
   const who = $('jtPalWho'), wh = E.order.map(k => `<span class="pw${k === G.me ? ' on' : ''}">${palIcon(k)}<span>${palName(k)}</span><em class="fg-v">${val(k)}</em></span>`).join('');
   if (FGX.txt.who !== wh) { FGX.txt.who = wh; who.style.setProperty('--n', Math.min(4, E.order.length)); who.innerHTML = wh; }
   // what to do now
@@ -23617,6 +23617,7 @@ fgText = function fgText4() {
   }
   else if (E.phase === 'play' && E.game === 'choux') { const n = mine.score | 0; kick = `À TOI · ${n} POINT${Math.abs(n) > 1 ? 'S' : ''}`; msg = 'Sa tête : +10, vite : +15 · sa marotte : −5'; }
   else if (E.phase === 'play' && E.game === 'etend') { const n = mine.score | 0, c = mine.combo | 0; kick = `À TOI · ${n} POINT${Math.abs(n) > 1 ? 'S' : ''}` + (c >= 4 ? ` · SÉRIE ${c}` : ''); msg = 'Pile dans le cadre : +2 · presque : +1'; }
+  else if (E.phase === 'play' && (E.game === 'pomme' || E.game === 'bulles')) { const n = mine.sc | 0; kick = `À TOI · ${n} POINT${Math.abs(n) > 1 ? 'S' : ''}`; msg = E.game === 'pomme' ? 'Rouge +1 · dorée +3 · pourrie −2 · la guêpe pique' : 'Tes bulles +1 · dorée +3 · violette du fou −2'; }
   else if (E.phase === 'play') { if (mine.fin >= 0) { kick = 'EN HAUT'; msg = 'Tu as décroché la relique… on attend les autres'; } else { kick = `À TOI · GRIMPE · ${mine.h | 0}/${MAT.H}`; msg = 'Tape la main qui brille, puis l’autre'; } }
   else if (E.phase === 'count') { kick = 'LE FOU'; msg = g.cnt; }
   const mh = `<span class="jt-k">${kick}</span><b>${msg}</b>`;
@@ -23633,7 +23634,7 @@ fgText = function fgText4() {
   const sub = w < 0 ? 'Personne ne gagne la relique cette fois'
     : E.game === 'course' ? (w === G.me ? 'Ton sanglier arrive le premier' : `Le sanglier de ${G.b[w].name} arrive le premier`)
     : E.game === 'choux' || E.game === 'etend' ? (w === G.me ? 'Tu as le plus de points' : `${G.b[w].name} a le plus de points`)
-    : E.game === 'jongle' ? (w === G.me ? 'Tu as le plus de points' : `${G.b[w].name} a le plus de points`)
+    : E.game === 'jongle' || E.game === 'pomme' || E.game === 'bulles' ? (w === G.me ? 'Tu as le plus de points' : `${G.b[w].name} a le plus de points`)
     : (fgStOf(E, w).fin >= 0 ? (w === G.me ? 'Tu es le premier en haut du mât' : `${G.b[w].name} est le premier en haut du mât`) : (w === G.me ? 'Tu es le plus haut sur le mât' : `${G.b[w].name} est le plus haut sur le mât`));
   setTxt('jtPalSub', sub);
   const key = [w, s2, E.sack, E.botRelic, (me && me.jt.relicPick || []).join(','), E.myPick || '', NET.mode].join('|');
@@ -34720,7 +34721,7 @@ window.addEventListener('message', e => {
 { const base = closeFarm; closeFarm = function () { try { if (BT.farm) { btStop(true); BT.farm = false; } } catch (e) {} return base.apply(this, arguments); }; }
 // version 177: the boss music steps aside during « La danse des étendards » (its own tune keeps the beat), and comes back after
 setInterval(() => { try {
-  const on = !!(G && G.entr && G.entr.game === 'etend'), a = SFX.ctx; if (!BT.g || !a) return;
+  const on = !!(G && G.entr && ['etend', 'pomme', 'bulles'].includes(G.entr.game)), a = SFX.ctx; if (!BT.g || !a) return;
   if (on && BT.playing && !BT.duck) { BT.duck = true; BT.g.gain.cancelScheduledValues(a.currentTime); BT.g.gain.setTargetAtTime(0, a.currentTime, 0.15); }
   else if (!on && BT.duck) { BT.duck = false; if (BT.playing) { BT.g.gain.cancelScheduledValues(a.currentTime); BT.g.gain.setTargetAtTime(0.3, a.currentTime, 0.4); } }
 } catch (e) {} }, 200);
@@ -34733,6 +34734,610 @@ document.addEventListener('visibilitychange', () => { try { if (!BT.el) return; 
 .fou-say .fs-bub{pointer-events:auto;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.hs-hl{animation:none;box-shadow:inset 0 0 0 2px #f3d27e}}`; document.head.appendChild(st); })();
 /* ================================================================ /version 172 */
+
+/* ================================================================ version 178 (25/11): two new games of the fou at the Entracte — la cueillette, les bulles du fou
+   Patrick, 25/11, 18 h 25 (prototype « Nouveaux jeux du fou », 3rd round): « j'aime bien le jeu avec les bulles quand il est dans sa
+   baignoire. Mais je changerais la musique » ; « Une fois fait, tu pourras mettre du coup les deux jeux en ligne. »
+   - La cueillette: the apple tree on the flat meadow (ground A), the basket in the House's colour with its gold outline; slide it under
+     the apples: red +1, golden +3, rotten −2, the wasp stings (the basket stays put a second). 20 s, a folk tune that speeds up at the end.
+   - Les bulles du fou: the fou in his tub blows bubbles, each with a House's colour and its sign; pop yours +1, the golden ones +3 for all,
+     the fou's purple ones −2; another House's bubble: a moment without popping. 22 s, a music box with bubbles.
+   Each House plays its own tree and its own bubbles, from the same seed (the apples' fall, the bubbles' flight are the same for all):
+   a guest sends where his basket goes (x, 2 characters) or which bubble he popped (its number, 2 characters); the host replays them. */
+(function fnGames() {
+  const W = 176, H = 270;
+  const FN_G = { pomme: 1, bulles: 1 };
+  const isFN = E => !!(E && FN_G[E.game]);
+  FG.pomme = { c: 'a', n: 'La cueillette', k: 'ENTRACTE · LA CUEILLETTE', short: 'la cueillette', dur: 20,
+    d: 'Le plus beau panier choisit une relique', say: '« Oyez ! La cueillette ! Je secoue le pommier : glisse ton panier sous les pommes… gare aux guêpes ! »',
+    cnt: '« On compte les pommes… »', cv: 'Le pommier du fou et ton panier' };
+  FG.bulles = { c: 'b', n: 'Les bulles du fou', k: 'ENTRACTE · LES BULLES DU FOU', short: 'les bulles du fou', dur: 22,
+    d: 'Le plus de bulles éclatées choisit une relique', say: '« Oyez ! Les bulles du fou ! À chacun les siennes… et pas les miennes ! »',
+    cnt: '« On compte les bulles… »', cv: 'Le fou dans son bain et ses bulles' };
+  FG_DEC.a = 'pomme'; FG_DEC.b = 'bulles';
+  FG_POOL.push('pomme', 'bulles');
+
+  /* ---------------------------------------------------------------- the painting kit (the prototype's), on the canvas of the moment */
+  let X = null;
+  const px = (x, y, c) => { X.fillStyle = c; X.fillRect(Math.round(x), Math.round(y), 1, 1); };
+  const rect = (x, y, w, h, c) => { X.fillStyle = c; X.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+  const hl = (x, y, w, c) => rect(x, y, w, 1, c), vl = (x, y, h, c) => rect(x, y, 1, h, c);
+  function ell(cx, cy, rx, ry, c) { X.fillStyle = c; for (let y = -ry; y <= ry; y++) { const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (y * y) / (ry * ry + 0.01)))); X.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1); } }
+  function spr(rows, pal, x, y, flip = false) { for (let j = 0; j < rows.length; j++) { const r = rows[j]; for (let i = 0; i < r.length; i++) { const k = r[i]; if (k === '.' || !pal[k]) continue; px(x + (flip ? r.length - 1 - i : i), y + j, pal[k]); } } }
+  const hash = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 2246822519) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const tnt = (hex, k, to = '#000000') => { const a = parseInt(hex.slice(1), 16), b = parseInt(to.slice(1), 16); const m = s => Math.round(((a >> s) & 255) * (1 - k) + ((b >> s) & 255) * k); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1); };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const r2 = t => Math.round(t * 100) / 100;
+  function txt(s, x, y, c, sh = '#1b2b34', size = 11) { X.font = `400 ${size}px "Jersey 10", monospace`; X.textAlign = 'center'; X.textBaseline = 'alphabetic'; X.fillStyle = sh; X.fillText(s, x, y + 1); X.fillStyle = c; X.fillText(s, x, y); }
+  function sparkle(x, y, t, c = '#fff2b4') { const k = Math.floor(t * 10) % 4; const r = [1, 2, 3, 2][k]; px(x, y, '#ffffff'); for (let i = 1; i <= r; i++) { px(x + i, y, c); px(x - i, y, c); px(x, y + i, c); px(x, y - i, c); } }
+  function dsky(y0, y1, cols) {
+    const n = cols.length, h = (y1 - y0) / n;
+    for (let y = y0; y < y1; y++) { const f = (y - y0) / h, i = Math.min(n - 1, Math.floor(f)), fr = f - i; for (let x = 0; x < W; x++) { const next = i < n - 1 && fr > 0.78 && ((x + y) % 2 === 0); const prev = i > 0 && fr < 0.12 && ((x + y) % 2 === 1); px(x, y, next ? cols[i + 1] : prev ? cols[i - 1] : cols[i]); } }
+  }
+  function hill(yb, amp, freq, seed, col, edge) { for (let x = 0; x < W; x++) { const top = Math.round(yb - amp * (0.55 + 0.45 * Math.sin(x * freq + seed) * Math.cos(x * freq * 0.37 + seed * 2))); vl(x, top, yb - top + 1, col); if (edge) px(x, top, edge); } }
+  function cloud(cx, cy, w, c1, c2) { ell(cx, cy, w, 3, c1); ell(cx - w / 3, cy - 2, w / 2, 3, c1); ell(cx + w / 4, cy - 3, w / 2.5, 3, c1); hl(Math.round(cx - w + 2), cy + 2, Math.round(w * 2 - 4), c2); }
+  function clump(cx, cy, r, L, seed) {
+    for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+      const d = Math.hypot(x, y * 1.05) / r; if (d > 1 + (hash(cx + x, cy + y, seed) - 0.5) * 0.22) continue;
+      const lit = (-x - y * 1.2) / r + (hash((cx + x) >> 1, (cy + y) >> 1, seed + 1) - 0.5) * 0.6;
+      px(cx + x, cy + y, d > 0.84 && lit < -0.2 ? L[0] : lit > 0.75 ? L[3] : lit > 0.15 ? L[2] : lit > -0.55 ? L[1] : L[0]);
+    }
+  }
+  function fou(x, y, rows = 'front', flip = false) { ell(x + 7, y + 17, 6, 2, 'rgba(40,30,20,.3)'); spr(JEST_ROWS[rows] || JEST_ROWS.front, JEST_PAL, x, y, flip); }
+  const FN = { bg: {}, err: 0, evI: 0, evSeed: -1, pend: null, down: false, lay: '', said: 0 };
+  function bgOf(key, fn) { let c = FN.bg[key]; if (!c) { c = document.createElement('canvas'); c.width = W; c.height = H; const prev = X; X = c.getContext('2d'); try { fn(); } finally { X = prev; } FN.bg[key] = c; } X.drawImage(c, 0, 0); }
+  // the fou's bubble speaks in the field's units (FG_W wide)
+  const say = (s, secs, x, y) => fgSay(s, secs, x * FG_W / W, y * FG_W / W);
+
+  /* ---------------------------------------------------------------- the sounds and the tunes (the browser's own, on the game's sound) */
+  const AUD = { bus: null };
+  function bus() {
+    const a = SFX.ctx; if (!a) return null;
+    try { if (typeof sxReady === 'function') sxReady(); } catch (e) {}
+    if (!AUD.bus || AUD.bus.context !== a) { AUD.bus = a.createGain(); AUD.bus.gain.value = 0.9; AUD.bus.connect(a.destination); }
+    return AUD.bus;
+  }
+  function tone(f, d, v, type = 'sine', to = 0, at = 0, music = false) {
+    if (music ? !MUS.on : !SFX.on) return; const b = bus(); if (!b) return; const a = b.context;
+    const t = a.currentTime + at, o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (to) o.frequency.exponentialRampToValueAtTime(to, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(g); g.connect(b); o.start(t); o.stop(t + d + 0.05);
+  }
+  function noise(d, v, f = 1200, q = 1, at = 0, music = false) {
+    if (music ? !MUS.on : !SFX.on) return; const b = bus(); if (!b) return; const a = b.context;
+    const t = a.currentTime + at, n = Math.floor(a.sampleRate * d), bf = a.createBuffer(1, n, a.sampleRate), ch = bf.getChannelData(0); for (let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain(); s.buffer = bf; fl.type = 'bandpass'; fl.frequency.value = f; fl.Q.value = q; g.gain.value = v; s.connect(fl); fl.connect(g); g.connect(b); s.start(t);
+  }
+  const SND = {
+    pop() { tone(660, 0.07, 0.07, 'triangle', 990); },
+    gold() { [988, 1319, 1568].forEach((f, i) => tone(f, 0.16, 0.07, 'triangle', 0, i * 0.05)); },
+    yuk() { tone(220, 0.2, 0.1, 'sawtooth', 120); },
+    sting() { tone(1400, 0.08, 0.05, 'square', 700); tone(300, 0.2, 0.08, 'sawtooth', 160, 0.05); },
+    shake() { noise(0.28, 0.08, 900, 0.8); },
+    bub() { tone(900 + Math.random() * 500, 0.06, 0.08, 'sine', 300); noise(0.04, 0.05, 4000, 2); },
+    nope() { tone(260, 0.12, 0.08, 'square', 200); },
+    thud() { tone(200, 0.06, 0.04, 'sine', 120); },
+    tick() { tone(1320, 0.06, 0.06, 'square'); },
+  };
+  // the fête's folk dance (la cueillette) and the bath's music box (les bulles); scheduled a little ahead at each frame
+  const SONG = {
+    fete: { bpm: 132, fast: 150, MEL: [74, 0, 76, 78, 79, 0, 78, 76, 74, 0, 71, 0, 69, 0, 0, 0, 71, 0, 74, 76, 78, 0, 76, 74, 76, 0, 78, 0, 81, 0, 0, 0, 79, 0, 78, 76, 74, 0, 76, 78, 79, 0, 81, 79, 78, 0, 76, 0, 74, 0, 76, 0, 78, 0, 76, 0, 74, 0, 0, 0, 74, 0, 0, 0],
+      BASS: [50, 50, 55, 55, 50, 50, 57, 57, 55, 55, 50, 50, 57, 57, 50, 50] },
+    bain: { bpm: 112, fast: 128, MEL: [67, 0, 71, 0, 74, 0, 79, 0, 78, 0, 74, 0, 76, 0, 0, 0, 72, 0, 76, 0, 79, 0, 76, 0, 74, 0, 71, 0, 72, 0, 0, 0,
+        71, 0, 74, 0, 71, 0, 67, 0, 69, 0, 72, 0, 71, 0, 69, 0, 67, 0, 71, 74, 0, 72, 71, 0, 69, 0, 0, 0, 67, 0, 0, 0],
+      BASS: [43, 50, 38, 45, 48, 55, 43, 50, 43, 50, 48, 55, 50, 45, 43, 43] },
+  };
+  const TUNE = { on: false, song: 'fete', next: 0, step: 0, fast: false };
+  function tuneStart(song) { const b = bus(); if (!b) return; Object.assign(TUNE, { on: true, song, step: 0, next: b.context.currentTime + 0.06, fast: false }); }
+  function tuneStop() { TUNE.on = false; }
+  function tunePump() {
+    if (!TUNE.on || !MUS.on) return; const b = bus(); if (!b) return; const a = b.context, S = SONG[TUNE.song];
+    const sp = 60 / (TUNE.fast ? S.fast : S.bpm) / 4, f = m => 440 * Math.pow(2, (m - 69) / 12);
+    if (TUNE.next < a.currentTime - 0.25) TUNE.next = a.currentTime + 0.02;     // back from a pause: no flood of notes
+    while (TUNE.next < a.currentTime + 0.12) {
+      const s = TUNE.step % 64, at = TUNE.next - a.currentTime;
+      if (TUNE.song === 'bain') {
+        const m = S.MEL[s]; if (m) { tone(f(m), sp * 2.2, 0.05, 'sine', 0, at, true); tone(f(m) * 2, sp * 0.7, 0.016, 'triangle', 0, at, true); }
+        if (s % 4 === 0) tone(f(S.BASS[(s / 4) | 0] - 12), sp * 1.6, 0.085, 'triangle', 0, at, true);
+        if (s % 8 === 4) tone(190, 0.09, 0.07, 'sine', 70, at, true);
+        if (s % 16 === 6 || s % 16 === 13) { const bb = 520 + ((s * 37) % 9) * 60; tone(bb, 0.07, 0.028, 'sine', bb * 2.2, at, true); }
+        if (s % 4 === 2) noise(0.025, 0.018, 5200, 1.2, at, true);
+      } else {
+        if (S.MEL[s]) { tone(f(S.MEL[s]), sp * 1.8, 0.045, 'square', 0, at, true); tone(f(S.MEL[s]) * 2, sp * 1.2, 0.012, 'triangle', 0, at, true); }
+        if (s % 4 === 0) tone(f(S.BASS[(s / 4) | 0] - 12), sp * 3, 0.09, 'triangle', 0, at, true);
+        if (s % 8 === 0) tone(110, 0.1, 0.12, 'sine', 50, at, true);
+        if (s % 2 === 1) noise(0.03, 0.035, 7000, 1, at, true);
+      }
+      TUNE.step++; TUNE.next += sp;
+    }
+  }
+
+  /* ================================================================ LA CUEILLETTE: the rules (pure: the seed, the basket's moves) */
+  const PM = { GY: 232, BW: 28, SPD: 165, R: 16, STING: 1.0 };
+  const CROWN = [[88, 40, 26], [60, 50, 22], [116, 50, 22], [38, 66, 18], [138, 66, 18], [72, 72, 20], [104, 72, 20], [88, 60, 22], [52, 80, 14], [124, 80, 14], [88, 86, 16], [26, 82, 12], [150, 82, 12]];
+  // each apple: where it hangs, when it starts to shake (t), when it falls (tf), when it reaches the baskets (tl) and where (lx: a wasp zigzags)
+  function pmCond(seed) {
+    const R = prng(seed + 31), A = [], shakes = []; let t = 0.4;
+    const spawn = t0 => {
+      const r = R(), k = r < 0.09 ? 'g' : r < 0.23 ? 'w' : r < 0.31 ? 'b' : 'r';
+      const c = CROWN[(R() * CROWN.length) | 0], an = R() * Math.PI * 2, d = R() * c[2] * 0.75;
+      const x = Math.round(clamp(c[0] + Math.cos(an) * d, 12, W - 12)), y = Math.round(c[1] + Math.sin(an) * d * 0.8);
+      const wob = k === 'g' ? 0.75 : 0.55, ph = Math.round(R() * 628) / 100, dist = PM.GY - 10 - y, tau = (-20 + Math.sqrt(400 + 600 * dist)) / 300;
+      const T0 = r2(t0), tf = r2(T0 + wob), tl = Math.round((tf + tau) * 1000) / 1000;
+      A.push({ k, x, y, t: T0, tf, tl, ph, lx: k === 'b' ? Math.round((x + Math.sin((tl - T0) * 7 + ph) * 9) * 10) / 10 : x });
+    };
+    while (t < FG.pomme.dur - 0.6) {
+      const late = t / FG.pomme.dur;
+      if (R() < 0.2 + late * 0.2) { shakes.push(r2(t)); for (let i = 0; i < 3; i++) spawn(t + i * 0.12); } else spawn(t);
+      t += 0.5 - late * 0.22 + R() * 0.16;
+    }
+    A.sort((a, c) => a.tl - c.tl); A.forEach((a, i) => { a.i = i; });
+    return { A, shakes };
+  }
+  const pmAx = (a, T) => a.k === 'b' && T > a.tf ? a.x + Math.sin((T - a.t) * 7 + a.ph) * 9 : a.x;
+  const pmY = (a, T) => { if (T <= a.tf) return a.y; const u = T - a.tf; return a.y + 20 * u + 150 * u * u; };
+  const pmInit = () => ({ t: 0, i: 0, n: 0, x: 40, tx: 40, stg: -9, na: 0, sc: 0, got: [], cau: {}, ev: [], bump: -9, rot: 0, tS: 0, h: 0, fin: -1 });
+  function pmCatch(st, a, t) {
+    st.cau[a.i] = 1; const T = r2(t);
+    if (a.k === 'b') { st.stg = t + PM.STING; st.ev.push({ t: T, r: 'b', i: a.i }); return; }
+    const v = a.k === 'g' ? 3 : a.k === 'w' ? -2 : 1;
+    st.sc = Math.max(0, st.sc + v); if (v > 0) { st.got.push(a.k); st.tS = T; } else { st.got.pop(); st.rot++; }
+    st.bump = t; st.ev.push({ t: T, r: a.k, i: a.i, v });
+  }
+  function pmAdvance(cond, st, taps, tTo) {
+    tTo = Math.min(tTo, FG.pomme.dur);
+    const A = cond.A;
+    while ((st.n + 1) * FG_DT <= tTo + 1e-9) {
+      const t1 = (st.n + 1) * FG_DT;
+      while (st.i < taps.length && taps[st.i].t < t1) st.tx = taps[st.i++].x;
+      if (t1 >= st.stg) { const d = st.tx - st.x, m = PM.SPD * FG_DT; st.x = Math.abs(d) <= m ? st.tx : st.x + Math.sign(d) * m; }
+      while (st.na < A.length && A[st.na].tl <= t1 + 1e-9) { const a = A[st.na++]; if (Math.abs(st.x - a.lx) < PM.R) pmCatch(st, a, t1); }
+      st.n++; st.t = t1;
+    }
+    st.h = st.sc > 0 ? 1 : 0;
+    return st;
+  }
+  // the bots: they see the apples once they shake, go for the best one they can reach, and step away from the rotten ones and the wasps
+  const PM_BOT = { easy: { dt: 0.4, err: 14, dodge: 0.3 }, normal: { dt: 0.3, err: 10, dodge: 0.55 }, hard: { dt: 0.2, err: 6, dodge: 0.85 } };
+  function pmBotPlan(E) {
+    const B = PM_BOT[(NET.mode === 'host' && NET.diff) || diffKey] || PM_BOT.normal, st = pmInit(), out = [], A = E.cond.A;
+    let t = 0.25 + Math.random() * 0.25;
+    while (t < FG.pomme.dur) {
+      pmAdvance(E.cond, st, out, t);
+      let best = null, bv = -9;
+      for (const a of A) {
+        if (a.t > t || a.tl <= t || a.k === 'w' || a.k === 'b') continue;
+        const tl = a.tl - t, need = Math.abs(a.lx - st.x) / PM.SPD; if (need > tl + 0.05) continue;
+        const v = (a.k === 'g' ? 3 : 1) * 2 - tl - Math.abs(a.lx - st.x) / 80; if (v > bv) { bv = v; best = a; }
+      }
+      let tx = best ? best.lx + (Math.random() - 0.5) * 2 * B.err : st.tx;
+      for (const a of A) if ((a.k === 'w' || a.k === 'b') && a.t <= t && a.tl > t && a.tl - t < 0.4 && Math.abs(a.lx - tx) < PM.R && Math.random() < B.dodge) tx += a.lx < tx ? 20 : -20;
+      tx = Math.round(clamp(tx, 14, W - 14));
+      if (tx !== st.tx) out.push({ t: fgR2(t), x: tx });
+      t += B.dt * (0.8 + Math.random() * 0.4);
+    }
+    return out;
+  }
+
+  /* ================================================================ LES BULLES DU FOU: the rules (pure: the seed, the bubbles popped) */
+  const BU = { SX: W / 2 + 6, SY: 206, COOL_F: 0.6, COOL_X: 0.5 };
+  // each bubble: when it leaves the hoop, its kind (g golden, f the fou's, p a House's), whose (o: a share of the Houses), its flight;
+  // te: when it leaves at the top; ct: when its House pops it (seen by the others, the bubbles of the others don't stay forever)
+  function buPos(b, T) {
+    const u = T - b.t, ex = Math.exp(-0.6 * u), ey = Math.exp(-0.8 * u);
+    let x = BU.SX + b.vx * (1 - ex) / 0.6 - 5 * Math.cos(2 * u + b.ph) + 5 * Math.cos(b.ph);
+    const y = BU.SY - 22 * u + (b.vy + 22) * (1 - ey) / 0.8;
+    const lo = b.r, span = W - 2 * b.r; let q = (x - lo) % (2 * span); if (q < 0) q += 2 * span; x = lo + (q > span ? 2 * span - q : q);
+    return [x, y];
+  }
+  function buCond(seed) {
+    const R = prng(seed + 41), B = []; let t = 0.3;
+    const spawn = t0 => {
+      const r = R(), k = r < 0.07 ? 'g' : r < 0.15 ? 'f' : 'p', an = -Math.PI / 2 + (R() - 0.5) * 1.7, sp = 34 + R() * 24;
+      const b = { i: B.length, k, o: R(), t: r2(t0), vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, r: k === 'g' ? 8 : 9 + Math.round(R() * 3), ph: R() * 6, ct: 0, te: 0 };
+      b.ct = r2(b.t + 1.0 + R() * 2.6);
+      let u = 0; while (u < 15 && buPos(b, b.t + u)[1] >= 14 - b.r) u += 0.05; b.te = r2(b.t + u);
+      B.push(b);
+    };
+    while (t < FG.bulles.dur - 0.3) { spawn(t); if (R() < 0.45) spawn(t); t += 0.32 - t / FG.bulles.dur * 0.12 + R() * 0.1; }
+    return { B };
+  }
+  const buOwn = (b, n) => Math.min(n - 1, Math.floor(b.o * n));
+  // seen by the House at seat s of n: out of the hoop, not yet at the top, not popped by it, and (another House's) not yet popped by that House
+  const buAlive = (b, st, T) => T >= b.t && T < b.te && !st.pop[b.i] && !(b.k === 'p' && buOwn(b, st.nn) !== st.sl && T >= b.ct);
+  const buInit = () => ({ t: 0, i: 0, sc: 0, pops: 0, cool: -9, pop: {}, ev: [], tS: 0, h: 0, fin: -1, sl: undefined, nn: 1 });
+  function buSeat(st, k) { const E = G && G.entr; if (!E) return; const kk = k === undefined ? G.me : k; st.sl = Math.max(0, E.order.indexOf(kk)); st.nn = Math.max(1, E.order.length); }
+  function buTap(st, cond, tp) {
+    if (tp.t < st.cool - 1e-9) return;
+    const b = cond.B[tp.b]; if (!b || !buAlive(b, st, tp.t)) return;
+    st.pop[b.i] = 1; st.pops++;
+    let r;
+    if (b.k === 'g') { st.sc += 3; r = 'g'; st.tS = tp.t; }
+    else if (b.k === 'f') { st.sc = Math.max(0, st.sc - 2); st.cool = tp.t + BU.COOL_F; r = 'f'; }
+    else if (buOwn(b, st.nn) === st.sl) { st.sc++; r = 'p'; st.tS = tp.t; }
+    else { st.cool = tp.t + BU.COOL_X; r = 'x'; }
+    st.ev.push({ t: tp.t, r, b: b.i });
+  }
+  function buAdvance(cond, st, taps, tTo) {
+    if (st.sl === undefined) buSeat(st);
+    tTo = Math.min(tTo, FG.bulles.dur);
+    while (st.i < taps.length && taps[st.i].t <= tTo + 1e-9) buTap(st, cond, taps[st.i++]);
+    if (tTo > st.t) st.t = tTo;
+    st.h = st.sc > 0 ? 1 : 0;
+    return st;
+  }
+  // the bots: their bubbles and the golden ones by their level, after a little while; now and then the fou's, or another House's
+  const BU_BOT = { easy: { p: 0.6, lo: 0.55, hi: 1.3, fou: 0.12, wr: 0.05, gap: 1.0 }, normal: { p: 0.76, lo: 0.42, hi: 1.0, fou: 0.07, wr: 0.03, gap: 0.9 }, hard: { p: 0.9, lo: 0.32, hi: 0.8, fou: 0.03, wr: 0.015, gap: 0.58 } };
+  function buBotPlan(E, k) {
+    const Bt = BU_BOT[(NET.mode === 'host' && NET.diff) || diffKey] || BU_BOT.normal, out = [], n = E.order.length, sl = E.order.indexOf(k);
+    for (const b of E.cond.B) {
+      const mine = b.k === 'g' || (b.k === 'p' && buOwn(b, n) === sl); let t = -1;
+      if (mine && Math.random() < Bt.p) t = b.t + Bt.lo + Math.random() * (Bt.hi - Bt.lo);
+      else if (b.k === 'f' && Math.random() < Bt.fou) t = b.t + 0.5 + Math.random();
+      else if (b.k === 'p' && !mine && Math.random() < Bt.wr) t = b.t + 0.4 + Math.random() * 0.5;
+      if (t < 0 || t >= b.te - 0.05 || (b.k === 'p' && !mine && t >= b.ct)) continue;
+      out.push({ t: fgR2(t), b: b.i, b0: b });
+    }
+    // a finger is not everywhere at once: a little while between two pops (a bubble that has gone by then is let go)
+    out.sort((a, c) => a.t - c.t);
+    const res = []; let last = -9;
+    for (const tp of out) {
+      const b = tp.b0, t = fgR2(Math.max(tp.t, last + Bt.gap * (0.75 + Math.random() * 0.5)));
+      if (t >= b.te - 0.05 || (b.k === 'p' && buOwn(b, n) !== sl && t >= b.ct)) continue;
+      res.push({ t, b: tp.b }); last = t;
+    }
+    return res;
+  }
+
+  /* ---------------------------------------------------------------- the game's own functions, wrapped */
+  { const base = fgCond; fgCond = function (game, seed) { return game === 'pomme' ? pmCond(seed) : game === 'bulles' ? buCond(seed) : base.apply(this, arguments); }; }
+  { const base = fgInit; fgInit = function (game) { return game === 'pomme' ? pmInit() : game === 'bulles' ? buInit() : base.apply(this, arguments); }; }
+  { const base = fgAdvance; fgAdvance = function (game, cond, st, taps, tTo) { return game === 'pomme' ? pmAdvance(cond, st, taps, tTo) : game === 'bulles' ? buAdvance(cond, st, taps, tTo) : base.apply(this, arguments); }; }
+  // a guest's move that reaches the host late: that House's game is played again from the start; each House knows its seat (its bubbles)
+  { const base = fgSync; fgSync = function (E, k, t) {
+      if (isFN(E)) {
+        let st = E.st[k]; const taps = E.taps[k];
+        if (st && st.i < taps.length && taps[st.i].t < st.t - 1e-9) st = E.st[k] = fgInit(E.game);
+        if (E.game === 'bulles' && st) buSeat(st, k);
+      }
+      return base.apply(this, arguments);
+  }; }
+  { const base = fgRank; fgRank = function (E) {
+      if (!isFN(E)) return base.apply(this, arguments);
+      const R = E.order.map(k => ({ k, st: E.st[k] || fgInit(E.game) }));
+      R.sort((a, c) => ((c.st.sc | 0) - (a.st.sc | 0)) || ((a.st.rot | 0) - (c.st.rot | 0)) || ((a.st.tS || 0) - (c.st.tS || 0)) || (a.k - c.k));
+      return R.map(r => ({ k: r.k }));
+  }; }
+  { const base = fgBotPlan; fgBotPlan = function (E) {
+      if (E.game === 'pomme') return pmBotPlan(E);
+      if (E.game === 'bulles') { const k = E.order.find(kk => G.b[kk] && G.b[kk].bot && !E.bot[kk]); return buBotPlan(E, k === undefined ? E.order[0] : k); }
+      return base.apply(this, arguments);
+  }; }
+  { const base = fgNow; fgNow = function () {
+      const E = G.entr, t = base.apply(this, arguments);
+      if (!isFN(E) || t < 0) return t;
+      return Math.round(etClock(E) * 100) / 100;
+  }; }
+  { const base = fgTapFx; fgTapFx = function (E) { if (isFN(E)) return; return base.apply(this, arguments); }; }
+  // my moves: the basket goes where the finger is (held or slid), a bubble under the finger is popped
+  function fnPush(tp) {
+    const E = G.entr; let st;
+    if (auth()) { const L = E.taps[G.me]; if (L.length && tp.t < L[L.length - 1].t) tp.t = L[L.length - 1].t; L.push(tp); st = fgSync(E, G.me, E.t); }
+    else { const M = FGX.mine; if (!M) return null; const L = M.taps; if (L.length && tp.t < L[L.length - 1].t) tp.t = L[L.length - 1].t; L.push(tp); st = fgAdvance(E.game, E.cond, M.st, L, tp.t); fgSend(true); }
+    return st;
+  }
+  const myTaps = () => { const E = G.entr; return auth() ? E.taps[G.me] : FGX.mine ? FGX.mine.taps : null; };
+  const canPlay = () => { const E = G && G.entr; return isFN(E) && E.phase === 'play' && fgIn(G.me); };
+  function pmAim(ax, force) {
+    if (!canPlay()) return;
+    const t = fgNow(); if (t < 0 || t > FG.pomme.dur) return;
+    const x = Math.round(clamp(ax, 14, W - 14)), L = myTaps(); if (!L) return;
+    const last = L.length ? L[L.length - 1] : null;
+    if (last && last.x === x) { FN.pend = null; return; }
+    if (!force && last && t - last.t < 0.06) { FN.pend = x; return; }
+    FN.pend = null; fnPush({ t, x });
+  }
+  function buPick(ax, ay) {
+    if (!canPlay()) return;
+    const E = G.entr, t = fgNow(); if (t < 0 || t > FG.bulles.dur) return;
+    const st = fgMine(); if (!st) return;
+    if (st.sl === undefined) buSeat(st);
+    if (t < st.cool) { FN.coolT = performance.now(); return; }
+    let best = null, bd = 99;
+    for (const b of E.cond.B) { if (b.t > t) break; if (!buAlive(b, st, t)) continue; const [x, y] = buPos(b, t), d = Math.hypot(x - ax, y - ay); if (d < b.r + 6 && d < bd) { bd = d; best = b; } }
+    if (best) fnPush({ t, b: best.i });
+  }
+  const toArt = (e) => { const r = PAL.cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
+  { const base = fgTap; fgTap = function (ax, ay, inCv, side) {
+      const E = G && G.entr;
+      if (isFN(E)) { const mx = ax / FG_W * W, my = ay / FG_H * H; if (E.game === 'pomme') { FN.down = true; pmAim(mx, true); } else if (inCv) buPick(mx, my); return; }
+      return base.apply(this, arguments);
+  }; }
+  (function fnInput() {
+    const cv = $('jtPalCv'), box = cv && cv.parentElement; if (!box) return;
+    box.addEventListener('pointermove', e => {
+      const E = G && G.entr; if (!E || E.game !== 'pomme' || E.phase !== 'play') return;
+      if (!(e.buttons & 1) && e.pointerType !== 'mouse') return;
+      const [x] = toArt(e); pmAim(x, false);
+    });
+    for (const ev of ['pointerup', 'pointercancel']) box.addEventListener(ev, () => { FN.down = false; });
+  })();
+
+  /* ---------------------------------------------------------------- between friends: 5 characters a move (2 for x or the bubble, 3 for the time) */
+  { const base = fgSend; fgSend = function (now) {
+      const E = G.entr, M = FGX.mine; if (!isFN(E)) return base.apply(this, arguments);
+      if (!M || auth() || !fgIn(G.me)) return;
+      const ack = Math.min((E.n && E.n[G.me]) | 0, M.taps.length); if (ack >= M.taps.length) return;
+      const T = performance.now(); if (!now && T - M.sentAt < FG_SEND * 1000) return;
+      if (now && T - M.sentAt < 60) return;
+      M.sentAt = T;
+      const enc = tp => b36(E.game === 'pomme' ? tp.x : tp.b, 2) + b36(Math.round(tp.t * 100), 3);
+      const chunk = M.taps.slice(ack, ack + 4).map(enc);
+      act(['J', 'fg', ack, chunk.slice(0, 2).join(''), chunk.slice(2).join('')]);
+  }; }
+  { const base = fgGesture; fgGesture = function (k, a) {
+      const E = G.entr; if (!isFN(E)) return base.apply(this, arguments);
+      if (!auth()) return '';
+      if (E.phase !== 'play' && E.phase !== 'count') return 'x';
+      const list = E.taps[k]; if (!list || !G.b[k] || G.b[k].bot) return 'x';
+      const i0 = a[2], s = String(a[3] || '') + String(a[4] || '');
+      if (!Number.isInteger(i0) || i0 < 0 || i0 > list.length) return 'x';
+      const D = FG[E.game].dur, upTo = E.phase === 'play' ? E.t + 0.5 : D + 0.05;
+      for (let j = 0; (j + 1) * 5 <= s.length; j++) {
+        if (i0 + j < list.length) continue;
+        const p = s.substr(j * 5, 5), v = parseInt(p.slice(0, 2), 36), tt = p.slice(2), t = parseInt(tt, 36) / 100;
+        if (!/^[0-9a-z]{5}$/.test(p) || !(t >= 0 && t <= Math.min(D + 0.05, upTo)) || (list.length && t < list[list.length - 1].t) || list.length >= 900) return 'x';
+        if (E.game === 'pomme' ? !(v >= 0 && v <= W) : !(v >= 0 && v < E.cond.B.length)) return 'x';
+        list.push(E.game === 'pomme' ? { t, x: v } : { t, b: v });
+      }
+      return '';
+  }; }
+  { const be = fgEncSt, bd = fgDecSt;
+    fgEncSt = function (game, st) {
+      if (game === 'pomme') return b36((st.sc | 0) + 300, 2) + b36(Math.round(st.x || 0), 2) + (G.entr && fgT(G.entr) < st.stg ? 's' : '.');
+      if (game === 'bulles') return b36((st.sc | 0) + 300, 2) + b36(Math.min(1295, st.pops | 0), 2) + ((st.pops | 0) % 2);
+      return be.apply(this, arguments);
+    };
+    fgDecSt = function (game, s) {
+      if (game === 'pomme') return { sc: parseInt(s.slice(0, 2), 36) - 300, x: parseInt(s.slice(2, 4), 36), stg: s[4] === 's' ? 99 : -9 };
+      if (game === 'bulles') return { sc: parseInt(s.slice(0, 2), 36) - 300, pops: parseInt(s.slice(2, 4), 36) };
+      return bd.apply(this, arguments);
+    };
+  }
+  { const base = frVal; frVal = function (E, k) {
+      if (!isFN(E)) return base.apply(this, arguments);
+      const p = (E.st[k] && E.st[k].sc) | 0; return { big: String(p), unit: Math.abs(p) > 1 ? 'POINTS' : 'POINT' };
+  }; }
+  /* ================================================================ the pictures: la cueillette */
+  const POMV = {
+    sky: ['#bcdbe8', '#cde4ea', '#dceae6', '#ebefdf', '#f5efd6'], hills: [['#a7c6b9', '#bcd6c8'], ['#8db59c', '#a2c6ad']],
+    leaf: ['#355f3f', '#457a48', '#5f9a55', '#86bf6c'], trunk: ['#5e4430', '#7a5a3e', '#94704c'], g: '#73a85f', gd: '#5f9452', gl: '#9cc97c',
+  };
+  function pmScene() {
+    const P2 = POMV;
+    dsky(0, 150, P2.sky);
+    cloud(34, 22, 14, '#ffffff', tnt(P2.sky[1], 0.1)); cloud(140, 30, 12, '#ffffff', tnt(P2.sky[1], 0.1));
+    hill(150, 16, 0.045, 1.3, P2.hills[0][0], P2.hills[0][1]); hill(156, 11, 0.07, 4.1, P2.hills[1][0], P2.hills[1][1]);
+    for (let i = 0; i < 10; i++) { const x = 4 + i * 19 + (i % 2) * 4, y = 152; clump(x, y - 4, 6, P2.leaf, 40 + i); vl(x, y + 2, 3, P2.trunk[0]); }
+    rect(0, 156, W, H - 156, P2.g); hl(0, 156, W, P2.gd);
+    const tuft = (x, y, c1, c2) => { px(x, y, c1); px(x - 1, y - 1, c1); px(x + 1, y - 1, c1); px(x - 2, y - 2, c2); px(x + 2, y - 2, c2); px(x, y - 2, c2); };
+    const flower = (x, y, c) => { px(x, y - 1, c); px(x - 1, y, c); px(x + 1, y, c); px(x, y + 1, c); px(x, y, '#f2cc48'); };
+    for (let i = 0; i < 18; i++) { const x = Math.floor(hash(i, 4, 6) * W), y = 164 + Math.floor(hash(i, 5, 6) * 94); tuft(x, y, P2.gl, P2.gd); }
+    for (let i = 0; i < 7; i++) { const x = Math.floor(hash(i, 6, 6) * W), y = 170 + Math.floor(hash(i, 7, 6) * 86); flower(x, y, i % 2 ? '#ffffff' : '#f2b8c8'); }
+    const T = P2.trunk, GY = PM.GY;
+    ell(W / 2, GY + 2, 22, 4, P2.gd);
+    for (let y = 70; y < GY + 2; y++) { const w = y > GY - 14 ? 9 + (y - (GY - 14)) * 0.5 : 7; for (let x = -Math.round(w); x <= Math.round(w); x++) px(W / 2 + x, y, x < -w + 2 ? T[0] : x > w - 3 ? T[2] : (hash(x, y >> 2, 3) > 0.8 ? T[0] : T[1])); }
+    for (const [x0, y0, x1, y1] of [[88, 110, 54, 76], [88, 104, 124, 72], [88, 96, 88, 54]]) { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)); for (let s = 0; s <= n; s++) { const x = Math.round(x0 + (x1 - x0) * s / n), y = Math.round(y0 + (y1 - y0) * s / n), w = Math.round(3 - s / n * 1.5); for (let i = -w; i <= w; i++) px(x + i, y, i < 0 ? T[0] : T[1]); } }
+    for (const [cx, cy, r] of CROWN) clump(cx, cy, r, P2.leaf, cx * 7 + cy);
+    for (let i = 0; i < 9; i++) { const c = CROWN[i], x = c[0] + Math.round((hash(i, 1, 9) - 0.5) * c[2]), y = c[1] + Math.round((hash(i, 2, 9) - 0.2) * c[2] * 0.6); ell(x, y, 2, 2, '#d2463a'); px(x - 1, y - 1, '#f39484'); }
+  }
+  function apple(x, y, k, t, alpha = 1) {
+    x = Math.round(x); y = Math.round(y);
+    if (alpha < 1) X.globalAlpha = alpha;
+    if (k === 'b') {
+      const f = Math.floor(t * 24) % 2;
+      ell(x, y, 5, 3, '#f0c63a'); for (const i of [-2, 1]) vl(x + i, y - 2, 5, '#3a3036'); px(x + 4, y, '#3a3036'); px(x + 5, y + 1, '#3a3036'); ell(x - 4, y, 2, 2, '#3a3036'); px(x - 5, y - 1, '#ffffff');
+      ell(x - 1, y - 4 - f, 3, 2, '#eef6fa'); ell(x + 2, y - 4 + f, 3, 2, '#dbe9f0');
+    } else if (k === 'g') {
+      X.globalAlpha = alpha * (0.25 + 0.15 * Math.sin(t * 10)); ell(x, y, 10, 10, '#fff2b4'); X.globalAlpha = alpha;
+      ell(x, y + 1, 5, 5, '#c79a2c'); ell(x, y, 5, 4, '#f2cc48'); ell(x - 1, y - 1, 3, 2, '#ffe68a'); px(x - 2, y - 2, '#ffffff'); px(x - 1, y - 3, '#ffffff');
+      vl(x, y - 7, 3, '#5a4436'); px(x + 1, y - 7, '#86bf6c'); px(x + 2, y - 8, '#86bf6c'); px(x + 3, y - 8, '#86bf6c');
+      for (let i = 0; i < 4; i++) { const an = t * 3 + i * Math.PI / 2; sparkle(x + Math.round(Math.cos(an) * 9), y + Math.round(Math.sin(an) * 7), t + i); }
+    } else if (k === 'w') {
+      ell(x, y + 1, 4, 3, '#4c4a2a'); ell(x, y, 4, 3, '#7a7238'); ell(x - 1, y - 1, 2, 1, '#9a9250'); px(x + 1, y, '#3c3a22'); px(x - 2, y + 1, '#3c3a22'); px(x + 2, y + 2, '#3c3a22');
+      vl(x, y - 5, 2, '#4a3a2a');
+      for (let i = 0; i < 3; i++) { const an = t * (9 + i) + i * 2.1; px(x + Math.round(Math.cos(an) * 6), y - 3 + Math.round(Math.sin(an * 1.3) * 4), '#2e2a30'); }
+      for (let i = 0; i < 2; i++) { const yy = y - 7 - ((t * 10 + i * 4) % 6); px(x - 2 + i * 4 + Math.round(Math.sin(t * 6 + i) * 1), Math.round(yy), '#9ab05a'); }
+    } else {
+      ell(x, y + 1, 4, 3, '#8e2c28'); ell(x, y, 4, 3, '#d2463a'); px(x - 2, y - 1, '#f39484'); px(x - 1, y - 2, '#f39484'); vl(x, y - 5, 2, '#5a4436'); px(x + 1, y - 5, '#7fb06a'); px(x + 2, y - 6, '#7fb06a');
+    }
+    X.globalAlpha = 1;
+  }
+  // my basket: an outline that follows its own shape (the basket, the cloth, the handle), gold and breathing
+  function halo(x, y, w, l, t) {
+    const S2 = new Set(), key = (i, j) => i + ',' + j, add = (i, j) => S2.add(key(i, j));
+    for (let j = 0; j < 10; j++) { const ww = Math.round(w / 2 - (j > 7 ? j - 7 : 0)); for (let i = -ww; i <= ww; i++) add(x + i, y + j); }
+    for (let i = -w / 2 - 1; i <= w / 2 + 1; i++) { const sag = Math.round(Math.abs(Math.sin((i + w / 2) / w * Math.PI * 3)) * 2); for (let j = -1; j < 4 + sag; j++) add(x + i, y + j); }
+    for (let i = 0; i <= w; i++) { const hy = y - 2 - Math.round(Math.sin(i / w * Math.PI) * 10); add(l + i, hy); add(l + i, hy - 1); }
+    const ring = src => { const out = new Set(); for (const s of src) { const [i, j] = s.split(',').map(Number); for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const q = key(i + di, j + dj); if (!S2.has(q) && !src.has(q)) out.add(q); } } return out; };
+    const r1 = ring(S2), r2s = ring(new Set([...S2, ...r1])), b = 0.5 + 0.5 * Math.sin(t * 5);
+    X.globalAlpha = 0.25 + b * 0.35; for (const s of r2s) { const [i, j] = s.split(',').map(Number); px(i, j, '#fff2b4'); }
+    X.globalAlpha = 1; for (const s of r1) { const [i, j] = s.split(',').map(Number); px(i, j, j < y - 3 ? '#fff2b4' : '#f2c84a'); }
+  }
+  function basket(x, y, k, got, bump, mine, t) {
+    x = Math.round(x); y = Math.round(y - (bump ? 2 : 0)); const w = PM.BW, l = x - w / 2, c = fgCol(k), d = fgDark(k), lc = tnt(c, 0.35, '#ffffff');
+    ell(x, y + 10, 15, 2, 'rgba(30,24,20,.3)');
+    if (mine) halo(x, y, w, l, t);
+    got.slice(-7).forEach((a, i) => { const ax = l + 5 + (i % 5) * 4.5, ay = y - 2 - Math.floor(i / 5) * 3; ell(ax, ay, 2, 2, a === 'g' ? '#f2cc48' : '#d2463a'); px(Math.round(ax - 1), ay - 1, a === 'g' ? '#ffffff' : '#f39484'); });
+    for (let j = 0; j < 10; j++) { const ww = Math.round(w / 2 - (j > 7 ? j - 7 : 0)); for (let i = -ww; i <= ww; i++) px(x + i, y + j, ((i + j * 2) % 4 === 0) ? '#8a5a2a' : (j % 2 ? '#b07c45' : '#c8945a')); }
+    for (let i = -w / 2 - 1; i <= w / 2 + 1; i++) { const sag = Math.round(Math.abs(Math.sin((i + w / 2) / w * Math.PI * 3)) * 2); for (let j = -1; j < 4 + sag; j++) { const chk = (Math.floor((i + 40) / 3) + Math.floor((j + 4) / 2)) % 2; px(x + i, y + j, j === 3 + sag ? d : chk ? c : lc); } }
+    for (let i = 0; i <= w; i++) { const hy = y - 2 - Math.round(Math.sin(i / w * Math.PI) * 10); px(l + i, hy, '#7a5030'); px(l + i, hy - 1, '#a8754f'); }
+  }
+  function pmDraw(E) {
+    const t = fgT(E), live = E.phase === 'play', me = G.me, plays = fgIn(me), st = (plays ? fgMine() : null) || null, A = E.cond.A, GY = PM.GY;
+    bgOf('pom', pmScene);
+    // the shake: the tree's crown trembles, a few leaves fall
+    let shk = 0;
+    if (live) for (const s of E.cond.shakes) { const u = t - s; if (u >= 0 && u < 0.5) shk = 1; if (u >= 0 && u < 2.2) for (let i = 0; i < 6; i++) { const lx = 20 + hash(i, s * 100 | 0, 4) * (W - 40) + Math.sin(u * 3 + i) * 6 + u * 8, ly = 40 + hash(i, 7, s * 100 | 0) * 50 + u * 40; if (ly < GY) { const c = POMV.leaf[1 + (i % 3)]; px(lx, ly, c); px(lx + 1, ly, c); } } }
+    fou(W / 2 - 30 + (shk ? Math.round(Math.sin(performance.now() / 25) * 1.5) : 0), GY - 18, shk || (E.phase === 'intro' && Math.floor(performance.now() / 500) % 2) ? 'ann' : 'front');
+    if (live) for (const a of A) {
+      if (a.t > t) continue;
+      const caught = st && st.cau[a.i];
+      if (t >= a.tl) {    // landed: in my basket (gone), or on the grass, fading
+        if (caught || a.k === 'b') continue; const u = t - a.tl; if (u > 1.4) continue;
+        apple(a.lx, GY + 6 + (a.i % 4), a.k, t + a.i, Math.max(0, 1 - u / 1.4)); continue;
+      }
+      const y = pmY(a, t), x = pmAx(a, t), wob = t < a.tf ? Math.round(Math.sin((t - a.t) * 40) * (a.k === 'g' ? 2 : 1.4)) : 0;
+      if (a.k === 'g' && t > a.tf) for (let i = 1; i <= 5; i++) { const tt = t - i * 0.03; if (tt <= a.tf) break; X.globalAlpha = (6 - i) / 10; ell(Math.round(pmAx(a, tt)), Math.round(pmY(a, tt)), 3, 3, '#ffe27a'); X.globalAlpha = 1; }
+      apple(x + wob, y, a.k, t + a.i);
+      if (t > a.tf && a.k !== 'b' && y > 120) { X.globalAlpha = 0.25 * clamp((y - 120) / 100, 0, 1); ell(Math.round(x), GY + 10, a.k === 'g' ? 5 : 3, 1, '#1b1612'); X.globalAlpha = 1; }
+    }
+    if (!st) return;
+    const stung = t < st.stg, jit = stung ? Math.round(Math.sin(performance.now() / 20)) : 0;
+    basket(st.x + jit, GY, me, st.got, t - st.bump < 0.25, true, performance.now() / 1000);
+    if (stung) for (let i = 0; i < 3; i++) { const an = performance.now() / 125 + i * 2.1; px(Math.round(st.x + Math.cos(an) * 11), Math.round(GY - 14 + Math.sin(an) * 3), '#f0c63a'); }
+    // my catches: the points over the basket, sparks for a golden one, flies for a rotten one
+    for (let j = st.ev.length - 1; j >= 0; j--) {
+      const e = st.ev[j], u = t - e.t; if (u > 1) break; if (u < 0) continue;
+      if (e.r === 'g') for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2, rr = u * 26; sparkle(Math.round(st.x + Math.cos(an) * rr), Math.round(GY - 12 + Math.sin(an) * rr * 0.6), u + i); }
+      if (e.r === 'w') for (let i = 0; i < 4; i++) { const an = u * 12 + i * 1.6; px(Math.round(st.x + Math.cos(an) * (6 + u * 8)), Math.round(GY - 8 - u * 14 + Math.sin(an) * 3), '#2e2a30'); }
+      if (u > 0.9) continue;
+      const q = u / 0.9, tx = e.r === 'b' ? 'Aïe !' : e.v > 0 ? '+' + e.v : '−2', col = e.r === 'g' ? '#ffe27a' : e.r === 'w' ? '#e88a7a' : e.r === 'b' ? '#ffb0a0' : '#ffffff';
+      X.globalAlpha = Math.min(1, 2 - q * 2); txt(tx, Math.round(st.x), Math.round(GY - 28 - q * 16), col, '#1b2b34', 16); X.globalAlpha = 1;
+    }
+  }
+
+  /* ================================================================ the pictures: les bulles du fou (le bain) */
+  const SIGNS = [
+    ['..x..', '.xxx.', 'xxxxx', '.x.x.', 'x...x'], ['.x.x.', 'xxxxx', 'xxxxx', '.xxx.', '..x..'], ['..x..', '.xxx.', 'xxxxx', '.xxx.', '..x..'],
+    ['x.x.x', 'xxxxx', 'xxxxx', 'xxxxx', '.....'], ['.xxx.', 'xx...', 'x....', 'xx...', '.xxx.'], ['..x..', '..x..', 'xxxxx', '..x..', '..x..'],
+    ['.x.x.', 'xxxxx', '.xxx.', 'xxxxx', '.x.x.'], ['x.x.x', '.xxx.', 'xxxxx', '.xxx.', 'x.x.x'],
+  ];
+  function sign(k, x, y, c) { const s = SIGNS[k % SIGNS.length]; for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) if (s[j][i] === 'x') px(x - 2 + i, y - 2 + j, c); }
+  function buScene() {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const tile = (x % 16 === 0) || (y % 16 === 0); px(x, y, tile ? '#d8ccb4' : ((x >> 4) + (y >> 4)) % 2 ? '#efe6d2' : '#e8dcc4'); }
+    rect(18, 30, 40, 52, '#8a6a48'); rect(21, 33, 34, 46, '#9fc8e0'); hl(21, 33, 34, '#c6e0ee'); vl(37, 33, 46, '#8a6a48'); hl(21, 55, 34, '#8a6a48'); ell(30, 44, 6, 3, '#ffffff'); ell(46, 66, 5, 2, '#ffffff');
+    rect(124, 40, 3, 30, '#8a6a48'); rect(127, 44, 22, 34, '#c46b7e'); for (let y = 48; y < 78; y += 6) hl(127, y, 22, '#a85468'); hl(127, 77, 22, '#8a4a5c');
+    rect(0, 236, W, H - 236, '#b8a684'); for (let x = 0; x < W; x += 12) vl(x, 236, H - 236, '#a8946e');
+    const tx = W / 2, ty = 214; ell(tx, ty + 24, 46, 5, 'rgba(60,40,30,.25)');
+    for (let j = 0; j < 26; j++) { const w = Math.round(44 - Math.max(0, j - 18) * 1.5); for (let i = -w; i <= w; i++) px(tx + i, ty + j, (i + 60) % 9 === 0 ? '#7d5530' : i < -w + 4 ? '#c08a52' : '#a8753f'); }
+    for (const j of [5, 18]) { const w = Math.round(44 - Math.max(0, j - 18) * 1.5); hl(tx - w, ty + j, w * 2 + 1, '#5b646e'); hl(tx - w, ty + j + 1, w * 2 + 1, '#3d444c'); }
+    for (let i = 0; i < 14; i++) { const fx = tx - 40 + i * 6, fy = ty - 2 + Math.round(Math.sin(i * 1.7) * 2); ell(fx, fy, 5, 4, '#ffffff'); ell(fx + 1, fy + 1, 3, 2, '#e4ecf0'); }
+    ell(tx + 30, ty - 6, 4, 3, '#e6c35a'); ell(tx + 33, ty - 10, 2, 2, '#e6c35a'); px(tx + 35, ty - 10, '#c97a3a'); px(tx + 33, ty - 11, '#2e2a30');
+  }
+  // a bubble: tinted by its House, its House's sign inside; mine with a white rim that breathes
+  function bubble(x, y, r, kind, slot, k, mine, t, ph) {
+    x = Math.round(x); y = Math.round(y);
+    const c = kind === 'g' ? '#f2cc48' : kind === 'f' ? '#8a5ab0' : fgCol(k);
+    X.globalAlpha = 0.55; ell(x, y, r, r, c); X.globalAlpha = 1;
+    for (let a = 0; a < 44; a++) { const an = a / 44 * Math.PI * 2, lit = Math.cos(an + 2.4); px(Math.round(x + Math.cos(an) * r), Math.round(y + Math.sin(an) * r), lit > 0.5 ? tnt(c, 0.55, '#ffffff') : lit < -0.6 ? tnt(c, 0.35) : c); }
+    const sx = x - Math.round(r * 0.45), sy = y - Math.round(r * 0.5); rect(sx, sy, 2, 2, '#ffffff'); px(sx + 2, sy - 1, '#ffffff');
+    if (kind === 'f') { px(x - 2, y - 1, '#2e2a30'); px(x + 2, y - 1, '#2e2a30'); hl(x - 2, y + 2, 5, '#2e2a30'); px(x - 3, y + 1, '#2e2a30'); px(x + 3, y + 1, '#2e2a30'); }
+    if (kind === 'g') { sparkle(x + r - 1, y - r + 1, t + ph); sparkle(x - r + 2, y + r - 2, t + ph + 1.5); }
+    if (kind === 'p') sign(slot, x, y + 1, '#ffffff');
+    if (mine && Math.floor(t * 4 + ph) % 2) for (let a = 0; a < 44; a++) { const an = a / 44 * Math.PI * 2; px(Math.round(x + Math.cos(an) * (r + 1)), Math.round(y + Math.sin(an) * (r + 1)), '#ffffff'); }
+  }
+  function buDraw(E) {
+    const t = fgT(E), now = performance.now() / 1000, live = E.phase === 'play', me = G.me, plays = fgIn(me), n = Math.max(1, E.order.length);
+    const st = plays ? fgMine() : null; if (st && st.sl === undefined) buSeat(st);
+    const mySl = st ? st.sl : -1;
+    bgOf('bul', buScene);
+    // the fou in his tub up to the chest; he blows when a bubble leaves the hoop
+    let blow = false; if (live) for (const b of E.cond.B) { if (b.t > t) break; if (t - b.t < 0.25) blow = true; }
+    X.save(); X.beginPath(); X.rect(0, 0, W, 214); X.clip(); fou(W / 2 - 7, 200, blow || E.phase === 'intro' ? 'ann' : 'front'); X.restore();
+    for (let i = 0; i < 5; i++) ell(W / 2 - 10 + i * 5, 213, 3, 2, '#ffffff');
+    for (let a = 0; a < 16; a++) { const an = a / 16 * Math.PI * 2; px(Math.round(BU.SX + Math.cos(an) * 4), Math.round(BU.SY + Math.sin(an) * 4), '#c9a04a'); } vl(BU.SX, BU.SY + 4, 7, '#8a6a48');
+    if (live || E.phase === 'count') {
+      const view = st || { pop: {}, sl: -1, nn: n };
+      const shown = [];
+      for (const b of E.cond.B) { if (b.t > t) break; if (t >= b.te) continue; const ok = st ? buAlive(b, st, t) : !(b.k === 'p' && t >= b.ct); if (!ok) continue; shown.push(b); }
+      shown.sort((a, c) => c.r - a.r);
+      for (const b of shown) { const [x, y] = buPos(b, t), slot = buOwn(b, n); bubble(x, y, b.r, b.k, slot, E.order[slot], b.k === 'p' && slot === mySl, now, b.ph); }
+      // the other Houses pop theirs: a little ring where it was
+      for (const b of E.cond.B) { if (b.t > t) break; if (b.k !== 'p' || buOwn(b, n) === view.sl) continue; const u = t - b.ct; if (u < 0 || u > 0.5 || b.ct >= b.te) continue; const [x, y] = buPos(b, b.ct); X.globalAlpha = Math.max(0, 1 - u * 2); for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2, rr = b.r + u * 20; px(Math.round(x + Math.cos(a) * rr), Math.round(y + Math.sin(a) * rr), fgCol(E.order[buOwn(b, n)])); } X.globalAlpha = 1; }
+    }
+    if (!st) return;
+    // my pops: a burst, the points
+    for (let j = st.ev.length - 1; j >= 0; j--) {
+      const e = st.ev[j], u = t - e.t; if (u > 0.8) break; if (u < 0) continue;
+      const b = E.cond.B[e.b], [x, y] = buPos(b, e.t), c = e.r === 'g' ? '#f2cc48' : e.r === 'f' ? '#8a5ab0' : fgCol(E.order[buOwn(b, n)]);
+      X.globalAlpha = Math.max(0, 1 - u * 1.8);
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, rr = b.r + u * 26; px(Math.round(x + Math.cos(a) * rr), Math.round(y + Math.sin(a) * rr), c); if (e.r === 'f') rect(Math.round(x + Math.cos(a) * rr * 0.6), Math.round(y + Math.sin(a) * rr * 0.6 + u * 20), 2, 2, '#6a3a90'); }
+      X.globalAlpha = 1;
+      const q = u / 0.8, tx = e.r === 'g' ? '+3' : e.r === 'f' ? '−2' : e.r === 'p' ? '+1' : 'pas la tienne', col = e.r === 'g' ? '#ffe27a' : e.r === 'f' ? '#d6a2f0' : e.r === 'p' ? '#ffffff' : '#e8dcc4';
+      X.globalAlpha = Math.min(1, 2 - q * 2); txt(tx, Math.round(x), Math.round(y - q * 14), col, '#1b2b34', e.r === 'x' ? 11 : 15); X.globalAlpha = 1;
+    }
+    if (live && t < st.cool) txt('…', W / 2, 186, '#ffb0a0', '#1b2b34', 15);
+    // what mine look like, at the bottom left
+    const bx = 8, by = 250; X.fillStyle = 'rgba(27,43,52,.78)'; X.fillRect(bx, by, 64, 16);
+    bubble(bx + 10, by + 8, 6, 'p', mySl, me, true, now, 0);
+    txt('tes bulles', bx + 40, by + 12, '#fff2b4', '#1b2b34', 10);
+  }
+
+  /* ---------------------------------------------------------------- the canvas: the whole width of the phone, the field fills the box */
+  { const base = fgDraw; fgDraw = function () {
+      const E = G && G.entr; if (!isFN(E) || !PAL.cv) return base.apply(this, arguments);
+      const cv = PAL.cv;
+      if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+      const x = cv.getContext('2d'), prevX = X, prevP = P; X = x; P = mkPen(x); x.imageSmoothingEnabled = false;
+      try { x.clearRect(0, 0, W, H); if (E.game === 'pomme') pmDraw(E); else buDraw(E); } catch (e) { if (!FN.err) { FN.err = 1; console.warn('fou:', e); } } finally { X = prevX; P = prevP; }
+      fgBubble(E); fgCountdown(E);
+      try { fgCtlFrame(); } catch (e) { if (!FN.err) { FN.err = 1; console.warn('fou:', e); } }
+  }; }
+  function fnLayout() {
+    const cv = PAL.cv; if (!cv || !fgCtlBuild()) return;
+    const box = cv.parentElement, bw = box.clientWidth, bh = box.clientHeight, d = Math.min(3, window.devicePixelRatio || 1);
+    const sc = Math.max(1, Math.floor(Math.min(bw / W, (bh - 4) / H) * d * 4) / 4) / d;
+    const w = W * sc, h = H * sc, cx = bw / 2, ct = Math.max(0, Math.round((bh - h) / 2));
+    cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.width = W; cv.height = H; PAL.sc = sc;
+    cv.style.left = Math.round(cx) + 'px'; cv.style.top = Math.round(ct + h / 2) + 'px';
+    Object.assign(FGB, { cl: cx - w / 2, cr: cx + w / 2, ct, cw: w, ch: h, bw, bh, bsz: 0, btnTop: ct + h, mode: 'fn' });
+    const tm = $('fgTime');
+    tm.style.left = Math.round(FGB.cl + 8 * sc) + 'px'; tm.style.top = Math.round(ct + 1 * sc) + 'px'; tm.style.width = Math.round(w - 16 * sc) + 'px'; tm.style.height = Math.max(5, Math.round(4 * sc)) + 'px';
+  }
+  { const base = fgColLayout; fgColLayout = function () { const E = G && G.entr; if (isFN(E)) return fnLayout(); return base.apply(this, arguments); }; }
+  function fnHide() { const en = $('jtEntr'); if (en) en.classList.remove('fn-on'); tuneStop(); }
+  function fnFrame() {
+    const E = G && G.entr; if (!isFN(E) || !PAL.cv) return;
+    if (!fgCtlBuild()) return;
+    const en = $('jtEntr'); if (en && !en.classList.contains('fn-on')) { en.classList.add('fn-on'); FGB.lay = ''; }
+    const want = 'fn|' + PAL.cv.parentElement.clientWidth + 'x' + PAL.cv.parentElement.clientHeight;
+    if (FGB.lay !== want) { FGB.lay = want; palLayout(); }
+    for (const id of ['fgBtnR', 'fgBtnL', 'fgHint']) { const el = $(id); if (el && !el.hidden) el.hidden = true; }
+    const cd = $('fgCd'); if (cd && FGB.cw) cd.style.left = Math.round(FGB.cl + FGB.cw / 2) + 'px';
+    const t = fgT(E), g = FG[E.game], left = Math.max(0, g.dur - t), on = E.phase === 'play';
+    const tm = $('fgTime'); tm.hidden = !on;
+    if (on) { tm.firstChild.style.width = (100 * left / g.dur).toFixed(2) + '%'; tm.classList.toggle('hurry', left < 5); }
+    // the tune: from « Partez ! » to the end, faster for the last five seconds; the last three seconds tick
+    if (on) { if (!TUNE.on) tuneStart(E.game === 'bulles' ? 'bain' : 'fete'); TUNE.fast = left < 5; tunePump(); if (left < 3.5 && left > 0 && Math.ceil(left) !== FN.tick) { FN.tick = Math.ceil(left); SND.tick(); } }
+    else if (TUNE.on) tuneStop();
+    if (!on) return;
+    // a slide the finger made too soon after the last one: sent now
+    if (E.game === 'pomme' && FN.pend != null) pmAim(FN.pend, false);
+    // my moves since the last frame: their sounds, the fou's words
+    const st = fgMine(); if (!st || !fgIn(G.me)) return;
+    if (FN.evSeed !== E.seed || FN.evI > st.ev.length) { FN.evSeed = E.seed; FN.evI = 0; }
+    while (FN.evI < st.ev.length) {
+      const e = st.ev[FN.evI++]; if (t - e.t > 0.5) continue;
+      if (E.game === 'pomme') {
+        if (e.r === 'g') { SND.gold(); buzz('palet'); } else if (e.r === 'w') { SND.yuk(); buzz('error'); if (performance.now() - FN.said > 2500) { FN.said = performance.now(); say('Beurk !', 0.9, 30, 150); } }
+        else if (e.r === 'b') { SND.sting(); buzz('error'); say('Aïe, la guêpe !', 1.1, 30, 150); } else SND.pop();
+      } else {
+        if (e.r === 'g') { SND.gold(); buzz('palet'); } else if (e.r === 'f') { SND.yuk(); buzz('error'); say('Hé hé, raté !', 1.0, 80, 170); }
+        else if (e.r === 'p') SND.bub(); else { SND.nope(); if (performance.now() - FN.said > 2500) { FN.said = performance.now(); say('Pas la tienne !', 1.0, 80, 170); } }
+      }
+    }
+    // the shakes of the tree: a rustle
+    if (E.game === 'pomme') for (const s of E.cond.shakes) if (s <= t && s > (FN.lastT || -1)) { SND.shake(); if (Math.random() < 0.5) say(rndOf(['Je secoue !', 'Gare dessous !', 'Hop !']), 0.9, 30, 150); }
+    FN.lastT = t;
+  }
+  { const base = fgCtlFrame; fgCtlFrame = function () { const E = G && G.entr; if (isFN(E)) return fnFrame(); fnHide(); return base.apply(this, arguments); }; }
+  { const base = fgStart; fgStart = function (game) { if (FN_G[game]) { FN.evI = 0; FN.evSeed = -1; FN.pend = null; FN.lastT = -1; FN.tick = -1; FN.said = 0; tuneStop(); } return base.apply(this, arguments); }; }
+  { const base = fgCleanup; fgCleanup = function () { const r = base.apply(this, arguments); try { fnHide(); FN.pend = null; FN.lastT = -1; } catch (e) {} return r; }; }
+  // the field the whole width, as the jongleur's
+  { const s = document.createElement('style'); s.id = 'fn178'; s.textContent = '.jt-entr.fn-on .jt-pal-box{width:calc(100% + var(--u)*16);margin-left:calc(var(--u)*-8);margin-right:calc(var(--u)*-8)}'; document.head.appendChild(s); }
+  window.FNX = { pmCond, buCond, pmAdvance, buAdvance, buPos, TUNE };
+})();
+/* ================================================================ /version 178 */
 
 useTerrain(TERKEY);
 demo();
