@@ -29107,7 +29107,7 @@ var HS = (function () {
 .hs-end .hd{text-align:center;margin-top:10px}.hs-end .hd .hs-j{font-size:56px;color:#d5bf7b;margin-top:8px}.hs-end.lost .hd .hs-j{color:#e0e5e6}
 .hs-end .big{display:flex;justify-content:center;gap:8px;margin-top:12px}.hs-end .big img{width:42px;height:42px}
 .hs-obj{margin-top:16px}.hs-obj div{display:flex;align-items:center;gap:10px;padding:8px 0;box-shadow:inset 0 -2px 0 rgba(142,162,167,.28);font-size:16px;font-weight:600;color:#8ea2a7}
-.hs-obj div.ok{color:#e0e5e6}.hs-obj img{width:14px;height:14px;flex:none}.hs-obj em{margin-left:auto;font-style:normal;font-family:var(--fb,var(--ft,sans-serif));font-size:20px;line-height:.8}
+.hs-obj div.ok{color:#e0e5e6}.hs-obj0{margin:10px 0 0}.hs-obj0 .hs-ey{color:#d5bf7b;margin-bottom:2px}.hs-obj0 div:not(.hs-ey){display:flex;align-items:center;gap:8px;padding:3px 0;font-size:14px;font-weight:600;color:#b9c7ca;text-shadow:0 1px 0 rgba(13,21,25,.7)}.hs-obj0 div.ok{color:#e0e5e6}.hs-obj0 img{width:12px;height:12px;flex:none}.hs-obj img{width:14px;height:14px;flex:none}.hs-obj em{margin-left:auto;font-style:normal;font-family:var(--fb,var(--ft,sans-serif));font-size:20px;line-height:.8}
 .hs-rew{display:flex;gap:10px;margin-top:14px}.hs-rew .r{flex:1;display:flex;align-items:center;gap:10px;padding:8px 10px;min-height:64px;box-sizing:border-box}
 .hs-rew .r canvas{height:46px;width:auto;flex:none}.hs-rew .r p{margin:0;font-size:14px;font-weight:600;line-height:1.2}.hs-rew .r p span{display:block;font:700 11px/1.2 var(--f,sans-serif);letter-spacing:.12em;text-transform:uppercase;color:#8ea2a7;margin-top:3px}
 .hs-rew .r.got{box-shadow:inset 0 0 0 2px #d5bf7b}.hs-rew .r.got p span{color:#d5bf7b}.hs-rew .r:not(.got) canvas{filter:grayscale(1) brightness(.6)}
@@ -29285,6 +29285,7 @@ var HS = (function () {
       `<div class="hd"><div class="hs-ey">Manche ${s.i - chFirst(s.ch) + 1} · ${esc(s.ter)}</div><div class="hs-j">${esc(nameOf(s))}</div><div class="sub">${esc(subOf(s))}</div></div>` +
       `<p class="intro">${esc(s.intro)}</p>` +
       `<div class="hs-rows"><div><span>Ses créatures</span><b>${esc(s.info[0])}</b></div><div><span>Son rythme</span><b>${esc(s.info[1])}</b></div><div><span>Le terrain</span><b>${esc(s.info[2])}</b></div></div>` +
+      `<div class="hs-obj0"><div class="hs-ey">Les 3 étoiles</div>${[['Battre ' + nameOf(s)], ['Garder 15 vies'], ['Gagner en moins de ' + fmt(s.time)]].map(([t], i) => `<div class="${i < st ? 'ok' : ''}">${imgTag(i < st ? 'son' : 'soff')}<span>${esc(t)}</span></div>`).join('')}</div>` +
       `<div class="hs-low">${gain}${big}</div>` +
       `<div class="cta"><button type="button" class="hs-btn" data-hs="play">Jouer</button></div></div>`;
     const b = bannerCv(s, 2); b.setAttribute('aria-label', 'Ta bannière avec son étendard'); b.setAttribute('role', 'img'); $('hsBan').replaceWith(b);
@@ -29746,7 +29747,7 @@ var HS = (function () {
     { k: 'build', when: me => G.t > 1.2 && !towers(me).length, done: me => towers(me).length > 0, hl: '#items [data-tool="arrow"]',
       say: 'Touche une case du terrain pour poser une <b>tour</b> : elle tire toute seule. Les <b>murs</b>, eux, allongent le chemin des créatures.' },
     { k: 'up', when: me => G.wave >= 2 && towers(me).some(t => t.lvl === 1 && me.gold >= upCost(t)), done: me => towers(me).some(t => t.lvl >= 2),
-      say: 'Touche une de tes tours, puis <b>Améliorer</b> : elle frappe plus fort et plus loin.' },
+      say: 'Touche une de tes tours, puis <b>Niveau 2</b> : elle frappe plus fort et plus loin.' },
     { k: 'statue', when: me => G.wave >= 2 && me.jt && me.jt.em && towers(me).length >= 2, done: () => false,
       say: 'Ta <b>statue</b> renforce les tours posées dans son cercle en pointillés : bâtis autour d’elle.' },
     { k: 'send', when: me => G.wave >= 3 && !(me.jt && me.jt.sent > 0), done: me => G.mode === 'send' || !!(me.jt && me.jt.sent > 0), hl: '#dock [data-mode="send"]',
@@ -35338,6 +35339,308 @@ document.addEventListener('visibilitychange', () => { try { if (!BT.el) return; 
   window.FNX = { pmCond, buCond, pmAdvance, buAdvance, buPos, TUNE };
 })();
 /* ================================================================ /version 178 */
+
+/* ===== version 179 · les retours des 8 testeurs (Patrick, 27/11 : « commence par faire les retours »)
+   1. La bulle du guide ne cache plus jamais la fiche ouverte : elle passe en haut de l'écran, et dit le vrai nom du bouton (« Niveau 2 »).
+   2. La caméra ne bouge plus quand on ouvre une fiche : si la tour serait sous la fiche, la fiche s'ancre en haut. Après une amélioration,
+      la fiche reste ouverte (on enchaîne niveau 2 → 3 → 4). La flèche au bout d'une rangée fait défiler, elle n'envoie plus rien.
+   3. Plus de textes coupés : tant que les envois sont fermés, une seule carte « Envois dans 1:12 » ; les libellés passent sur deux lignes ;
+      l'or s'affiche toujours en entier.
+   4. La partie guidée se lance d'office au tout premier Line Towers en solo (« Passer le guide » reste là), et elle apprend en plus
+      le mur qui devient tour et la statue.
+   5. Une alerte quand un groupe arrive chez toi (« Gueules t'envoie 6 créatures »), et un compteur de tes envois (passés / arrêtés).
+   6. Les mêmes noms au salon et en partie (Gueules, Sable…), avec l'animal de la Maison sur les pastilles, et « Tu attaques / T'attaque ».
+   7. Mode Histoire : les trois objectifs des étoiles sur la fiche du rival, avant « Jouer ».
+   8. L'Entracte s'annonce une vague avant, puis « 3, 2, 1 » ; les taps sont ignorés la première seconde ; plus de relique qui rend des vies.
+   9. La couronne : le « +6 or » s'affiche chez celui qui l'empoche, plus sous la pastille du joueur volé. */
+(function v179() {
+  const css = document.createElement('style'); css.id = 'v179'; document.head.appendChild(css);
+  const addCss = t => { css.textContent += t + '\n'; };
+
+  /* ---------------------------------------------------------------- 1 · la bulle du guide et la fiche */
+  const GUIDE_TXT = 'Touche ton Archer, puis <b>Niveau 2</b> : il frappe plus fort.';
+  try { const st = GUIDE_STEPS.find(s => s && s.sq === 4); if (st) st.sayF = () => GUIDE_TXT; } catch (e) {}
+  const popOpen = () => { const p = $('pop'); return !!(p && !p.hidden && p.offsetHeight); };
+  function bubbleAt(el) {
+    if (!el || el.hidden) return;
+    const box = el.querySelector('.guide-in'); if (!box) return;
+    const dock = $('dock').getBoundingClientRect(), low = Math.max(12, Math.round(innerHeight - (dock.top || innerHeight)) + 10);
+    const hd = document.querySelector('header'), hi = Math.round((hd ? hd.getBoundingClientRect().bottom : view.top) + 6), h = box.offsetHeight;
+    let up = false;
+    if (popOpen()) {                                  // the place that hides the less of the panel (low when it is a draw)
+      const p = $('pop').getBoundingClientRect(), ov = (a, b) => Math.max(0, Math.min(b, p.bottom) - Math.max(a, p.top));
+      const yLow = innerHeight - low - h;
+      up = ov(hi, hi + h) < ov(yLow, yLow + h);
+    }
+    if (up) { const t = hi + 'px'; if (el.style.top !== t) { el.style.top = t; el.style.bottom = 'auto'; } }
+    else if (el.style.top && el.style.top !== 'auto') { el.style.top = 'auto'; el.style.bottom = low + 'px'; }
+  }
+  setInterval(() => { try { bubbleAt($('guide')); bubbleAt($('hsTip')); } catch (e) {} }, 60);
+
+  /* ---------------------------------------------------------------- 2 · la fiche ne déplace plus la caméra */
+  let popping = false;
+  { const base = goCam; goCam = function () { if (popping) return; return base.apply(this, arguments); }; }
+  { const base = openPop; openPop = function () { popping = true; try { return base.apply(this, arguments); } finally { popping = false; } }; }
+  try {
+    const base = placePop; placePop = function () {
+      const r = base.apply(this, arguments);
+      try {
+        const p = $('pop'); if (!p.classList.contains('pa') || !G || !G.sel) return r;
+        const me = G.b[G.me], [, y0] = w2s(me.ox + G.sel.c + 0.5, me.oy + G.sel.r), [, y1] = w2s(me.ox + G.sel.c + 0.5, me.oy + G.sel.r + 1);
+        const top = p.getBoundingClientRect().top;
+        if (y1 > top - 6) {                              // the tower would hide under the panel: the panel goes up, the camera stays
+          const hd = document.querySelector('header'), t = Math.round((hd ? hd.getBoundingClientRect().bottom : view.top) + 6);
+          if (y0 > t + p.offsetHeight + 6) p.style.top = t + 'px';
+        }
+      } catch (e) {}
+      return r;
+    };
+  } catch (e) {}
+  // after « Niveau 2 », the panel stays open on the same tower (only where the game is decided here: solo or host)
+  { let last = null;
+    $('pop').addEventListener('click', e => { const b = e.target.closest('[data-act="u"]'); last = b && G && G.sel ? { c: G.sel.c, r: G.sel.r, t: performance.now() } : null; }, true);
+    $('pop').addEventListener('click', () => {
+      const L = last; last = null; if (!L || !G || !G.running || G.ended || G.guide || !auth()) return;
+      setTimeout(() => { try {
+        if (!G || G.sel || !$('pop').hidden) return;
+        const me = G.b[G.me], t = me && me.grid[idx(L.c, L.r)];
+        if (t && t.type !== 'wall') openPop(L.c, L.r);
+      } catch (e) {} }, 0);
+    });
+  }
+  // the chevron at the end of a row of cards scrolls the row (it used to let the touch fall on the card under it)
+  addCss('.rowwrap .more{pointer-events:auto;cursor:pointer;width:calc(var(--u)*11)}');
+  document.addEventListener('click', e => {
+    const m = e.target.closest && e.target.closest('.rowwrap .more'); if (!m) return;
+    e.stopPropagation(); e.preventDefault();
+    const it = $('items'); try { sfx('click'); } catch (er) {}
+    it.scrollBy({ left: (m.classList.contains('r') ? 1 : -1) * Math.round(it.clientWidth * 0.75), behavior: 'smooth' });
+  }, true);
+
+  /* ---------------------------------------------------------------- 3 · plus de textes coupés */
+  const mmss = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  addCss(`.items>.item.v179w{grid-column:1/-1;flex:1 1 100%;flex-direction:row;justify-content:flex-start;align-items:center;gap:calc(var(--u)*5);padding:calc(var(--u)*3) calc(var(--u)*6);cursor:default;box-shadow:inset 0 0 0 var(--u) var(--line);background:none}
+.item.v179w .lk{flex:none;width:calc(var(--u)*9);height:calc(var(--u)*9);display:grid;place-items:center;color:var(--muted)}
+.item.v179w .lk svg,.item.v179w .lk img{width:100%;height:100%}
+.item.v179w .tx{display:flex;flex-direction:column;align-items:flex-start;gap:calc(var(--u)*1.5);min-width:0;text-align:left}
+.item.v179w .tx b{font-family:var(--fb);color:var(--ink);font-size:calc(var(--t)*1.35);line-height:1;letter-spacing:.02em}
+.item.v179w .tx b em{font-style:normal;color:var(--gold)}
+.item.v179w .tx span{color:var(--muted);font-size:var(--t);line-height:1.25;white-space:normal}
+.item.v179w .who{margin-left:auto;display:flex;gap:calc(var(--u)*2);opacity:.55;filter:grayscale(.6)}
+.item.v179w .who img,.item.v179w .who svg{width:calc(var(--u)*9);height:auto}
+.item.snd.lockhint .tag{position:static;background:none;padding:0;max-width:none;white-space:nowrap;font-size:var(--t)}
+.item .nm.v179s{white-space:normal;text-overflow:clip;overflow:visible;text-align:center;line-height:1.02;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}`);
+  function sendLockCard() {
+    const left = SEND_AT() - G.t, ic = k => (typeof ICON !== 'undefined' && ICON[k]) || '';
+    return `<div class="item snd v179w" aria-live="off"><span class="lk">${ICON.lock || ''}</span><span class="tx"><b>Envois dans <em>${mmss(left)}</em></b><span>Bâtis ta défense d’abord. Ensuite, tes créatures iront chez ton rival.</span></span><span class="who">${ic('rat')}${ic('skel') || ''}${ic('crow') || ''}</span></div>`;
+  }
+  // a label too long for its card: smaller first, then on two lines, never cut
+  function fitLabels() {
+    const items = $('items'); if (!items) return;
+    items.querySelectorAll('.item .nm').forEach(n => {
+      if (n.closest('.v179w')) return;
+      n.style.fontSize = ''; n.classList.remove('v179s');
+      if (n.scrollWidth <= n.clientWidth + 1) return;
+      n.style.fontSize = '0.86em'; if (n.scrollWidth <= n.clientWidth + 1) return;
+      n.classList.add('v179s');
+    });
+    items.querySelectorAll('.item .tag').forEach(n => { n.style.fontSize = ''; if (n.scrollWidth > n.clientWidth + 1) n.style.fontSize = '0.78em'; });
+  }
+  { const base = renderItems; renderItems = function () {
+      const r = base.apply(this, arguments);
+      try {
+        const items = $('items'), me = G && G.b[G.me];
+        if (G && me && G.mode === 'send' && G.running && !items.classList.contains('ghost') && G.t < SEND_AT() && !G.guide) {
+          items.innerHTML = sendLockCard(); items.classList.remove('scroll'); lot1Rows();
+        } else if (G && me && G.mode === 'send') {
+          // the locked cards say it all: the elite in two short words, the next tier in clear
+          items.querySelectorAll('.item.snd.tech.locked .nm').forEach(n => { n.textContent = 'Renforts'; });
+          items.querySelectorAll('.item.snd.tech.locked .ct').forEach(n => { n.textContent = `à ${Math.round(ELT_T / 60)} min`; });
+        } else if (G && me && G.mode !== 'build' && G.mode !== 'tech') {
+          const ch = items.querySelector('.item.charge'), spells = items.querySelectorAll('.item.spell').length;
+          if (ch) {
+            const nm = ch.querySelector('.nm'), tag = ch.querySelector('.tag');
+            if (!spells) { ch.classList.add('v179w'); if (nm) nm.outerHTML = `<span class="tx"><b>Prochain sort : <em>${me.charge}/${CARD_EVERY}</em></b><span>Tue ${CARD_EVERY} créatures pour gagner un sort (${MAX_CARDS} au plus).</span></span>`; if (tag) tag.remove(); items.querySelectorAll('.item.slot').forEach(s => s.remove()); items.classList.remove('scroll'); }
+            else if (nm) nm.textContent = 'Prochain';
+          }
+          items.querySelectorAll('.item.spell[data-card]').forEach(b => { const k = me.cards[+b.dataset.card], t = b.querySelector('.tag'); if (k && t && CARDS[k]) t.textContent = CARDS[k].self ? 'chez toi' : 'chez lui'; });
+        }
+        fitLabels();
+      } catch (e) {}
+      return r;
+  }; }
+  { const base = updateUI; updateUI = function () {
+      const r = base.apply(this, arguments);
+      try {
+        const em = document.querySelector('#items .v179w .tx b em');
+        if (em && G && G.mode === 'send') { if (G.t >= SEND_AT()) renderItems(); else { const v = mmss(SEND_AT() - G.t); if (em.textContent !== v) em.textContent = v; } }
+        else if (em && G && G.mode === 'cards') { const me = G.b[G.me], v = me.charge + '/' + CARD_EVERY; if (em.textContent !== v) em.textContent = v; }
+      } catch (e) {}
+      return r;
+  }; }
+  addEventListener('resize', () => { try { fitLabels(); } catch (e) {} });
+  // the gold, always a whole number
+  { const g = $('gold'); if (g) new MutationObserver(() => { const t = g.textContent; if (/\d[.,]\d/.test(t)) { const v = String(Math.floor(parseFloat(t.replace(',', '.')))); if (v !== t) g.textContent = v; } }).observe(g, { childList: true, characterData: true, subtree: true }); }
+
+  /* ---------------------------------------------------------------- 9 · la couronne : le « +6 or » chez celui qui l'empoche */
+  new MutationObserver(ms => {
+    for (const m of ms) for (const n of m.addedNodes) {
+      if (!n.classList || !n.classList.contains('vh-crown')) continue;
+      const v = (n.querySelector('b') || n).textContent.replace(/[^\d]/g, '') || '6';
+      n.innerHTML = `<b>+${v} or</b> · prime de la couronne`;
+      const gp = $('goldPill') || $('gold'); if (!gp) continue;
+      const r = gp.getBoundingClientRect();
+      n.style.left = Math.round(Math.min(innerWidth - 190, r.left)) + 'px'; n.style.top = Math.round(r.bottom + 6) + 'px';
+    }
+  }).observe(document.body, { childList: true });
+
+  /* ---------------------------------------------------------------- 4 · la partie guidée d'office, et deux leçons de plus */
+  const ltPlayed = () => {
+    try {
+      if (localStorage.getItem('ddl-won1')) return true;
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && (k === 'ddl-best' || k.indexOf('ddl-best-') === 0) && (parseInt(localStorage.getItem(k), 10) || 0) > 0) return true; }
+    } catch (e) {}
+    return false;
+  };
+  // the first Line Towers of anyone who has never played it opens the guided game (no longer only for a phone that has never touched anything)
+  try { guideDue = function () { try { return !localStorage.getItem('ddl-guide') && !ltPlayed(); } catch (e) { return false; } }; } catch (e) {}
+  const towersN = me => me.grid.filter(t => t && t.type !== 'wall').length;
+  const V179_N = 9;
+  try {
+    const i4 = GUIDE_STEPS.findIndex(s => s && s.sq === 4);
+    if (i4 >= 0 && !GUIDE_STEPS.some(s => s && s.v179)) {
+      const rat = GUIDE_STEPS.find(s => s && s.sq === 5); if (rat) rat.v179rat = true;
+      GUIDE_STEPS.forEach((s, k) => { if (k > i4 && s && s.sq >= 5) s.sq += 2; });
+      GUIDE_STEPS.splice(i4 + 1, 0,
+        { sq: 5, v179: 'wall', say: '', gold: 30, cells: 'v179wall',
+          sayF: () => 'Touche un de tes <b>murs</b> : il peut devenir une tour, et ton chemin ne change pas.',
+          hl: () => (document.querySelector('#pop:not([hidden]) [data-act="v"]') ? '#pop [data-act="v"]' : ''),
+          done: me => towersN(me) > (G.v179t0 || 0) },
+        { sq: 6, v179: 'statue', say: '', btn: 'Suivant', cells: 'emblem',
+          sayF: () => 'Ta <b>statue</b> renforce les tours posées dans son cercle en pointillés : bâtis autour d’elle.' });
+    }
+  } catch (e) {}
+  { const base = guideCells; guideCells = function (kind) {
+      if (kind === 'v179wall') { const me = G.b[G.me], out = []; for (const t of me.grid) if (t && t.type === 'wall' && out.length < 3) out.push([t.c, t.r]); return out; }
+      return base.apply(this, arguments);
+  }; }
+  { const base = guideGo; guideGo = function (i) {
+      const r = base.apply(this, arguments);
+      try {
+        const GD = G && G.guide, st = GUIDE_STEPS[i]; if (!GD || !st || GD.step !== i) return r;
+        const me = G.b[G.me];
+        if (st.v179 === 'wall') G.v179t0 = towersN(me);
+        if (st.v179rat) G68.lv0 = me.lives;
+        const n = $('guideN'); n.setAttribute('aria-label', `Étape ${st.sq} sur ${V179_N}`);
+        n.innerHTML = Array.from({ length: V179_N }, (_, k) => `<i class="${k < st.sq - 1 ? 'on' : k === st.sq - 1 ? 'now' : ''}"></i>`).join('');
+      } catch (e) {}
+      return r;
+  }; }
+
+  /* ---------------------------------------------------------------- 5 · ce qui arrive chez toi, ce que deviennent tes envois */
+  addCss(`.v179in{position:fixed;left:50%;z-index:6;transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 24px);box-sizing:border-box;padding:6px 10px 6px 8px;background:rgba(24,16,18,.92);box-shadow:inset 0 0 0 2px #c46a5e;color:#f3e6e0;font:600 13px/1.2 var(--f);pointer-events:none;white-space:nowrap}
+.v179in .bz{flex:none;display:grid;place-items:center;width:22px;height:22px}
+.v179in .bz img,.v179in .bz svg{width:22px;height:auto}
+.v179in b{color:#fff}
+.v179in .ks{display:flex;align-items:center;gap:6px;margin-left:4px}
+.v179in .k{display:flex;align-items:center;gap:2px;font-family:var(--fb);font-size:12px;color:#f0c9c2}
+.v179in .k img,.v179in .k svg{width:18px;height:auto}
+.v179out{position:fixed;right:10px;z-index:5;display:flex;align-items:baseline;gap:6px;padding:4px 8px;background:rgba(18,30,36,.88);color:#c9d3d4;font:600 12px/1.2 var(--f);pointer-events:none;white-space:nowrap}
+.v179out b{font-family:var(--fb);color:#e9efe9}
+.v179out .ok b{color:#a6dc8f}`);
+  const V5 = { band: null, out: null, buf: null, showT: 0, seen: new WeakSet(), last: {}, wave: -1, pass: 0, stop: 0, outT: -99 };
+  function v5El(cls) { const e = document.createElement('div'); e.className = cls; e.setAttribute('aria-live', 'polite'); e.hidden = true; document.body.appendChild(e); return e; }
+  const hdBottom = () => { const hd = document.querySelector('header'); return hd ? hd.getBoundingClientRect().bottom : 90; };
+  function blazonOf(k) { try { const b = G.b[k]; return typeof blazonImg === 'function' && b && b.jt && b.jt.em ? blazonImg(b.jt.em.k, pcol(k), 1) : ''; } catch (e) { return ''; } }
+  function v5Show() {
+    const B = V5.buf; if (!B) return;
+    const b = G.b[B.from]; if (!b) return;
+    const n = Object.values(B.kinds).reduce((a, c) => a + c, 0);
+    const ks = Object.entries(B.kinds).sort((a, c) => c[1] - a[1]).slice(0, 4).map(([k, c]) => `<span class="k">${ICON[k] || ''}×${c}</span>`).join('');
+    if (!V5.band) V5.band = v5El('v179in');
+    V5.band.innerHTML = `<span class="bz">${blazonOf(B.from)}</span><span><b>${esc(b.name)}</b> t’envoie ${n} créature${n > 1 ? 's' : ''}</span><span class="ks">${ks}</span>`;
+    V5.band.style.top = Math.round(hdBottom() + 6) + 'px'; V5.band.hidden = false; V5.showT = performance.now();
+  }
+  function v5Tick() {
+    if (!G || !G.running || G.ended || G.spec || G.entr || G.guide) { if (V5.band) V5.band.hidden = true; if (V5.out) V5.out.hidden = true; return; }
+    const me = G.b[G.me]; if (!me || !me.alive) { if (V5.band) V5.band.hidden = true; return; }
+    const now = performance.now();
+    // what was just queued at my gate by a rival
+    for (const it of me.queue) {
+      if (!it || V5.seen.has(it)) continue; V5.seen.add(it);
+      if (!(it.from >= 0) || it.from === G.me || it.wave) continue;
+      if (!V5.buf || V5.buf.from !== it.from || now - V5.buf.t > 4000) V5.buf = { from: it.from, kinds: {}, t: now, shown: false };
+      V5.buf.kinds[it.kind] = (V5.buf.kinds[it.kind] || 0) + 1; V5.buf.t = now;
+      const n = Object.values(V5.buf.kinds).reduce((a, c) => a + c, 0), boss = S[it.kind] && S[it.kind].hb;
+      if (V5.buf.shown || n >= 3 || boss) { V5.buf.shown = true; v5Show(); }
+    }
+    if (V5.band && !V5.band.hidden && now - V5.showT > 3500) V5.band.hidden = true;
+    // my sends: passed / stopped, this wave
+    if (G.wave !== V5.wave) { V5.wave = G.wave; if (V5.pass + V5.stop) { V5.lastP = V5.pass; V5.lastS = V5.stop; } V5.pass = V5.stop = 0; }
+    const p = V5.pass + V5.stop ? [V5.pass, V5.stop] : V5.lastP + V5.lastS ? [V5.lastP, V5.lastS] : null;
+    if (!V5.out) V5.out = v5El('v179out');
+    const on = !!p && auth() && (G.mode === 'send' || G.t - V5.outT < 6);
+    if (on) {
+      const h = `<span>Tes envois</span><span class="ok"><b>${p[0]}</b> passé${p[0] > 1 ? 's' : ''}</span><span><b>${p[1]}</b> arrêté${p[1] > 1 ? 's' : ''}</span>`;
+      if (V5.out.dataset.h !== h) { V5.out.innerHTML = h; V5.out.dataset.h = h; }
+      V5.out.style.top = Math.round(hdBottom() + (V5.band && !V5.band.hidden ? 40 : 6)) + 'px';
+    }
+    V5.out.hidden = !on;
+  }
+  setInterval(() => { try { v5Tick(); } catch (e) {} }, 150);
+  { const base = leak; leak = function (b, cr) { try { if (G && cr && cr.from === G.me && b.k !== G.me) { V5.pass++; V5.outT = G.t; } } catch (e) {} return base.apply(this, arguments); }; }
+  { const base = damage; damage = function (b, cr) {
+      const was = cr && cr.dead, r = base.apply(this, arguments);
+      try { if (G && cr && !was && cr.dead && cr.from === G.me && b.k !== G.me) { V5.stop++; V5.outT = G.t; } } catch (e) {}
+      return r;
+  }; }
+  { const base = newGame; newGame = function () { V5.buf = null; V5.wave = -1; V5.pass = V5.stop = V5.lastP = V5.lastS = 0; V5.outT = -99; return base.apply(this, arguments); }; }
+
+  /* ---------------------------------------------------------------- 6 · qui est qui : les mêmes noms, l'animal de la Maison, qui t'attaque */
+  { const base = botSeats; botSeats = function () {
+      const s = base.apply(this, arguments);
+      try { for (const x of s) if (x && x.bot && /^Bot( \d+)?$/.test(x.name) && PCOL_N[x.col]) x.name = PCOL_N[x.col]; } catch (e) {}
+      return s;
+  }; }
+  addCss(`#rivals .who .v179bz{flex:none;display:inline-grid;place-items:center;margin-right:2px}
+#rivals .who .v179bz img{width:15px;height:auto}
+#rivals .who .v179cap{font:700 10px/1 var(--f);letter-spacing:.08em;text-transform:uppercase;color:#e59a8c;margin-right:4px;white-space:nowrap}
+#rivals .who .v179cap.t{color:#d5bf7b}
+#rivals .v179tg{margin-left:auto;display:flex;align-items:center;gap:5px;padding:0 8px;font:600 12px/1 var(--f);color:#c9d3d4;white-space:nowrap;pointer-events:none}
+#rivals .v179tg .v179cap{font:700 10px/1 var(--f);letter-spacing:.08em;text-transform:uppercase;color:#d5bf7b}
+#rivals .v179tg img{width:15px;height:auto}`);
+  const emOf = b => (b && b.jt && b.jt.em && b.jt.em.k) || (b && b.maison) || '';
+  { const base = renderHud; renderHud = function () {
+      const r = base.apply(this, arguments);
+      try {
+        if (!G || !G.running || G.story) return r;
+        const ak = prevAlive(G.me), tk = nextAlive(G.me), riv = $('rivals'); if (!riv) return r;
+        riv.querySelectorAll('.who').forEach(el => {
+          const k = +el.dataset.k, b = G.b[k]; if (!b) return;
+          if (!el.querySelector('.v179bz')) { const m = emOf(b), nm = el.querySelector('.nm'); if (m && nm && typeof BLAZON !== 'undefined' && BLAZON[m]) nm.insertAdjacentHTML('beforebegin', `<span class="v179bz">${blazonImg(m, b.col != null ? b.col : k, 1)}</span>`); }
+          const cap = el.querySelector('.v179cap'), want = !b.alive ? '' : k === ak && k === tk ? 'ton rival' : k === ak ? 't’attaque' : k === tk ? 'ta cible' : '';
+          if (want && !cap) el.insertAdjacentHTML('afterbegin', `<span class="v179cap${k === tk && k !== ak ? ' t' : ''}">${want}</span>`);
+          else if (cap && cap.textContent !== want) { if (want) cap.textContent = want; else cap.remove(); }
+        });
+        // with three rivals or more, the one you attack, on the right
+        let tg = riv.querySelector('.v179tg');
+        const show = G.N > 2 && tk >= 0 && tk !== ak && G.b[tk] && G.b[tk].alive && !aimPicksPlayer();
+        if (show) {
+          const b = G.b[tk], m = emOf(b), h = `<span class="v179cap">Tu attaques</span>${m && BLAZON[m] ? blazonImg(m, b.col != null ? b.col : tk, 1) : ''}<span>${esc(b.name)}</span>`;
+          if (!tg) { tg = document.createElement('div'); tg.className = 'v179tg'; riv.appendChild(tg); }
+          if (tg.dataset.h !== h) { tg.innerHTML = h; tg.dataset.h = h; }
+        } else if (tg) tg.remove();
+      } catch (e) {}
+      return r;
+  }; }
+
+  /* ---------------------------------------------------------------- 8 · l'Entracte : jamais de vies à gagner, un temps pour lire, un bot moins parfait au rythme */
+  { const base = relicPool; relicPool = function () { const p = base.apply(this, arguments); const q = p.filter(k => k !== 'fiole'); return q.length ? q : p; }; }
+  { const guard = f => function () { try { const E = G && G.entr; if (E && E.phase === 'play' && fgNow() < 0.6) return; } catch (e) {} return f.apply(this, arguments); };
+    fgTap = guard(fgTap); fgTapSide = guard(fgTapSide); }
+  try { Object.assign(ET_BOT.easy, { p: 0.66, sd: 0.08 }); Object.assign(ET_BOT.normal, { p: 0.78, sd: 0.062 }); Object.assign(ET_BOT.hard, { p: 0.9, sd: 0.045 }); } catch (e) {}
+})();
+/* ================================================================ /version 179 */
 
 useTerrain(TERKEY);
 demo();
